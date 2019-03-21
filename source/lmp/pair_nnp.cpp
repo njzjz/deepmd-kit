@@ -17,6 +17,10 @@
 using namespace LAMMPS_NS;
 using namespace std;
 
+// jinzhe
+#include <math.h>
+#define SQR(x) ((x)*(x))
+
 static void 
 ana_st (double & max, 
 	double & min, 
@@ -99,6 +103,47 @@ void PairNNP::compute(int eflag, int vflag)
   }
   int nall = nlocal + nghost;
   int newton_pair = force->newton_pair;
+
+  // Jinzhe start ESOINN
+  // Calculate distance
+  vector<double > distances (nall * nall);
+  vector<int > kts (nall * 3);
+  vector<double > numbers (nall * 3);
+  vector<int > neighbourlist (nall * nall);
+  vector<int > neighbournum (nall);
+  vector<double > matrix (nall * nall);
+  for (int ii = 0; ii < nall; ++ii){
+    for (int jj = 0; jj < nall; ++jj){
+      // todo: how to handle PBC?
+      distances[ii][jj]=sqrt(SQR(x[ii][0]-x[jj][0])+SQR(x[ii][1]-x[jj][1])+SQR(x[ii][2]-x[jj][2]))
+    }
+    // C H O
+    if (type[ii] == 1){
+      numbers[ii] = 6.0
+    } else if (type[ii] == 2){
+      numbers[ii] = 1.0
+    } else if (type[ii] == 3){
+      numbers[ii] = 8.0
+    }
+  }
+  for (int ii = 0; ii < nall; ++ii){
+    neighbournum[ii] = 0
+    for (int jj = 0; jj < nall; ++jj){
+      if (distances[ii][jj] < 5){ // cutoff
+        neighbourlist[neighbournum[ii]] = jj
+        neighbournum[ii]++
+      }
+    }
+    for (int jj = 0; jj < neighbournum[ii]; ++jj){
+      matrix[jj][jj] = pow(numbers[neighbourlist[jj]], 2.4)
+      for (int kk = 0; kk < jj; ++kk){
+        matrix[jj][kk] = numbers[neighbourlist[jj]] * numbers[neighbourlist[kk]] / distances[neighbourlist[jj]][neighbourlist[kk]]
+      }
+    }
+  }
+
+
+  // Jinzhe end
 
   vector<int > dtype (nall);
   for (int ii = 0; ii < nall; ++ii){
