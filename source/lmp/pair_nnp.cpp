@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <Python.h> // jinzhe
 #include "atom.h"
 #include "domain.h"
 #include "comm.h"
@@ -16,10 +17,6 @@
 
 using namespace LAMMPS_NS;
 using namespace std;
-
-// jinzhe
-#include <math.h>
-#define SQR(x) ((x)*(x))
 
 static void 
 ana_st (double & max, 
@@ -56,6 +53,12 @@ PairNNP::PairNNP(LAMMPS *lmp)
   comm_reverse = 1;
 
   print_summary("  ");
+	   
+  //jinzhe start
+  Py_Initialize();
+  PyRun_SimpleString("import sys");
+  PyRun_SimpleString("sys.path.append('./')");
+  //jinzhe end
 }
 
 void
@@ -103,47 +106,6 @@ void PairNNP::compute(int eflag, int vflag)
   }
   int nall = nlocal + nghost;
   int newton_pair = force->newton_pair;
-
-  // Jinzhe start ESOINN
-  // Calculate distance
-  vector<double > distances (nall * nall);
-  vector<int > kts (nall * 3);
-  vector<double > numbers (nall * 3);
-  vector<int > neighbourlist (nall * nall);
-  vector<int > neighbournum (nall);
-  vector<double > matrix (nall * nall);
-  for (int ii = 0; ii < nall; ++ii){
-    for (int jj = 0; jj < nall; ++jj){
-      // todo: how to handle PBC?
-      distances[ii][jj]=sqrt(SQR(x[ii][0]-x[jj][0])+SQR(x[ii][1]-x[jj][1])+SQR(x[ii][2]-x[jj][2]))
-    }
-    // C H O
-    if (type[ii] == 1){
-      numbers[ii] = 6.0
-    } else if (type[ii] == 2){
-      numbers[ii] = 1.0
-    } else if (type[ii] == 3){
-      numbers[ii] = 8.0
-    }
-  }
-  for (int ii = 0; ii < nall; ++ii){
-    neighbournum[ii] = 0
-    for (int jj = 0; jj < nall; ++jj){
-      if (distances[ii][jj] < 5){ // cutoff
-        neighbourlist[neighbournum[ii]] = jj
-        neighbournum[ii]++
-      }
-    }
-    for (int jj = 0; jj < neighbournum[ii]; ++jj){
-      matrix[jj][jj] = pow(numbers[neighbourlist[jj]], 2.4)
-      for (int kk = 0; kk < jj; ++kk){
-        matrix[jj][kk] = numbers[neighbourlist[jj]] * numbers[neighbourlist[kk]] / distances[neighbourlist[jj]][neighbourlist[kk]]
-      }
-    }
-  }
-
-
-  // Jinzhe end
 
   vector<int > dtype (nall);
   for (int ii = 0; ii < nall; ++ii){
@@ -388,6 +350,48 @@ void PairNNP::compute(int eflag, int vflag)
     }
   }
 
+  // jinzhe start esoinn
+  PyObject *pmodule = PyImport_ImportModule("force");
+  PyObject *pfunc = PyObject_GetAttrString(pmodule, "printforce");
+  PyObject *pyarg = PyTuple_New(3);
+  PyObject *py_x  = PyList_New(nall*3);
+  for (int i = 0; i < nall; i++){
+    for (int j = 0; j < 3; j++){
+      PyList_SetItem(py_x, i*3+j, PyFloat_FromDouble(x[i][j]));
+    }
+  }
+  PyTuple_SetItem(pyarg, 0, py_x);
+  PyObject *py_type = PyList_New(nall);
+  for (int i = 0; i < nall; i++){
+    PyList_SetItem(py_type, i, PyLong_FromLong(type[i]));
+  }
+  PyTuple_SetItem(pyarg, 1, py_type);
+  PyObject *py_all_force = PyList_New(all_force.size()*all_force[0].size());
+  int i=0;
+  for (unsigned ii = 0; ii < all_force.size(); ++ii){
+    for (unsigned jj = 0; jj < all_force[ii].size(); ++jj){
+      PyList_SetItem(py_all_force, i++, PyFloat_FromDouble(all_force[ii][jj]));
+    }
+  }
+  PyTuple_SetItem(pyarg, 2, py_all_force);
+  PyObject *pyfesoinn = PyObject_CallObject(pfunc, pyarg);
+  if(!pyfesoinn){
+     PyErr_Print();
+     PyErr_Clear();
+     error->all(FLERR,"python error.");
+  }
+  if(PyList_Check(pyfesoinn)){
+    for (int ii = 0; ii < nall; ++ii){
+      for (int dd = 0; dd < 3; ++dd){
+        dforce[3*ii+dd] = PyFloat_AsDouble(PyList_GetItem(pyfesoinn, 3*ii+dd));
+      }
+    }
+  } else error->all(FLERR,"no forces returned.");
+  Py_DECREF(pyfesoinn);
+  Py_DECREF(pyarg);
+  // jinzhe end
+	
+	
   // get force
   for (int ii = 0; ii < nall; ++ii){
     for (int dd = 0; dd < 3; ++dd){
