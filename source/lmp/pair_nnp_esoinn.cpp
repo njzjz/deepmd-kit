@@ -13,7 +13,7 @@
 #include "neigh_list.h"
 #include "neigh_request.h"
 
-#include "pair_nnp.h"
+#include "pair_nnp_esoinn.h"
 
 using namespace LAMMPS_NS;
 using namespace std;
