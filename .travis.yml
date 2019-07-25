@@ -1,0 +1,15 @@
+language: python
+python: "3.6"
+env:
+  matrix:
+  - TENSORFLOW_VERSION=1.8
+  - TENSORFLOW_VERSION=1.12
+  - TENSORFLOW_VERSION=1.14
+  - TENSORFLOW_VERSION=1.8 PREC="-DFLOAT_PREC=low"
+  - TENSORFLOW_VERSION=1.12 PREC="-DFLOAT_PREC=low"
+  - TENSORFLOW_VERSION=1.14 PREC="-DFLOAT_PREC=low"
+install:
+  - pip install scikit-build cmake tensorflow==$TENSORFLOW_VERSION
+  - cd source && python setup.py install $PREC
+script:
+  - python -m unittest deepmd.tests
