@@ -1,0 +1,38 @@
+set(DEEPMD_ROOT @CMAKE_INSTALL_PREFIX@)
+set(TENSORFLOW_INCLUDE_DIRS @TensorFlow_INCLUDE_DIRS@)
+set(TENSORFLOW_LIBRARY_PATH @TensorFlow_LIBRARY_PATH@)
+set(USER-DEEPMD_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR})
+
+option(PKG_USER-DEEPMD "Build USER-DEEPMD Package" OFF)
+
+include(../../cmake/Modules/LAMMPSUtils.cmake)
+
+# Fetch missing external files and archives
+FetchPotentials(${LAMMPS_SOURCE_DIR}/${PKG} ${LAMMPS_POTENTIALS_DIR})
+
+file(GLOB USER-DEEPMD_SOURCES ${USER-DEEPMD_SOURCES_DIR}/[^.]*.cpp)
+file(GLOB USER-DEEPMD_HEADERS ${USER-DEEPMD_SOURCES_DIR}/[^.]*.h)
+
+# detects styles in package and adds them to global list
+RegisterStyles(${USER-DEEPMD_SOURCES_DIR})
+
+target_sources(lammps PRIVATE ${USER-DEEPMD_SOURCES_DIR})
+target_include_directories(lammps PRIVATE ${USER-DEEPMD_SOURCES_DIR})
+
+# link TensorFlow
+list(APPEND CMAKE_INSTALL_RPATH ${TENSORFLOW_LIBRARY_PATH})
+target_include_directories(lammps PRIVATE ${TENSORFLOW_INCLUDE_DIRS})
+target_link_libraries(lammps PRIVATE "-ltensorflow_cc -ltensorflow_framework")
+target_link_libraries(lammps PRIVATE -L${TENSORFLOW_LIBRARY_PATH})
+
+# link deepmd-kit
+set(CMAKE_CXX_STANDARD 11)
+string(APPEND CMAKE_CXX_FLAGS "@PREC_DEF@ @TTM_DEF@ @OLD_LMP_PPPM_DEF@")
+list(APPEND CMAKE_INSTALL_RPATH ${DEEPMD_ROOT}/lib)
+string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--no-as-needed")
+target_include_directories(lammps PRIVATE ${DEEPMD_ROOT}/include)
+target_link_libraries(lammps PRIVATE "-l@LIB_DEEPMD_OP_CUDA@ -l@LIB_DEEPMD_OP@ -l@LIB_DEEPMD_CC@ -l@LIB_DEEPMD@")
+target_link_libraries(lammps PRIVATE -L${DEEPMD_ROOT}/lib)
+
+RegisterPackages(${USER-DEEPMD_SOURCES_DIR})
+list(APPEND ENABLED_PACKAGES USER-DEEPMD)
