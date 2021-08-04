@@ -65,6 +65,7 @@ get_vector (std::vector<VT> & vec, const std::string & name) const
   session_get_vector<VT>(vec, session, name, name_scope);
 }
 
+template <typename VALUETYPE>
 void 
 DipoleChargeModifier::
 run_model (std::vector<VALUETYPE> &		dforce,
@@ -116,8 +117,27 @@ run_model (std::vector<VALUETYPE> &		dforce,
   }
 }
 
+template
+void 
+DipoleChargeModifier::
+run_model (std::vector<double> &		dforce,
+	   std::vector<double> &		dvirial,
+	   Session *				session, 
+	   const std::vector<std::pair<std::string, Tensor>> & input_tensors,
+	   const AtomMap<double> &	atommap, 
+	   const int				nghost);
+template
+void 
+DipoleChargeModifier::
+run_model (std::vector<float> &		dforce,
+	   std::vector<float> &		dvirial,
+	   Session *				session, 
+	   const std::vector<std::pair<std::string, Tensor>> & input_tensors,
+	   const AtomMap<float> &	atommap, 
+	   const int				nghost);
 
 
+template <typename VALUETYPE>
 void
 DipoleChargeModifier::
 compute (std::vector<VALUETYPE> &		dfcorr_,
@@ -199,11 +219,8 @@ compute (std::vector<VALUETYPE> &		dfcorr_,
   TensorShape extf_shape ;
   extf_shape.AddDim (nframes);
   extf_shape.AddDim (dextf.size());
-#ifdef HIGH_PREC
-  Tensor extf_tensor	(DT_DOUBLE, extf_shape);
-#else
-  Tensor extf_tensor	(DT_FLOAT, extf_shape);
-#endif
+  const DataType DTYPE = std::is_same<VALUETYPE, double>::value ? DT_DOUBLE: DT_FLOAT;
+  Tensor extf_tensor	(DTYPE, extf_shape);
   auto extf = extf_tensor.matrix<VALUETYPE> ();
   for (int ii = 0; ii < nframes; ++ii){
     for (int jj = 0; jj < extf.size(); ++jj){

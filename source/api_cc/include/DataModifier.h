@@ -16,6 +16,7 @@ public:
 	     const std::string & name_scope = "");
   void print_summary(const std::string &pre) const;
 public:
+  template <typename VALUETYPE>
   void compute (std::vector<VALUETYPE> &		dfcorr_,
 		std::vector<VALUETYPE> &		dvcorr_,
 		const std::vector<VALUETYPE> &	dcoord_,
@@ -41,6 +42,7 @@ private:
   std::vector<int> sel_type;
   template<class VT> VT get_scalar(const std::string & name) const;
   template<class VT> void get_vector(std::vector<VT> & vec, const std::string & name) const;
+  template <typename VALUETYPE>
   void run_model (std::vector<VALUETYPE> &		dforce,
 		  std::vector<VALUETYPE> &		dvirial,
 		  tensorflow::Session *			session,

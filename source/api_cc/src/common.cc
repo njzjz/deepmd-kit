@@ -45,12 +45,13 @@ model_compatable(
   }
 }
 
+template <typename VALUETYPE>
 void 
 deepmd::
 select_by_type(std::vector<int> & fwd_map,
 	       std::vector<int> & bkw_map,
 	       int & nghost_real, 
-	       const std::vector<deepmd::VALUETYPE> & dcoord_, 
+	       const std::vector<VALUETYPE> & dcoord_, 
 	       const std::vector<int> & datype_,
 	       const int & nghost,
 	       const std::vector<int> & sel_type_)
@@ -86,13 +87,36 @@ select_by_type(std::vector<int> & fwd_map,
   assert((nloc_real+nghost_real) == bkw_map.size());  
 }	       
 
+template
+void 
+deepmd::
+select_by_type(std::vector<int> & fwd_map,
+	       std::vector<int> & bkw_map,
+	       int & nghost_real, 
+	       const std::vector<double> & dcoord_, 
+	       const std::vector<int> & datype_,
+	       const int & nghost,
+	       const std::vector<int> & sel_type_);
 
+template
+void 
+deepmd::
+select_by_type(std::vector<int> & fwd_map,
+	       std::vector<int> & bkw_map,
+	       int & nghost_real, 
+	       const std::vector<float> & dcoord_, 
+	       const std::vector<int> & datype_,
+	       const int & nghost,
+	       const std::vector<int> & sel_type_);
+
+
+template <typename VALUETYPE>
 void
 deepmd::
 select_real_atoms(std::vector<int> & fwd_map,
 		  std::vector<int> & bkw_map,
 		  int & nghost_real,
-		  const std::vector<deepmd::VALUETYPE> & dcoord_, 
+		  const std::vector<VALUETYPE> & dcoord_, 
 		  const std::vector<int> & datype_,
 		  const int & nghost,
 		  const int & ntypes)
@@ -103,6 +127,28 @@ select_real_atoms(std::vector<int> & fwd_map,
   }
   deepmd::select_by_type(fwd_map, bkw_map, nghost_real, dcoord_, datype_, nghost, sel_type);
 }
+
+template
+void
+deepmd::
+select_real_atoms(std::vector<int> & fwd_map,
+		  std::vector<int> & bkw_map,
+		  int & nghost_real,
+		  const std::vector<double> & dcoord_, 
+		  const std::vector<int> & datype_,
+		  const int & nghost,
+		  const int & ntypes);
+
+template
+void
+deepmd::
+select_real_atoms(std::vector<int> & fwd_map,
+		  std::vector<int> & bkw_map,
+		  int & nghost_real,
+		  const std::vector<float> & dcoord_, 
+		  const std::vector<int> & datype_,
+		  const int & nghost,
+		  const int & ntypes);
 
 
 void
@@ -121,13 +167,25 @@ copy_from_nlist(const InputNlist & inlist)
 }
 
 
+template <typename VALUETYPE>
 void
 deepmd::NeighborListData::
-shuffle(const AtomMap<deepmd::VALUETYPE> & map)
+shuffle(const AtomMap<VALUETYPE> & map)
 {
   const std::vector<int> & fwd_map = map.get_fwd_map();
   shuffle(fwd_map);
 }
+
+template
+void
+deepmd::NeighborListData::
+shuffle(const AtomMap<double> & map);
+
+template
+void
+deepmd::NeighborListData::
+shuffle(const AtomMap<float> & map);
+
 
 void
 deepmd::NeighborListData::
@@ -239,18 +297,19 @@ name_prefix(const std::string & scope)
   return prefix;
 }
 
+template <typename VALUETYPE>
 int
 deepmd::
 session_input_tensors (
     std::vector<std::pair<std::string, Tensor>> & input_tensors,
-    const std::vector<deepmd::VALUETYPE> &	dcoord_,
+    const std::vector<VALUETYPE> &	dcoord_,
     const int &					ntypes,
     const std::vector<int> &			datype_,
-    const std::vector<deepmd::VALUETYPE> &	dbox, 
-    const deepmd::VALUETYPE &			cell_size,
-    const std::vector<deepmd::VALUETYPE> &	fparam_,
-    const std::vector<deepmd::VALUETYPE> &	aparam_,
-    const deepmd::AtomMap<deepmd::VALUETYPE>&	atommap,
+    const std::vector<VALUETYPE> &	dbox, 
+    const VALUETYPE &			cell_size,
+    const std::vector<VALUETYPE> &	fparam_,
+    const std::vector<VALUETYPE> &	aparam_,
+    const deepmd::AtomMap<VALUETYPE>&	atommap,
     const std::string				scope)
 {
   bool b_pbc = (dbox.size() == 9);
@@ -292,30 +351,24 @@ session_input_tensors (
   aparam_shape.AddDim (nframes);
   aparam_shape.AddDim (aparam_.size());
   
-#ifdef HIGH_PREC
-  Tensor coord_tensor	(DT_DOUBLE, coord_shape);
-  Tensor box_tensor	(DT_DOUBLE, box_shape);
-  Tensor fparam_tensor  (DT_DOUBLE, fparam_shape);
-  Tensor aparam_tensor  (DT_DOUBLE, aparam_shape);
-#else
-  Tensor coord_tensor	(DT_FLOAT, coord_shape);
-  Tensor box_tensor	(DT_FLOAT, box_shape);
-  Tensor fparam_tensor  (DT_FLOAT, fparam_shape);
-  Tensor aparam_tensor  (DT_FLOAT, aparam_shape);
-#endif
+  const DataType DTYPE = std::is_same<VALUETYPE, double>::value ? DT_DOUBLE: DT_FLOAT;
+  Tensor coord_tensor	(DTYPE, coord_shape);
+  Tensor box_tensor	(DTYPE, box_shape);
+  Tensor fparam_tensor  (DTYPE, fparam_shape);
+  Tensor aparam_tensor  (DTYPE, aparam_shape);
   Tensor type_tensor	(DT_INT32, type_shape);
   Tensor mesh_tensor	(DT_INT32, mesh_shape);
   Tensor natoms_tensor	(DT_INT32, natoms_shape);
 
-  auto coord = coord_tensor.matrix<deepmd::VALUETYPE> ();
+  auto coord = coord_tensor.matrix<VALUETYPE> ();
   auto type = type_tensor.matrix<int> ();
-  auto box = box_tensor.matrix<deepmd::VALUETYPE> ();
+  auto box = box_tensor.matrix<VALUETYPE> ();
   auto mesh = mesh_tensor.flat<int> ();
   auto natoms = natoms_tensor.flat<int> ();  
-  auto fparam = fparam_tensor.matrix<deepmd::VALUETYPE> ();
-  auto aparam = aparam_tensor.matrix<deepmd::VALUETYPE> ();
+  auto fparam = fparam_tensor.matrix<VALUETYPE> ();
+  auto aparam = aparam_tensor.matrix<VALUETYPE> ();
 
-  std::vector<deepmd::VALUETYPE> dcoord (dcoord_);
+  std::vector<VALUETYPE> dcoord (dcoord_);
   atommap.forward (dcoord.begin(), dcoord_.begin(), 3);
   
   for (int ii = 0; ii < nframes; ++ii){
@@ -374,18 +427,49 @@ session_input_tensors (
   return nloc;
 }
 
+template
 int
 deepmd::
 session_input_tensors (
     std::vector<std::pair<std::string, Tensor>> & input_tensors,
-    const std::vector<deepmd::VALUETYPE> &	dcoord_,
+    const std::vector<double> &	dcoord_,
     const int &					ntypes,
     const std::vector<int> &			datype_,
-    const std::vector<deepmd::VALUETYPE> &	dbox,		    
+    const std::vector<double> &	dbox, 
+    const double &			cell_size,
+    const std::vector<double> &	fparam_,
+    const std::vector<double> &	aparam_,
+    const deepmd::AtomMap<double>&	atommap,
+    const std::string				scope);
+
+template
+int
+deepmd::
+session_input_tensors (
+    std::vector<std::pair<std::string, Tensor>> & input_tensors,
+    const std::vector<float> &	dcoord_,
+    const int &					ntypes,
+    const std::vector<int> &			datype_,
+    const std::vector<float> &	dbox, 
+    const float &			cell_size,
+    const std::vector<float> &	fparam_,
+    const std::vector<float> &	aparam_,
+    const deepmd::AtomMap<float>&	atommap,
+    const std::string				scope);
+
+template <typename VALUETYPE>
+int
+deepmd::
+session_input_tensors (
+    std::vector<std::pair<std::string, Tensor>> & input_tensors,
+    const std::vector<VALUETYPE> &	dcoord_,
+    const int &					ntypes,
+    const std::vector<int> &			datype_,
+    const std::vector<VALUETYPE> &	dbox,		    
     InputNlist &				dlist, 
-    const std::vector<deepmd::VALUETYPE> &	fparam_,
-    const std::vector<deepmd::VALUETYPE> &	aparam_,
-    const deepmd::AtomMap<deepmd::VALUETYPE>&	atommap,
+    const std::vector<VALUETYPE> &	fparam_,
+    const std::vector<VALUETYPE> &	aparam_,
+    const deepmd::AtomMap<VALUETYPE>&	atommap,
     const int					nghost,
     const int					ago,
     const std::string				scope)
@@ -424,30 +508,24 @@ session_input_tensors (
   aparam_shape.AddDim (nframes);
   aparam_shape.AddDim (aparam_.size());
   
-#ifdef HIGH_PREC
-  Tensor coord_tensor	(DT_DOUBLE, coord_shape);
-  Tensor box_tensor	(DT_DOUBLE, box_shape);
-  Tensor fparam_tensor  (DT_DOUBLE, fparam_shape);
-  Tensor aparam_tensor  (DT_DOUBLE, aparam_shape);
-#else
-  Tensor coord_tensor	(DT_FLOAT, coord_shape);
-  Tensor box_tensor	(DT_FLOAT, box_shape);
-  Tensor fparam_tensor  (DT_FLOAT, fparam_shape);
-  Tensor aparam_tensor  (DT_FLOAT, aparam_shape);
-#endif
+  const DataType DTYPE = std::is_same<VALUETYPE, double>::value ? DT_DOUBLE: DT_FLOAT;
+  Tensor coord_tensor	(DTYPE, coord_shape);
+  Tensor box_tensor	(DTYPE, box_shape);
+  Tensor fparam_tensor  (DTYPE, fparam_shape);
+  Tensor aparam_tensor  (DTYPE, aparam_shape);
   Tensor type_tensor	(DT_INT32, type_shape);
   Tensor mesh_tensor	(DT_INT32, mesh_shape);
   Tensor natoms_tensor	(DT_INT32, natoms_shape);
 
-  auto coord = coord_tensor.matrix<deepmd::VALUETYPE> ();
+  auto coord = coord_tensor.matrix<VALUETYPE> ();
   auto type = type_tensor.matrix<int> ();
-  auto box = box_tensor.matrix<deepmd::VALUETYPE> ();
+  auto box = box_tensor.matrix<VALUETYPE> ();
   auto mesh = mesh_tensor.flat<int> ();
   auto natoms = natoms_tensor.flat<int> ();
-  auto fparam = fparam_tensor.matrix<deepmd::VALUETYPE> ();
-  auto aparam = aparam_tensor.matrix<deepmd::VALUETYPE> ();
+  auto fparam = fparam_tensor.matrix<VALUETYPE> ();
+  auto aparam = aparam_tensor.matrix<VALUETYPE> ();
 
-  std::vector<deepmd::VALUETYPE> dcoord (dcoord_);
+  std::vector<VALUETYPE> dcoord (dcoord_);
   atommap.forward (dcoord.begin(), dcoord_.begin(), 3);
   
   for (int ii = 0; ii < nframes; ++ii){
@@ -504,6 +582,40 @@ session_input_tensors (
   }
   return nloc;
 }
+
+template
+int
+deepmd::
+session_input_tensors (
+    std::vector<std::pair<std::string, Tensor>> & input_tensors,
+    const std::vector<double> &	dcoord_,
+    const int &					ntypes,
+    const std::vector<int> &			datype_,
+    const std::vector<double> &	dbox,		    
+    InputNlist &				dlist, 
+    const std::vector<double> &	fparam_,
+    const std::vector<double> &	aparam_,
+    const deepmd::AtomMap<double>&	atommap,
+    const int					nghost,
+    const int					ago,
+    const std::string				scope);
+
+template
+int
+deepmd::
+session_input_tensors (
+    std::vector<std::pair<std::string, Tensor>> & input_tensors,
+    const std::vector<float> &	dcoord_,
+    const int &					ntypes,
+    const std::vector<int> &			datype_,
+    const std::vector<float> &	dbox,		    
+    InputNlist &				dlist, 
+    const std::vector<float> &	fparam_,
+    const std::vector<float> &	aparam_,
+    const deepmd::AtomMap<float>&	atommap,
+    const int					nghost,
+    const int					ago,
+    const std::string				scope);
 
 template<typename VT>
 VT
