@@ -365,8 +365,9 @@ class DPTrainer (object):
             optimizer = self.run_opt._HVD.DistributedOptimizer(optimizer)
         else:
             optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
-        grads = tf.gradients(self.l2_l, trainable_variables)
-        apply_op = optimizer.apply_gradients (zip (grads, trainable_variables),
+        optimizer = tf.mixed_precision.enable_mixed_precision_graph_rewrite(optimizer)
+        grads = optimizer.compute_gradients(self.l2_l, trainable_variables)
+        apply_op = optimizer.apply_gradients (grads,
                                               global_step=self.global_step,
                                               name='train_step')
         train_ops = [apply_op] + self._extra_train_ops
@@ -498,7 +499,7 @@ class DPTrainer (object):
             self.cur_batch = cur_batch
 
             # on-the-fly validation
-            if self.display_in_training and (cur_batch % self.disp_freq == 0):
+            if self.display_in_training and cur_batch and (cur_batch % self.disp_freq == 0):
                 if self.timing_in_training:
                     tic = time.time()
                 if self.run_opt.is_chief:
