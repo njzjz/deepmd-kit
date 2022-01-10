@@ -6,6 +6,7 @@
 #include "version.h"
 #include "neighbor_list.h"
 #include "AtomMap.h"
+#include "errors.h"
 
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/public/session.h"
@@ -26,9 +27,13 @@ typedef double ENERGYTYPE;
 
 struct NeighborListData 
 {
+  /// Array stores the core region atom's index
   std::vector<int > ilist;
+  /// Array stores the core region atom's neighbor index
   std::vector<std::vector<int> > jlist;
+  /// Array stores the number of neighbors of core region atoms
   std::vector<int > numneigh;
+  /// Array stores the the location of the first neighbor of core region atoms
   std::vector<int* > firstneigh;  
 public:
   void copy_from_nlist(const InputNlist & inlist);
@@ -38,6 +43,9 @@ public:
   void shuffle_exclude_empty(const std::vector<int> & fwd_map);
   void make_inlist(InputNlist & inlist);
 };
+
+/** @struct deepmd::InputNlist
+ **/
 
 /**
 * @brief Check if the model version is supported.
@@ -105,8 +113,17 @@ void
 get_env_nthreads(int & num_intra_nthreads,
 		 int & num_inter_nthreads);
 
+/** @struct deepmd::deepmd_exception
+ **/
+
+/**
+* @brief Throw exception if TensorFlow doesn't work.
+**/
 struct
-tf_exception: public std::exception {
+tf_exception: public deepmd::deepmd_exception {
+public:
+	tf_exception(): deepmd::deepmd_exception("TensorFlow Error!") {};
+	tf_exception(const std::string& msg): deepmd::deepmd_exception(std::string("TensorFlow Error: ") + msg) {};
 };
 
 /**

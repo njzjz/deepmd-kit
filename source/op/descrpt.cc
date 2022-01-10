@@ -2,6 +2,7 @@
 #include "ComputeDescriptor.h"
 #include "neighbor_list.h"
 #include "fmt_nlist.h"
+#include "errors.h"
 
 typedef double boxtensor_t ;
 typedef double compute_t;
@@ -49,6 +50,10 @@ public:
   }
 
   void Compute(OpKernelContext* context) override {
+    deepmd::safe_compute(context, [this](OpKernelContext* context) {this->_Compute(context);});
+  }
+
+  void _Compute(OpKernelContext* context) {
     // Grab the input tensor
     const Tensor& coord_tensor	= context->input(0);
     const Tensor& type_tensor	= context->input(1);
@@ -105,7 +110,7 @@ public:
       nei_mode = -1;
     }
     else {
-      throw std::runtime_error("invalid mesh tensor");
+      throw deepmd::deepmd_exception("invalid mesh tensor");
     }
     bool b_pbc = true;
     // if region is given extended, do not use pbc
@@ -208,22 +213,20 @@ public:
       std::vector<int> nlist_map;
       bool b_nlist_map = false;
       if (nei_mode == 3) {	
-	int * pilist, *pjrange, *pjlist;
+	int *pilist, *pnumneigh, **pfirstneigh;
 	memcpy (&pilist, &mesh(4), sizeof(int *));
-	memcpy (&pjrange, &mesh(8), sizeof(int *));
-	memcpy (&pjlist, &mesh(12), sizeof(int *));
+	memcpy (&pnumneigh, &mesh(8), sizeof(int *));
+	memcpy (&pfirstneigh, &mesh(12), sizeof(int **));
 	int inum = mesh(1);
 	assert (inum == nloc);
 	d_nlist_a.resize (inum);
 	d_nlist_r.resize (inum);
 	for (unsigned ii = 0; ii < inum; ++ii){
-	  d_nlist_r.reserve (pjrange[inum] / inum + 10);
-	}
-	for (unsigned ii = 0; ii < inum; ++ii){
 	  int i_idx = pilist[ii];
-	  for (unsigned jj = pjrange[ii]; jj < pjrange[ii+1]; ++jj){
-	    int j_idx = pjlist[jj];
-	    d_nlist_r[i_idx].push_back (j_idx);
+	  d_nlist_r[i_idx].reserve(pnumneigh[ii]);
+	  for (unsigned jj = 0; jj < pnumneigh[ii]; ++jj){
+	    int j_idx = pfirstneigh[ii][jj];
+	    d_nlist_r[i_idx].push_back(j_idx);
 	  }
 	}
       }
@@ -254,7 +257,7 @@ public:
 	::build_nlist (d_nlist_a, d_nlist_r, d_coord3, rcut_a, rcut_r, NULL);
       }
       else {
-	throw std::runtime_error("unknow neighbor mode");
+	throw deepmd::deepmd_exception("unknow neighbor mode");
       }
 
       // loop over atoms, compute descriptors for each atom

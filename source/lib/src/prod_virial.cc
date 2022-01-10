@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <cstring>
 #include "prod_virial.h"
+#include "errors.h"
 
 inline void 
 make_index_range (
@@ -15,7 +16,7 @@ make_index_range (
     idx_end   = nei_idx * 4 + 4;
   }
   else {
-    throw std::runtime_error("should no reach here");    
+    throw deepmd::deepmd_exception("should no reach here");    
   }
 }
 
@@ -43,6 +44,7 @@ prod_virial_a_cpu(
   }
 
   // compute virial of a frame
+  #pragma omp parallel for
   for (int ii = 0; ii < nloc; ++ii){
     int i_idx = ii;
 
@@ -57,7 +59,9 @@ prod_virial_a_cpu(
 	for (int dd0 = 0; dd0 < 3; ++dd0){
 	  for (int dd1 = 0; dd1 < 3; ++dd1){
 	    FPTYPE tmp_v = pref * rij[i_idx * nnei * 3 + jj * 3 + dd1] *  env_deriv[i_idx * ndescrpt * 3 + aa * 3 + dd0];
+      #pragma omp atomic
 	    virial[dd0 * 3 + dd1] -= tmp_v;
+      #pragma omp atomic
 	    atom_virial[j_idx * 9 + dd0 * 3 + dd1] -= tmp_v;
 	  }
 	}
@@ -119,6 +123,7 @@ prod_virial_r_cpu(
   }
 
   // compute virial of a frame
+  #pragma omp parallel for
   for (int ii = 0; ii < nloc; ++ii){
     int i_idx = ii;
 
@@ -130,7 +135,9 @@ prod_virial_r_cpu(
       for (int dd0 = 0; dd0 < 3; ++dd0){
 	for (int dd1 = 0; dd1 < 3; ++dd1){
 	  FPTYPE tmp_v = pref * rij[i_idx * nnei * 3 + jj * 3 + dd1] *  env_deriv[i_idx * ndescrpt * 3 + jj * 3 + dd0];
+    #pragma omp atomic
 	  virial[dd0 * 3 + dd1] -= tmp_v;
+    #pragma omp atomic
 	  atom_virial[j_idx * 9 + dd0 * 3 + dd1] -= tmp_v;
 	}
       }
