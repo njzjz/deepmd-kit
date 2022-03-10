@@ -11,8 +11,9 @@ if (USE_CUDA_TOOLKIT)
   add_definitions("-DGOOGLE_CUDA")
   add_subdirectory(src/cuda)
   set (EXTRA_LIBS ${EXTRA_LIBS} deepmd_op_cuda)
-  target_link_libraries (${libname} INTERFACE ${CUDA_LIBRARIES} ${EXTRA_LIBS})
+  target_link_libraries (${libname} INTERFACE ${EXTRA_LIBS})
   # gpu_cuda.h
+  target_link_libraries (${libname} PUBLIC ${CUDA_LIBRARIES})
   target_include_directories(${libname} PUBLIC ${CUDA_INCLUDE_DIRS})
 endif()
 
@@ -20,8 +21,9 @@ if (USE_ROCM_TOOLKIT)
   add_definitions("-DTENSORFLOW_USE_ROCM")
   add_subdirectory(src/rocm)
   set (EXTRA_LIBS ${EXTRA_LIBS} deepmd_op_rocm)
-  target_link_libraries (${libname} INTERFACE ${ROCM_LIBRARIES} ${EXTRA_LIBS})
+  target_link_libraries (${libname} INTERFACE ${EXTRA_LIBS})
   # gpu_rocm.h
+  target_link_libraries (${libname} PUBLIC ${ROCM_LIBRARIES})
   target_include_directories(${libname} PUBLIC ${ROCM_INCLUDE_DIRS})
 endif()
 
