@@ -556,7 +556,7 @@ class DescrptSeA (DescrptSe):
         inputs = tf.reshape(inputs, [-1, self.ndescrpt * natoms[0]])
         output = []
         output_qmat = []
-        if not (self.type_one_side and len(self.exclude_types) == 0) and type_embedding is None:
+        if not (self.type_one_side and len(self.exclude_types) == 0):
             for type_i in range(self.ntypes):
                 inputs_i = tf.slice (inputs,
                                      [ 0, start_index*      self.ndescrpt],
@@ -568,7 +568,7 @@ class DescrptSeA (DescrptSe):
                     filter_name = 'filter_type_all'+suffix
                 else:
                     filter_name = 'filter_type_'+str(type_i)+suffix
-                layer, qmat = self._filter(inputs_i, type_i, name=filter_name, natoms=natoms, reuse=reuse, trainable = trainable, activation_fn = self.filter_activation_fn)
+                layer, qmat = self._filter(inputs_i, type_i, name=filter_name, natoms=natoms, reuse=reuse, trainable = trainable, activation_fn = self.filter_activation_fn, type_embedding=type_embedding)
                 layer = tf.reshape(layer, [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_out()])
                 qmat  = tf.reshape(qmat,  [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_rot_mat_1() * 3])
                 output.append(layer)

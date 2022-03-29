@@ -496,6 +496,20 @@ class EnerFitting (Fitting):
             _TF_VERSION = Version(TF_VERSION)
             if (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')) and self.bias_atom_e is not None:
                 outs += tf.repeat(tf.Variable(self.bias_atom_e, dtype=self.fitting_precision, trainable=False, name="bias_atom_ei"), natoms[2:])
+            if len(self.atom_ener) > 0:
+                # atom_ener has been included in the line above, so we only need to minus zero_layer for those atoms
+                zero_layer = self._build_lower(
+                    0, natoms[0],
+                    inputs_zero, fparam, aparam,
+                    bias_atom_e=0.0, suffix=suffix, reuse=True,
+                )
+                zero_outs = tf.reshape(zero_layer, [tf.shape(inputs)[0], natoms[0]])
+                if (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')):
+                    raise RuntimeError("Please upgrade TensorFlow to 2.1 or higher!")
+                mask_type = np.zeros(self.ntypes, dtype=bool)
+                mask_type[map(lambda x: x is not None, self.atom_ener)] = True
+                mask_atom = tf.repeat(mask_type, natoms[2:])
+                outs -= zero_outs * tf.cast(mask_atom, self.fitting_precision)
 
         if self.tot_ener_zero:
             force_tot_ener = 0.0
