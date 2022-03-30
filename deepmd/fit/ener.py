@@ -475,8 +475,6 @@ class EnerFitting (Fitting):
             outs = tf.concat(outs_list, axis = 1)
         # with type embedding
         else:
-            if len(self.atom_ener) > 0:
-                raise RuntimeError("setting atom_ener is not supported by type embedding")
             atype_embed = tf.cast(atype_embed, self.fitting_precision)
             type_shape = atype_embed.get_shape().as_list()
             inputs = tf.concat(
