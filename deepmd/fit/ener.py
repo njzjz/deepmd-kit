@@ -502,7 +502,7 @@ class EnerFitting (Fitting):
                     bias_atom_e=0.0, suffix=suffix, reuse=True,
                 )
                 zero_outs = tf.reshape(zero_layer, [tf.shape(inputs)[0], natoms[0]])
-                if (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')):
+                if not (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')):
                     raise RuntimeError("Please upgrade TensorFlow to 2.1 or higher!")
                 mask_type = np.zeros(self.ntypes, dtype=bool)
                 mask_type[map(lambda x: x is not None, self.atom_ener)] = True
