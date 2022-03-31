@@ -505,7 +505,7 @@ class EnerFitting (Fitting):
                 if not (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')):
                     raise RuntimeError("Please upgrade TensorFlow to 2.1 or higher!")
                 mask_type = np.zeros(self.ntypes, dtype=bool)
-                mask_type[map(lambda x: x is not None, self.atom_ener)] = True
+                mask_type[list(map(lambda x: x is not None, self.atom_ener))] = True
                 mask_atom = tf.repeat(mask_type, natoms[2:])
                 outs -= zero_outs * tf.cast(mask_atom, self.fitting_precision)
 
