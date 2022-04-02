@@ -2,6 +2,7 @@ import shutil
 import numpy as np
 import unittest
 import dpdata
+import scipy.spatial.distance
 
 from deepmd.entrypoints.neighbor_stat import neighbor_stat
 
@@ -26,9 +27,12 @@ class TestNeighborStat(unittest.TestCase):
         sys0 = dpdata.LabeledSystem()
         sys0.data = data0
         sys0.to_deepmd_npy('system_0', set_size = 10)
+        sys0.data['nopbc'] = True
+        sys0.to_deepmd_npy('system_0_nopbc', set_size = 10)
         
     def tearDown(self):
         shutil.rmtree('system_0')
+        shutil.rmtree('system_0_nopbc')
 
     def test_neighbor_stat(self):
         # set rcut to 0. will cause a core dumped
@@ -43,5 +47,24 @@ class TestNeighborStat(unittest.TestCase):
                 # distance to (0,0,0)
                 distance = np.linalg.norm(positions, axis=1)
                 expected_neighbors = np.count_nonzero(np.logical_and(distance > 0, distance <= rcut))
+                self.assertAlmostEqual(min_nbor_dist, 1.0, 6)
+                self.assertEqual(max_nbor_size, [expected_neighbors])
+
+    def test_neighbor_stat_nopbc(self):
+        # set rcut to 0. will cause a core dumped
+        # TODO: check what is wrong
+        for rcut in (3., 6., 11.):
+            with self.subTest():
+                rcut += 1e-3 # prevent numerical errors
+                min_nbor_dist, max_nbor_size = neighbor_stat(system="system_0_nopbc", rcut=rcut, type_map=["TYPE"])
+                upper = np.ceil(rcut)+1
+                upper = np.min([upper, 5.])
+                # find centeral atom
+                X, Y, Z = np.mgrid[0:10, 0:10, 0:10]
+                positions = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
+                # distance to (0,0,0)
+                distance = scipy.spatial.distance.cdist(positions, positions)
+                expected_neighbors = np.count_nonzero(np.logical_and(distance > 0, distance <= rcut), axis=0)
+                expected_neighbors = np.max(expected_neighbors)
                 self.assertAlmostEqual(min_nbor_dist, 1.0, 6)
                 self.assertEqual(max_nbor_size, [expected_neighbors])

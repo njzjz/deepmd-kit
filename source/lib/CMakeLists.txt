@@ -4,8 +4,8 @@ set (libname ${LIB_DEEPMD})
 file(GLOB LIB_SRC src/*.cc src/*.cpp)
 file(GLOB INC_SRC include/*.h ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
-add_library(${libname} SHARED ${LIB_SRC})
-target_include_directories(${libname} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_library(${libname} SHARED ${LIB_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/kdtree/kdtree.c)
+target_include_directories(${libname} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/kdtree)
 
 if (USE_CUDA_TOOLKIT)
   add_definitions("-DGOOGLE_CUDA")

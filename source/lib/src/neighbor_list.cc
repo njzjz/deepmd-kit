@@ -2,6 +2,7 @@
 #include "device.h"
 #include <iostream>
 #include <limits>
+#include "kdtree.h"
 // #include <iomanip> 
 
 // using namespace std;
@@ -600,19 +601,13 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
     nlist0[ii].reserve (60);
     nlist1[ii].reserve (60);
   }
+  if (region != NULL) {
   for (unsigned ii = 0; ii < natoms; ++ii){
     for (unsigned jj = ii+1; jj < natoms; ++jj){
       double diff[3];
-      if (region != NULL) {
 	region->diffNearestNeighbor (posi3[jj*3+0], posi3[jj*3+1], posi3[jj*3+2],
 				     posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2],
 				     diff[0], diff[1], diff[2]);
-      }
-      else {
-	diff[0] = posi3[jj*3+0] - posi3[ii*3+0];
-	diff[1] = posi3[jj*3+1] - posi3[ii*3+1];
-	diff[2] = posi3[jj*3+2] - posi3[ii*3+2];
-      }
       double r2 = deepmd::dot3(diff, diff);
       if (r2 < rc02) {
 	nlist0[ii].push_back (jj);
@@ -624,7 +619,65 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
       }
     }
   }
+  } else {
+    std::vector<std::vector<int > > nlist;
+    find_neighbor_kdtree(posi3, rc1, nlist);
+    for (unsigned ii = 0; ii < natoms; ++ii){
+      for(unsigned tt = 0; tt < nlist[ii].size(); ++tt){
+        int jj = nlist[ii][tt];
+        if (!(jj > ii)) continue;
+        double diff[3];
+        diff[0] = posi3[jj * 3 + 0] - posi3[ii * 3 + 0];
+        diff[1] = posi3[jj * 3 + 1] - posi3[ii * 3 + 1];
+        diff[2] = posi3[jj * 3 + 2] - posi3[ii * 3 + 2];
+        double r2 = deepmd::dot3(diff, diff);
+        if (r2 < rc02) {
+          nlist0[ii].push_back (jj);
+          nlist0[jj].push_back (ii);
+        }
+        else if (r2 < rc12) {
+          nlist1[ii].push_back (jj);
+          nlist1[jj].push_back (ii);
+        }
+      }
+    }
+  }
 }
+
+
+void find_neighbor_kdtree(const std::vector<double > & posi3,
+                          const double & rcut,
+                          std::vector<std::vector<int > > & nlist)
+{
+  unsigned natoms = posi3.size()/3;
+  // init nlist and kdtree
+  std::vector<int> kd_idx;
+  kd_idx.resize(natoms);
+  double kd_pos[3];
+  struct kdtree *kd;
+  struct kdres *kd_result;
+  nlist.resize(natoms);
+  kd = kd_create(3);
+  for (unsigned ii = 0; ii < natoms; ++ii){
+    nlist[ii].reserve (60);
+    kd_idx[ii] = ii;
+    kd_insert3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], &kd_idx[ii]);
+  }
+  // find neighbors for each atoms 
+  for (unsigned ii = 0; ii < natoms; ++ii){
+    kd_result = kd_nearest_range3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], rcut);
+    while(!kd_res_end(kd_result)) {
+      int* kd_idx_t = (int*)kd_res_item(kd_result, kd_pos);
+      int jj = *kd_idx_t;
+      // skip the same atom
+      if (ii != jj) nlist[ii].push_back(jj);
+      kd_res_next(kd_result);
+    }
+    kd_res_free(kd_result);
+  }
+  kd_free(kd);
+}
+
 
 static int compute_pbc_shift (int idx, 
 			      int ncell)

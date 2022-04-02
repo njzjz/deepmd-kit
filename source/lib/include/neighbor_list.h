@@ -235,3 +235,13 @@ copy_coord (std::vector<double > &		out_c,
 	    const std::vector<int > &		in_t,
 	    const double &			rc,
 	    const SimulationRegion<double > &	region);
+
+/**
+  * @brief find nopbc neighbors using KDtree.
+  * @param[in] posi3 The positions of atoms.
+  * @param[in] rcut Radius cutoff.
+  * @param[out] nlist Returned neighbor list with atom indexes.
+  **/
+void find_neighbor_kdtree(const std::vector<double > & posi3,
+                          const double & rcut,
+                          std::vector<std::vector<int > > & nlist);
