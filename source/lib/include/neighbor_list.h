@@ -239,9 +239,15 @@ copy_coord (std::vector<double > &		out_c,
 /**
   * @brief find nopbc neighbors using KDtree.
   * @param[in] posi3 The positions of atoms.
-  * @param[in] rcut Radius cutoff.
-  * @param[out] nlist Returned neighbor list with atom indexes.
+  * @param[in] rc0 Inner radius cutoff.
+  * @param[in] rc1 Outer radius cutoff.
+  * @param[out] nlist0 Inner neighbor list with atom indexes.
+  * @param[out] nlist1 Outer neighbor list with atom indexes.
   **/
-void find_neighbor_kdtree(const std::vector<double > & posi3,
-                          const double & rcut,
-                          std::vector<std::vector<int > > & nlist);
+void
+find_neighbor_kdtree(const std::vector<double > & posi3,
+                    const double & rc0,
+                    const double & rc1,
+                    std::vector<std::vector<int > > & nlist0,
+                    std::vector<std::vector<int > > & nlist1
+                    );

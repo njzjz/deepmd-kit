@@ -620,17 +620,37 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
     }
   }
   } else {
-    std::vector<std::vector<int > > nlist;
-    find_neighbor_kdtree(posi3, rc1, nlist);
-    for (unsigned ii = 0; ii < natoms; ++ii){
-      for(unsigned tt = 0; tt < nlist[ii].size(); ++tt){
-        int jj = nlist[ii][tt];
-        if (!(jj > ii)) continue;
-        double diff[3];
-        diff[0] = posi3[jj * 3 + 0] - posi3[ii * 3 + 0];
-        diff[1] = posi3[jj * 3 + 1] - posi3[ii * 3 + 1];
-        diff[2] = posi3[jj * 3 + 2] - posi3[ii * 3 + 2];
-        double r2 = deepmd::dot3(diff, diff);
+    find_neighbor_kdtree(posi3, rc0, rc1, nlist0, nlist1);
+  }
+}
+
+
+void find_neighbor_kdtree(const std::vector<double > & posi3,
+                          const double & rc0_,
+                          const double & rc1_,
+                          std::vector<std::vector<int > > & nlist0,
+	                        std::vector<std::vector<int > > & nlist1)
+{
+  double rc0 (rc0_);
+  double rc1 (rc1_);
+  double rc02 = rc0 * rc0;
+  double rc12 = rc1 * rc1;
+  unsigned natoms = posi3.size()/3;
+  // init kdtree
+  struct kdtree *kd;
+  struct kdres *kd_result;
+  kd = kd_create(3);
+  for (unsigned ii = 0; ii < natoms; ++ii){
+    kd_insert3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], ii);
+  }
+  // find neighbors for each atoms 
+  for (unsigned ii = 0; ii < natoms; ++ii){
+    kd_result = kd_nearest_range3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], rc12);
+    while(!kd_res_end(kd_result)) {
+      double r2;
+      int jj = kd_res_item(kd_result, &r2);
+      // skip the same atom
+      if (!(jj > ii)) {
         if (r2 < rc02) {
           nlist0[ii].push_back (jj);
           nlist0[jj].push_back (ii);
@@ -640,33 +660,6 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
           nlist1[jj].push_back (ii);
         }
       }
-    }
-  }
-}
-
-
-void find_neighbor_kdtree(const std::vector<double > & posi3,
-                          const double & rcut,
-                          std::vector<std::vector<int > > & nlist)
-{
-  unsigned natoms = posi3.size()/3;
-  // init nlist and kdtree
-  double kd_pos[3];
-  struct kdtree *kd;
-  struct kdres *kd_result;
-  nlist.resize(natoms);
-  kd = kd_create(3);
-  for (unsigned ii = 0; ii < natoms; ++ii){
-    nlist[ii].reserve (60);
-    kd_insert3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], ii);
-  }
-  // find neighbors for each atoms 
-  for (unsigned ii = 0; ii < natoms; ++ii){
-    kd_result = kd_nearest_range3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], rcut);
-    while(!kd_res_end(kd_result)) {
-      int jj = kd_res_item(kd_result, kd_pos);
-      // skip the same atom
-      if (ii != jj) nlist[ii].push_back(jj);
       kd_res_next(kd_result);
     }
     kd_res_free(kd_result);
