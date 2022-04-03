@@ -169,7 +169,8 @@ public:
                 int type = d_type[d_nlist_r[ii][jj]];
                 max_nbor_size[ii * ntypes + type] += 1;
                 compute_t rij[3] = {d_coord3[d_nlist_r[ii][jj] * 3 + 0] - d_coord3[ii * 3 + 0], d_coord3[d_nlist_r[ii][jj] * 3 + 1] - d_coord3[ii * 3 + 1], d_coord3[d_nlist_r[ii][jj] * 3 + 2] - d_coord3[ii * 3 + 2]};
-                min_nbor_dist[ii * MAX_NNEI + jj] = sqrt(rij[0] * rij[0] + rij[1] * rij[1] + rij[2] * rij[2]);
+                // we do not do expensive sqrt before comparing 
+                min_nbor_dist[ii * MAX_NNEI + jj] = rij[0] * rij[0] + rij[1] * rij[1] + rij[2] * rij[2];
             }
         }
     }

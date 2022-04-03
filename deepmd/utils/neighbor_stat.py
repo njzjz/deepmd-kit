@@ -66,7 +66,8 @@ class NeighborStat():
         max_nbor_size
                 A list with ntypes integers, denotes the actual achieved max sel
         """
-        self.min_nbor_dist = 100.0
+        
+        squared_min_nbor_dist = 10000.
         self.max_nbor_size = [0] * self.ntypes
 
         # for ii in tqdm(range(len(data.system_dirs)), desc = 'DEEPMD INFO    |-> deepmd.utils.neighbor_stat\t\t\tgetting neighbor status'):
@@ -86,10 +87,10 @@ class NeighborStat():
                     if dt.size != 0:
                         dt = np.min(dt)              
                     else:
-                        dt = self.rcut
+                        dt = self.rcut ** 2
                         log.warning("Atoms with no neighbors found in %s. Please make sure it's what you expected."%jj)
                         
-                    if dt < self.min_nbor_dist:
+                    if dt < squared_min_nbor_dist:
                         if math.isclose(dt, 0., rel_tol=1e-6):
                             # it's unexpected that the distance between two atoms is zero
                             # zero distance will cause nan (#874) 
@@ -97,12 +98,13 @@ class NeighborStat():
                                 "Some atoms in %s are overlapping. Please check your"
                                 " training data to remove duplicated atoms." % jj
                             )
-                        self.min_nbor_dist = dt
+                        squared_min_nbor_dist = dt
                     for ww in range(self.ntypes):
                         var = np.max(mn[:, ww])
                         if var > self.max_nbor_size[ww]:
                             self.max_nbor_size[ww] = var
 
+        self.min_nbor_dist = np.sqrt(squared_min_nbor_dist)
         log.info('training data with min nbor dist: ' + str(self.min_nbor_dist))
         log.info('training data with max nbor size: ' + str(self.max_nbor_size))
         return self.min_nbor_dist, self.max_nbor_size
