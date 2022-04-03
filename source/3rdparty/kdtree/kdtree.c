@@ -184,7 +184,7 @@ static int insert_rec(struct kdnode **nptr, const double *pos, int data, int dir
 	return insert_rec(&(*nptr)->right, pos, data, new_dir, dim);
 }
 
-int kd_insert(struct kdtree *tree, const double *pos, void *data)
+int kd_insert(struct kdtree *tree, const double *pos, int data)
 {
 	if (insert_rec(&tree->root, pos, data, 0, tree->dim)) {
 		return -1;
