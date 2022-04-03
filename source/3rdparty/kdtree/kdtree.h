@@ -1,3 +1,4 @@
+/* adapted by Jinzhe Zeng */
 /*
 This file is part of ``kdtree'', a library for working with kd-trees.
 Copyright (C) 2007-2011 John Tsiombikas <nuclear@member.fsf.org>
@@ -51,10 +52,10 @@ void kd_clear(struct kdtree *tree);
 void kd_data_destructor(struct kdtree *tree, void (*destr)(void*));
 
 /* insert a node, specifying its position, and optional data */
-int kd_insert(struct kdtree *tree, const double *pos, void *data);
-int kd_insertf(struct kdtree *tree, const float *pos, void *data);
-int kd_insert3(struct kdtree *tree, double x, double y, double z, void *data);
-int kd_insert3f(struct kdtree *tree, float x, float y, float z, void *data);
+int kd_insert(struct kdtree *tree, const double *pos, int data);
+int kd_insertf(struct kdtree *tree, const float *pos, int data);
+int kd_insert3(struct kdtree *tree, double x, double y, double z, int data);
+int kd_insert3f(struct kdtree *tree, float x, float y, float z, int data);
 
 /* Find the nearest node from a given point.
  *
@@ -113,13 +114,13 @@ int kd_res_next(struct kdres *set);
 /* returns the data pointer (can be null) of the current result set item
  * and optionally sets its position to the pointers(s) if not null.
  */
-void *kd_res_item(struct kdres *set, double *pos);
-void *kd_res_itemf(struct kdres *set, float *pos);
-void *kd_res_item3(struct kdres *set, double *x, double *y, double *z);
-void *kd_res_item3f(struct kdres *set, float *x, float *y, float *z);
+int kd_res_item(struct kdres *set, double *pos);
+int kd_res_itemf(struct kdres *set, float *pos);
+int kd_res_item3(struct kdres *set, double *x, double *y, double *z);
+int kd_res_item3f(struct kdres *set, float *x, float *y, float *z);
 
 /* equivalent to kd_res_item(set, 0) */
-void *kd_res_item_data(struct kdres *set);
+int kd_res_item_data(struct kdres *set);
 
 
 #ifdef __cplusplus

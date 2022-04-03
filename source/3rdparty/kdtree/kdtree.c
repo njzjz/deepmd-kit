@@ -1,3 +1,4 @@
+/* adapted by Jinzhe Zeng */
 /*
 This file is part of ``kdtree'', a library for working with kd-trees.
 Copyright (C) 2007-2011 John Tsiombikas <nuclear@member.fsf.org>
@@ -61,7 +62,7 @@ struct kdhyperrect {
 struct kdnode {
 	double *pos;
 	int dir;
-	void *data;
+	int data;
 
 	struct kdnode *left, *right;	/* negative/positive side */
 };
@@ -89,7 +90,7 @@ struct kdres {
 
 
 static void clear_rec(struct kdnode *node, void (*destr)(void*));
-static int insert_rec(struct kdnode **node, const double *pos, void *data, int dir, int dim);
+static int insert_rec(struct kdnode **node, const double *pos, int data, int dir, int dim);
 static int rlist_insert(struct res_node *list, struct kdnode *item, double dist_sq);
 static void clear_results(struct kdres *set);
 
@@ -164,7 +165,7 @@ void kd_data_destructor(struct kdtree *tree, void (*destr)(void*))
 }
 
 
-static int insert_rec(struct kdnode **nptr, const double *pos, void *data, int dir, int dim)
+static int insert_rec(struct kdnode **nptr, const double *pos, int data, int dir, int dim)
 {
 	int new_dir;
 	struct kdnode *node;
@@ -193,7 +194,7 @@ static int insert_rec(struct kdnode **nptr, const double *pos, void *data, int d
 	return insert_rec(&(*nptr)->right, pos, data, new_dir, dim);
 }
 
-int kd_insert(struct kdtree *tree, const double *pos, void *data)
+int kd_insert(struct kdtree *tree, const double *pos, int data)
 {
 	if (insert_rec(&tree->root, pos, data, 0, tree->dim)) {
 		return -1;
@@ -208,7 +209,7 @@ int kd_insert(struct kdtree *tree, const double *pos, void *data)
 	return 0;
 }
 
-int kd_insertf(struct kdtree *tree, const float *pos, void *data)
+int kd_insertf(struct kdtree *tree, const float *pos, int data)
 {
 	static double sbuf[16];
 	double *bptr, *buf = 0;
@@ -241,7 +242,7 @@ int kd_insertf(struct kdtree *tree, const float *pos, void *data)
 	return res;
 }
 
-int kd_insert3(struct kdtree *tree, double x, double y, double z, void *data)
+int kd_insert3(struct kdtree *tree, double x, double y, double z, int data)
 {
 	double buf[3];
 	buf[0] = x;
@@ -250,7 +251,7 @@ int kd_insert3(struct kdtree *tree, double x, double y, double z, void *data)
 	return kd_insert(tree, buf, data);
 }
 
-int kd_insert3f(struct kdtree *tree, float x, float y, float z, void *data)
+int kd_insert3f(struct kdtree *tree, float x, float y, float z, int data)
 {
 	double buf[3];
 	buf[0] = x;
@@ -638,7 +639,7 @@ int kd_res_next(struct kdres *rset)
 	return rset->riter != 0;
 }
 
-void *kd_res_item(struct kdres *rset, double *pos)
+int kd_res_item(struct kdres *rset, double *pos)
 {
 	if(rset->riter) {
 		if(pos) {
@@ -649,7 +650,7 @@ void *kd_res_item(struct kdres *rset, double *pos)
 	return 0;
 }
 
-void *kd_res_itemf(struct kdres *rset, float *pos)
+int kd_res_itemf(struct kdres *rset, float *pos)
 {
 	if(rset->riter) {
 		if(pos) {
@@ -663,7 +664,7 @@ void *kd_res_itemf(struct kdres *rset, float *pos)
 	return 0;
 }
 
-void *kd_res_item3(struct kdres *rset, double *x, double *y, double *z)
+int kd_res_item3(struct kdres *rset, double *x, double *y, double *z)
 {
 	if(rset->riter) {
 		if(x) *x = rset->riter->item->pos[0];
@@ -674,7 +675,7 @@ void *kd_res_item3(struct kdres *rset, double *x, double *y, double *z)
 	return 0;
 }
 
-void *kd_res_item3f(struct kdres *rset, float *x, float *y, float *z)
+int kd_res_item3f(struct kdres *rset, float *x, float *y, float *z)
 {
 	if(rset->riter) {
 		if(x) *x = rset->riter->item->pos[0];
@@ -685,7 +686,7 @@ void *kd_res_item3f(struct kdres *rset, float *x, float *y, float *z)
 	return 0;
 }
 
-void *kd_res_item_data(struct kdres *set)
+int kd_res_item_data(struct kdres *set)
 {
 	return kd_res_item(set, 0);
 }

@@ -651,8 +651,6 @@ void find_neighbor_kdtree(const std::vector<double > & posi3,
 {
   unsigned natoms = posi3.size()/3;
   // init nlist and kdtree
-  std::vector<int> kd_idx;
-  kd_idx.resize(natoms);
   double kd_pos[3];
   struct kdtree *kd;
   struct kdres *kd_result;
@@ -660,15 +658,13 @@ void find_neighbor_kdtree(const std::vector<double > & posi3,
   kd = kd_create(3);
   for (unsigned ii = 0; ii < natoms; ++ii){
     nlist[ii].reserve (60);
-    kd_idx[ii] = ii;
-    kd_insert3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], &kd_idx[ii]);
+    kd_insert3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], ii);
   }
   // find neighbors for each atoms 
   for (unsigned ii = 0; ii < natoms; ++ii){
     kd_result = kd_nearest_range3(kd, posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2], rcut);
     while(!kd_res_end(kd_result)) {
-      int* kd_idx_t = (int*)kd_res_item(kd_result, kd_pos);
-      int jj = *kd_idx_t;
+      int jj = kd_res_item(kd_result, kd_pos);
       // skip the same atom
       if (ii != jj) nlist[ii].push_back(jj);
       kd_res_next(kd_result);
