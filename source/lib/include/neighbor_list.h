@@ -224,6 +224,16 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
 	     const double &			rc1_,
 	     const SimulationRegion<double > * region = NULL);
 
+// float rcut version. It does not make sense to cast float rcut to
+// double (precision will still float)
+void
+build_nlist (std::vector<std::vector<int > > & nlist0,
+	     std::vector<std::vector<int > > & nlist1,
+	     const std::vector<double > &	coord,
+	     const float &			rc0_,
+	     const float &			rc1_,
+	     const SimulationRegion<double > * region = NULL);
+
 // copy periodic images for the system
 void 
 copy_coord (std::vector<double > &		out_c, 
