@@ -107,6 +107,40 @@ __global__ void build_nlist(
     }
 }
 
+__global__ void build_nlist(
+    int * ilist, 
+    int * temp_nlist,
+    const double * c_cpy, 
+    const float rcut2,
+    const int nloc,
+    const int nall,
+    const int mem_size)
+{
+    const unsigned int atom_idx = blockIdx.x;
+    const unsigned int neighbor_idx = blockIdx.y * blockDim.y + threadIdx.y;
+    if(neighbor_idx<nall)
+    {
+        int * neighbor_row = temp_nlist + atom_idx * mem_size;
+        if(neighbor_idx==atom_idx)
+        {
+            ilist[atom_idx]=atom_idx;
+        }
+        else
+        {
+            const double * ccoord=c_cpy+atom_idx*3;
+            const double * ncoord=c_cpy+neighbor_idx*3;
+            float diff[3];
+            for(int kk=0;kk<3;kk++){
+                diff[kk] = (float) ccoord[kk] - (float) ncoord[kk];
+            }
+            float r2 = dev_dot(diff, diff);
+            if(r2<rcut2){
+                neighbor_row[neighbor_idx]=neighbor_idx;
+            }
+        }
+    }
+}
+
 __global__ void fill_nlist(
     int ** firstneigh,
     const int * temp_nlist,
@@ -167,7 +201,8 @@ int build_nlist_gpu(
     int * temp_nlist = nlist_data; //nloc*mem_size
     int * nei_order = temp_nlist + nloc * mem_size;
     nlist.inum = nloc;
-    FPTYPE rcut2 = rcut * rcut;
+    // it's meaningless to cast float rcut to double
+    float rcut2 = rcut * rcut;
     
     
     dim3 block_grid(nloc, nblock);
