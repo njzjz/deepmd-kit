@@ -654,19 +654,23 @@ build_nlist (std::vector<std::vector<int > > & nlist0,
   }
   for (unsigned ii = 0; ii < natoms; ++ii){
     for (unsigned jj = ii+1; jj < natoms; ++jj){
-      float diff[3];
+      double diff[3];
+      float diff_f[3];
       if (region != NULL) {
         region->diffNearestNeighbor (
-            static_cast<float>(posi3[jj*3+0]), static_cast<float>(posi3[jj*3+1]), static_cast<float>(posi3[jj*3+2]),
-            static_cast<float>(posi3[ii*3+0]), static_cast<float>(posi3[ii*3+1]), static_cast<float>(posi3[ii*3+2]),
+            posi3[jj*3+0], posi3[jj*3+1], posi3[jj*3+2],
+            posi3[ii*3+0], posi3[ii*3+1], posi3[ii*3+2],
             diff[0], diff[1], diff[2]);
+        diff_f[0] = static_cast<float>(diff[0]);
+        diff_f[1] = static_cast<float>(diff[1]);
+        diff_f[2] = static_cast<float>(diff[2]);
       }
       else {
-        diff[0] = static_cast<float>(posi3[jj*3+0]) - static_cast<float>(posi3[ii*3+0]);
-        diff[1] = static_cast<float>(posi3[jj*3+1]) - static_cast<float>(posi3[ii*3+1]);
-        diff[2] = static_cast<float>(posi3[jj*3+2]) - static_cast<float>(posi3[ii*3+2]);
+        diff_f[0] = static_cast<float>(posi3[jj*3+0]) - static_cast<float>(posi3[ii*3+0]);
+        diff_f[1] = static_cast<float>(posi3[jj*3+1]) - static_cast<float>(posi3[ii*3+1]);
+        diff_f[2] = static_cast<float>(posi3[jj*3+2]) - static_cast<float>(posi3[ii*3+2]);
       }
-      float r2 = deepmd::dot3(diff, diff);
+      float r2 = deepmd::dot3<float>(diff_f, diff_f);
       if (r2 < rc02) {
         nlist0[ii].push_back (jj);
         nlist0[jj].push_back (ii);
