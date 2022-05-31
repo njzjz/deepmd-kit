@@ -256,6 +256,7 @@ def fitting_ener():
     doc_neuron = 'The number of neurons in each hidden layers of the fitting net. When two hidden layers are of the same size, a skip connection is built.'
     doc_activation_function = f'The activation function in the fitting net. Supported activation functions are {list_to_doc(ACTIVATION_FN_DICT.keys())}'
     doc_precision = f'The precision of the fitting net parameters, supported options are {list_to_doc(PRECISION_DICT.keys())} Default follows the interface precision.'
+    doc_bias_atom_e_precision = f'The precision of bias atom energy. If not set or null, follow the network precision. Supported options are {list_to_doc(PRECISION_DICT.keys())}.'
     doc_resnet_dt = 'Whether to use a "Timestep" in the skip connection'
     doc_trainable = 'Whether the parameters in the fitting net are trainable. This option can be\n\n\
 - bool: True if all parameters of the fitting net are trainable, False otherwise.\n\n\
@@ -270,6 +271,7 @@ def fitting_ener():
         Argument("neuron", list, optional = True, default = [120,120,120], alias = ['n_neuron'], doc = doc_neuron),
         Argument("activation_function", str, optional = True, default = 'tanh', doc = doc_activation_function),
         Argument("precision", str, optional = True, default = 'default', doc = doc_precision),
+        Argument("bias_atom_e_precision", [str, None], optional=True, doc=doc_bias_atom_e_precision)
         Argument("resnet_dt", bool, optional = True, default = True, doc = doc_resnet_dt),
         Argument("trainable", [list,bool], optional = True, default = True, doc = doc_trainable),
         Argument("rcond", float, optional = True, default = 1e-3, doc = doc_rcond),

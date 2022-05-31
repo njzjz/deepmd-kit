@@ -75,6 +75,8 @@ class EnerFitting (Fitting):
             The activation function :math:`\boldsymbol{\phi}` in the embedding net. Supported options are {0}
     precision
             The precision of the embedding net parameters. Supported options are {1}                
+    bias_atom_e_precision : str, default=None
+            The bias atom energy precision. If None, follow the network precision.
     uniform_seed
             Only for the purpose of backward compatibility, retrieves the old behavior of using the random seed
     """
@@ -92,6 +94,7 @@ class EnerFitting (Fitting):
                   atom_ener : List[float] = [],
                   activation_function : str = 'tanh',
                   precision : str = 'default',
+                  bias_atom_e_precision: str = None,
                   uniform_seed: bool = False
     ) -> None:
         """
@@ -123,6 +126,10 @@ class EnerFitting (Fitting):
         self.tot_ener_zero = tot_ener_zero
         self.fitting_activation_fn = get_activation_func(activation_function)
         self.fitting_precision = get_precision(precision)
+        if bias_atom_e_precision is not None:
+            self.bias_atom_e_precision = get_precision(bias_atom_e_precision)
+        else:
+            self.bias_atom_e_precision = self.fitting_precision
         self.trainable = trainable
         if self.trainable is None:
             self.trainable = [True for ii in range(len(self.n_neuron) + 1)]
@@ -322,6 +329,8 @@ class EnerFitting (Fitting):
                     initial_variables = self.fitting_net_variables,
                     mixed_prec = self.mixed_prec)
             if (not self.uniform_seed) and (self.seed is not None): self.seed += self.seed_shift
+        # to prevent bias_atom_e is quite large
+        layer = tf.cast(layer, self.bias_atom_e_precision)
         final_layer = one_layer(
             layer, 
             1, 
@@ -330,7 +339,7 @@ class EnerFitting (Fitting):
             name='final_layer'+suffix, 
             reuse=reuse, 
             seed = self.seed, 
-            precision = self.fitting_precision, 
+            precision = self.bias_atom_e_precision, 
             trainable = self.trainable[-1],
             uniform_seed = self.uniform_seed,
             initial_variables = self.fitting_net_variables,
@@ -501,7 +510,7 @@ class EnerFitting (Fitting):
             # tf.repeat is avaiable in TF>=2.1 or TF 1.15
             _TF_VERSION = Version(TF_VERSION)
             if (Version('1.15') <= _TF_VERSION < Version('2') or _TF_VERSION >= Version('2.1')) and self.bias_atom_e is not None:
-                outs += tf.repeat(tf.Variable(self.bias_atom_e, dtype=self.fitting_precision, trainable=False, name="bias_atom_ei"), natoms[2:])
+                outs += tf.repeat(tf.Variable(self.bias_atom_e, dtype=self.bias_atom_e_precision, trainable=False, name="bias_atom_ei"), natoms[2:])
 
         if self.tot_ener_zero:
             force_tot_ener = 0.0
