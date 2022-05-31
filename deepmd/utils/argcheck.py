@@ -271,7 +271,7 @@ def fitting_ener():
         Argument("neuron", list, optional = True, default = [120,120,120], alias = ['n_neuron'], doc = doc_neuron),
         Argument("activation_function", str, optional = True, default = 'tanh', doc = doc_activation_function),
         Argument("precision", str, optional = True, default = 'default', doc = doc_precision),
-        Argument("bias_atom_e_precision", [str, None], optional=True, doc=doc_bias_atom_e_precision)
+        Argument("bias_atom_e_precision", [str, None], optional=True, doc=doc_bias_atom_e_precision),
         Argument("resnet_dt", bool, optional = True, default = True, doc = doc_resnet_dt),
         Argument("trainable", [list,bool], optional = True, default = True, doc = doc_trainable),
         Argument("rcond", float, optional = True, default = 1e-3, doc = doc_rcond),
