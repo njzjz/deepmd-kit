@@ -16,7 +16,7 @@ from deepmd.env import GLOBAL_ENER_FLOAT_PRECISION
 from deepmd.fit import EnerFitting, WFCFitting, PolarFittingLocFrame, PolarFittingSeA, GlobalPolarFittingSeA, DipoleFittingSeA
 from deepmd.descriptor import Descriptor
 from deepmd.model import EnerModel, WFCModel, DipoleModel, PolarModel, GlobalPolarModel
-from deepmd.loss import EnerStdLoss, EnerDipoleLoss, TensorLoss
+from deepmd.loss import EnerStdLoss, EnerDipoleLoss, TensorLoss, RelativeEnergyLoss
 from deepmd.utils.errors import GraphTooLargeError
 from deepmd.utils.learning_rate import LearningRateExp
 from deepmd.utils.neighbor_stat import NeighborStat
@@ -186,6 +186,8 @@ class DPTrainer (object):
                 self.loss = EnerStdLoss(**loss_param)
             elif loss_type == 'ener_dipole':
                 self.loss = EnerDipoleLoss(**loss_param)
+            elif loss_type == 'rel_ener':
+                self.loss = RelativeEnergyLoss(**loss_param)
             else:
                 raise RuntimeError('unknow loss type')
         elif fitting_type == 'wfc':

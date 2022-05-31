@@ -505,8 +505,22 @@ def loss_tensor():
     ]
 
 
+def loss_rel_ener() -> List[Argument]:
+    """Returns arguments for `RelativeEnergyLoss`."""
+    doc_start_pref_re = start_pref('rel_energy')
+    doc_limit_pref_re = limit_pref('rel_energy')
+    doc_start_pref_f = start_pref('force')
+    doc_limit_pref_f = limit_pref('force')
+    return [
+        Argument("start_pref_re", [float, int], optional=True, default=0.02, doc=doc_start_pref_re),
+        Argument("limit_pref_re", [float, int], optional=True, default=1.00, doc=doc_limit_pref_re),
+        Argument("start_pref_f", [float, int], optional=True, default=1000, doc=doc_start_pref_f),
+        Argument("limit_pref_f", [float, int], optional=True, default=1.00, doc=doc_limit_pref_f),
+    ]  
+
+
 def loss_variant_type_args():
-    doc_loss = 'The type of the loss. When the fitting type is `ener`, the loss type should be set to `ener` or left unset. When the fitting type is `dipole` or `polar`, the loss type should be set to `tensor`. \n\.'
+    doc_loss = 'The type of the loss. When the fitting type is `ener`, the loss type should be set to `ener`, `rel_ener`, or left unset. When the fitting type is `dipole` or `polar`, the loss type should be set to `tensor`. \n\.'
 
     
     return Variant("type", 
@@ -514,6 +528,7 @@ def loss_variant_type_args():
                     Argument("tensor", dict, loss_tensor()),
                     #Argument("polar", dict, loss_tensor()),
                     #Argument("global_polar", dict, loss_tensor("global"))
+                    Argument("rel_ener", dict, loss_rel_ener()),
                     ],
                    optional = True,
                    default_tag = 'ener',
