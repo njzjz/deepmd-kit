@@ -51,7 +51,13 @@ def _init_models():
     np.testing.assert_equal(ret, 0, 'DP model compression failed!')
     return INPUT, frozen_model, compressed_model
 
-INPUT, FROZEN_MODEL, COMPRESSED_MODEL = _init_models()
+def setUpModule():
+    INPUT, FROZEN_MODEL, COMPRESSED_MODEL = _init_models()
+
+INPUT = str(tests_path / "input.json")
+FROZEN_MODEL = str(tests_path / "dp-original-type-one-side-exclude-types.pb")
+COMPRESSED_MODEL = str(tests_path / "dp-compressed-type-one-side-exclude-types.pb")
+
 
 class TestDeepPotAPBCTypeOneSideExcludeTypes(unittest.TestCase) :
     @classmethod
