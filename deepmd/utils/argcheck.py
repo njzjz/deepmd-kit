@@ -285,6 +285,16 @@ def fitting_ener():
         Argument("atom_ener", list, optional = True, default = [], doc = doc_atom_ener)
     ]
 
+def fitting_hybrid_ener() -> List[Argument]:
+    """Arguments of the hybrid energy fitting network."""
+    doc_list = 'A list of hybrid definitions'
+    doc_suffixes = 'The suffixes of the fitting net. The length of this list should be equal to the length of `list`.'
+    
+    return [
+        Argument("list", list, optional = False, doc = doc_list),
+        Argument("suffixes", list, optional = True, doc = doc_suffixes)
+    ]
+
 
 def fitting_polar():
     doc_neuron = 'The number of neurons in each hidden layers of the fitting net. When two hidden layers are of the same size, a skip connection is built.'
@@ -338,10 +348,12 @@ def fitting_dipole():
 def fitting_variant_type_args():
     doc_descrpt_type = 'The type of the fitting. See explanation below. \n\n\
 - `ener`: Fit an energy model (potential energy surface).\n\n\
+- `hybrid_ener`: Fit a hybrid energy model.\n\n\
 - `dipole`: Fit an atomic dipole model. Global dipole labels or atomic dipole labels for all the selected atoms (see `sel_type`) should be provided by `dipole.npy` in each data system. The file either has number of frames lines and 3 times of number of selected atoms columns, or has number of frames lines and 3 columns. See `loss` parameter.\n\n\
 - `polar`: Fit an atomic polarizability model. Global polarizazbility labels or atomic polarizability labels for all the selected atoms (see `sel_type`) should be provided by `polarizability.npy` in each data system. The file eith has number of frames lines and 9 times of number of selected atoms columns, or has number of frames lines and 9 columns. See `loss` parameter.\n\n'
 
     return Variant("type", [Argument("ener", dict, fitting_ener()),
+                            Argument("hybrid_ener", dict, fitting_hybrid_ener()),
                             Argument("dipole", dict, fitting_dipole()),
                             Argument("polar", dict, fitting_polar()),
                             ], 

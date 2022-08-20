@@ -1,7 +1,9 @@
+from abc improt ABCMeta, abstractmethod
+
 from deepmd.env import tf
 from deepmd.utils import Plugin, PluginVariant
 
-class Fitting:
+class Fitting(metaclass=ABCMeta):
     @property
     def precision(self) -> tf.DType:
         """Precision of fitting network."""

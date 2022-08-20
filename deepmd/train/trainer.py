@@ -14,7 +14,7 @@ from deepmd.env import tf, tfv2
 from deepmd.env import get_tf_session_config
 from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
 from deepmd.env import GLOBAL_ENER_FLOAT_PRECISION
-from deepmd.fit import EnerFitting, WFCFitting, PolarFittingLocFrame, PolarFittingSeA, GlobalPolarFittingSeA, DipoleFittingSeA
+from deepmd.fit import get_fitting
 from deepmd.descriptor import Descriptor
 from deepmd.model import EnerModel, WFCModel, DipoleModel, PolarModel, GlobalPolarModel
 from deepmd.loss import EnerStdLoss, EnerDipoleLoss, TensorLoss
@@ -85,31 +85,7 @@ class DPTrainer (object):
         # fitting net
         fitting_type = fitting_param.get('type', 'ener')
         self.fitting_type = fitting_type
-        fitting_param.pop('type', None)
-        fitting_param['descrpt'] = self.descrpt
-        if fitting_type == 'ener':
-            self.fitting = EnerFitting(**fitting_param)
-        # elif fitting_type == 'wfc':            
-        #     self.fitting = WFCFitting(fitting_param, self.descrpt)
-        elif fitting_type == 'dipole':
-            if descrpt_type == 'se_e2_a':
-                self.fitting = DipoleFittingSeA(**fitting_param)
-            else :
-                raise RuntimeError('fitting dipole only supports descrptors: se_e2_a')
-        elif fitting_type == 'polar':
-            # if descrpt_type == 'loc_frame':
-            #     self.fitting = PolarFittingLocFrame(fitting_param, self.descrpt)
-            if descrpt_type == 'se_e2_a':
-                self.fitting = PolarFittingSeA(**fitting_param)
-            else :
-                raise RuntimeError('fitting polar only supports descrptors: loc_frame and se_e2_a')
-        elif fitting_type == 'global_polar':
-            if descrpt_type == 'se_e2_a':
-                self.fitting = GlobalPolarFittingSeA(**fitting_param)
-            else :
-                raise RuntimeError('fitting global_polar only supports descrptors: loc_frame and se_e2_a')
-        else :
-            raise RuntimeError('unknow fitting type ' + fitting_type)
+        self.fitting = get_fitting(fitting_type, descrpt_type)
 
         # type embedding
         if typeebd_param is not None:
