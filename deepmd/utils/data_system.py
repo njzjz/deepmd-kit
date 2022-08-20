@@ -220,13 +220,7 @@ class DeepmdDataSystem() :
         """
         for kk in adict :
             self.add(kk, 
-                     adict[kk]['ndof'], 
-                     atomic=adict[kk]['atomic'], 
-                     must=adict[kk]['must'], 
-                     high_prec=adict[kk]['high_prec'], 
-                     type_sel=adict[kk]['type_sel'], 
-                     repeat=adict[kk]['repeat'],
-                     default=adict[kk]['default'],
+                     **adict[kk],
                      )
 
     def add(self, 
@@ -238,6 +232,7 @@ class DeepmdDataSystem() :
             type_sel : List[int] = None,
             repeat : int = 1,
             default: float=0.,
+            data_type: type = None,
     ) :
         """
         Add a data item that to be loaded
@@ -263,9 +258,14 @@ class DeepmdDataSystem() :
                 The data will be repeated `repeat` times.
         default, default=0.
                 Default value of data
+        data_type: type, optional
+                type of data. If specified, the data will be cast to this type. high_prec is
+                ignored if this is specified.
         """
         for ii in self.data_systems:
-            ii.add(key, ndof, atomic=atomic, must=must, high_prec=high_prec, repeat=repeat, type_sel=type_sel, default=default)
+            ii.add(key, ndof, atomic=atomic, must=must, high_prec=high_prec, repeat=repeat, type_sel=type_sel, default=default
+                   data_type=data_type,
+                )
 
     def reduce(self, key_out, key_in):
         """
