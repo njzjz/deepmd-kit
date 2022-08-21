@@ -126,7 +126,7 @@ class HybridEnerFitting(Fitting):
         outs = []
         for ii, ss in zip(self.fitting_list, self.suffixes):
             out = ii.build(inputs, natoms, input_dict, reuse, ss + suffix)
-            outs.append(tf.reshape(out), [-1])
+            outs.append(tf.reshape(out, [-1]))
         # sum the first axis
         return tf.reduce_sum(outs, 0)
 

@@ -11,6 +11,7 @@ class ChargeEnerFitting(EnerFitting):
     def __init__ (self, *args, **kwargs) -> None:
         EnerFitting.__init__(self, *args, **kwargs)
         add_data_requirement('charge', 1, atomic=True,  must=False, high_prec=False)
+        self.dim_descrpt += 1
 
     def build (self, 
                inputs : tf.Tensor,
@@ -52,13 +53,31 @@ class ChargeEnerFitting(EnerFitting):
         atomic_zero = tf.zeros_like(charge, dtype=GLOBAL_TF_FLOAT_PRECISION)
 
         # inputs
-        inputs = tf.reshape(inputs, [-1, natoms[0], self.dim_descrpt])
+        inputs = tf.reshape(inputs, [-1, natoms[0], self.dim_descrpt - 1])
         inputs_charged = tf.concat([inputs, charge], axis = 2)
         inputs_neutral = tf.concat([inputs, atomic_zero], axis = 2)
         # fitting
-        fitting_charged = EnerFitting.build(self, inputs_charged, natoms, input_dict, True, suffix)
+        fitting_charged = EnerFitting.build(self, inputs_charged, natoms, input_dict, False, suffix)
         fitting_neutral = EnerFitting.build(self, inputs_neutral, natoms, input_dict, True, suffix)
         fitting_diff = fitting_charged - fitting_neutral
         # skip if charge is zero
-        result = tf.cond(tf.count_nonzero(charge), lambda: fitting_diff, lambda: atomic_zero)
+        result = tf.cond(tf.count_nonzero(charge) > 0, lambda: fitting_diff, lambda: atomic_zero)
         return result
+
+    def _init_variables(self,
+                       graph: tf.Graph,
+                       graph_def: tf.GraphDef,
+                       suffix : str = "",
+    ) -> None:
+        """
+        Init the fitting net variables with the given dict
+        Parameters
+        ----------
+        graph : tf.Graph
+            The input frozen model graph
+        graph_def : tf.GraphDef
+            The input frozen model graph_def
+        suffix : str
+            suffix to name scope
+        """
+        return

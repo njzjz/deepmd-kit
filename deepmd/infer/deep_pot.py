@@ -121,6 +121,14 @@ class DeepPot(DeepEval):
             self.t_aparam = None
             self.has_aparam = False
 
+        if 'load/t_charge' in operations:
+            self.tensors.update({"t_charge": "t_charge:0"})
+            self.has_charge = True
+        else:
+            log.debug(f"Could not get tensor 't_charge:0'")
+            self.t_charge = None
+            self.has_aparam = False
+
         # now load tensors to object attributes
         for attr_name, tensor_name in self.tensors.items():
             self._get_tensor(tensor_name, attr_name)
@@ -214,6 +222,7 @@ class DeepPot(DeepEval):
         fparam: Optional[np.ndarray] = None,
         aparam: Optional[np.ndarray] = None,
         efield: Optional[np.ndarray] = None,
+        charge: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, ...]:
         """Evaluate the energy, force and virial by using this DP.
 
@@ -260,8 +269,9 @@ class DeepPot(DeepEval):
             The atomic virial. Only returned when atomic == True
         """
         # reshape coords before getting shape
+        #print("charge", charge)
         natoms, numb_test = self._get_natoms_and_nframes(coords, atom_types)
-        output = self._eval_func(self._eval_inner, numb_test, natoms)(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic, efield = efield)
+        output = self._eval_func(self._eval_inner, numb_test, natoms)(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic, efield = efield, charge=charge)
 
         if self.modifier_type is not None:
             if atomic:
@@ -283,7 +293,8 @@ class DeepPot(DeepEval):
         fparam=None,
         aparam=None,
         atomic=False,
-        efield=None
+        efield=None,
+        charge=None,
     ):
         # standarize the shape of inputs
         natoms, nframes = self._get_natoms_and_nframes(coords, atom_types)
@@ -354,6 +365,9 @@ class DeepPot(DeepEval):
             feed_dict_test[self.t_fparam] = np.reshape(fparam, [-1])
         if self.has_aparam:
             feed_dict_test[self.t_aparam] = np.reshape(aparam, [-1])
+        if self.has_charge:
+            #print("charge",charge)
+            feed_dict_test[self.t_charge] = np.reshape(charge, [-1])
         return feed_dict_test, imap
 
     def _eval_inner(
@@ -364,10 +378,12 @@ class DeepPot(DeepEval):
         fparam=None,
         aparam=None,
         atomic=False,
-        efield=None
+        efield=None,
+        charge=None,
     ):
+        #print("charge", charge)
         natoms, nframes = self._get_natoms_and_nframes(coords, atom_types)
-        feed_dict_test, imap = self._prepare_feed_dict(coords, cells, atom_types, fparam, aparam, efield)
+        feed_dict_test, imap = self._prepare_feed_dict(coords, cells, atom_types, fparam, aparam, efield, charge=charge)
         t_out = [self.t_energy, 
                  self.t_force, 
                  self.t_virial]
