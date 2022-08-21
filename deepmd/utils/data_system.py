@@ -263,7 +263,7 @@ class DeepmdDataSystem() :
                 ignored if this is specified.
         """
         for ii in self.data_systems:
-            ii.add(key, ndof, atomic=atomic, must=must, high_prec=high_prec, repeat=repeat, type_sel=type_sel, default=default
+            ii.add(key, ndof, atomic=atomic, must=must, high_prec=high_prec, repeat=repeat, type_sel=type_sel, default=default,
                    data_type=data_type,
                 )
 
