@@ -1,4 +1,4 @@
-from .fitting improt Fitting
+from .fitting import Fitting
 from . import EnerFitting, WFCFitting, PolarFittingLocFrame, PolarFittingSeA, GlobalPolarFittingSeA, DipoleFittingSeA
 from .hybrid_ener import HybridEnerFitting
 
