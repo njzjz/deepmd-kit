@@ -27,6 +27,8 @@ def get_fitting(fitting_type: str, descrpt_type: str) -> Fitting:
         return EnerFitting(**fitting_param)
     elif fitting_type == 'hybrid_ener':
         return HybridEnerFitting(**fitting_param)
+    elif fitting_type == 'charge_ener':
+        return HybridEnerFitting(**fitting_param)
     # elif fitting_type == 'wfc':            
     #     return WFCFitting(fitting_param, self.descrpt)
     elif fitting_type == 'dipole':
