@@ -121,7 +121,6 @@ def add_data_requirement(
     type_sel: bool = None,
     repeat: int = 1,
     default: float = 0.,
-    data_type: type = None,
 ):
     """Specify data requirements for training.
 
@@ -145,9 +144,6 @@ def add_data_requirement(
         if specify repaeat data `repeat` times, by default 1
     default : float, optional, default=0.
         default value of data
-    data_type : type, optional
-        type of data. If specified, the data will be cast to this type. high_prec is
-        ignored if this is specified.
     """
     data_requirement[key] = {
         "ndof": ndof,
@@ -157,7 +153,6 @@ def add_data_requirement(
         "type_sel": type_sel,
         "repeat": repeat,
         "default": default,
-        "data_type": data_type,
     }
 
 

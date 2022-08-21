@@ -437,7 +437,13 @@ class DeepmdData() :
                     = self._load_data(set_name, 
                                       kk, 
                                       nframes, 
-                                      **self.data_dict[kk],
+                                      self.data_dict[kk]['ndof'],
+                                      atomic = self.data_dict[kk]['atomic'],
+                                      high_prec = self.data_dict[kk]['high_prec'],
+                                      must = self.data_dict[kk]['must'], 
+                                      type_sel = self.data_dict[kk]['type_sel'],
+                                      repeat = self.data_dict[kk]['repeat'],
+                                      default=self.data_dict[kk]['default'],
                                       )
         for kk in self.data_dict.keys():
             if self.data_dict[kk]['reduce'] is not None :
@@ -450,9 +456,7 @@ class DeepmdData() :
         return data
 
 
-    def _load_data(self, set_name, key, nframes, ndof_, atomic = False, must = True, repeat = 1, high_prec = False, type_sel = None, default: float=0.,
-                   data_type: type = None,
-        ):
+    def _load_data(self, set_name, key, nframes, ndof_, atomic = False, must = True, repeat = 1, high_prec = False, type_sel = None, default: float=0.):
         if atomic:
             natoms = self.natoms
             idx_map = self.idx_map
@@ -488,12 +492,10 @@ class DeepmdData() :
         elif must:
             raise RuntimeError("%s not found!" % path)
         else:
-            if data_type is None:
-                if high_prec:
-                    data_type = GLOBAL_ENER_FLOAT_PRECISION
-                else:
-                    data_type = GLOBAL_NP_FLOAT_PRECISION
-            data = np.full([nframes, ndof], default, dtype=data_type)
+            if high_prec :
+                data = np.full([nframes, ndof], default, dtype=GLOBAL_ENER_FLOAT_PRECISION)                
+            else :
+                data = np.full([nframes, ndof], default, dtype=GLOBAL_NP_FLOAT_PRECISION)
             if repeat != 1:
                 data = np.repeat(data, repeat).reshape([nframes, -1])
             return np.float32(0.0), data
