@@ -4,7 +4,7 @@ from typing import Tuple, List
 
 from deepmd.env import tf
 from .fitting import Fitting
-from .get_fitting import get_fitting
+import deepmd.fit.get_fitting
 
 
 class HybridEnerFitting(Fitting):
@@ -18,6 +18,7 @@ class HybridEnerFitting(Fitting):
         The suffixes of the scope. If None, use _index as suffixes.
     """
     def __init__ (self, 
+                  descrpt : tf.Tensor,
                   list: list,
                   suffixes: list = None,
     ) -> None:
@@ -31,7 +32,8 @@ class HybridEnerFitting(Fitting):
                 formatted_fitting_list.append(ii)
             elif isinstance(ii, dict):
                 # descrpt does not affect energy fitting
-                formatted_fitting_list.append(get_fitting(ii['type'], None)(**ii))
+                ii['descrpt'] = descrpt
+                formatted_fitting_list.append(deepmd.fit.get_fitting.get_fitting_network(ii.get('type', 'ener'), None, ii))
             else:
                 raise NotImplementedError
         self.fitting_list = formatted_fitting_list
@@ -88,7 +90,6 @@ class HybridEnerFitting(Fitting):
         for ff in self.fitting_list:
             ff.compute_input_stats(all_stat)
             
-    @cast_precision
     def build (self, 
                inputs : tf.Tensor,
                natoms : tf.Tensor,

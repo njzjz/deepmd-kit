@@ -14,7 +14,7 @@ from deepmd.env import tf, tfv2
 from deepmd.env import get_tf_session_config
 from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
 from deepmd.env import GLOBAL_ENER_FLOAT_PRECISION
-from deepmd.fit import get_fitting
+from deepmd.fit.get_fitting import get_fitting_network
 from deepmd.descriptor import Descriptor
 from deepmd.model import EnerModel, WFCModel, DipoleModel, PolarModel, GlobalPolarModel
 from deepmd.loss import EnerStdLoss, EnerDipoleLoss, TensorLoss
@@ -85,7 +85,8 @@ class DPTrainer (object):
         # fitting net
         fitting_type = fitting_param.get('type', 'ener')
         self.fitting_type = fitting_type
-        self.fitting = get_fitting(fitting_type, descrpt_type)
+        fitting_param['descrpt'] = self.descrpt
+        self.fitting = get_fitting_network(fitting_type, descrpt_type, fitting_param)
 
         # type embedding
         if typeebd_param is not None:
@@ -102,7 +103,7 @@ class DPTrainer (object):
 
         # init model
         # infer model type by fitting_type
-        if fitting_type == 'ener':
+        if fitting_type in ('ener', 'hybrid_ener', 'charge_ener'):
             self.model = EnerModel(
                 self.descrpt, 
                 self.fitting, 
@@ -166,7 +167,7 @@ class DPTrainer (object):
         loss_param = jdata.get('loss', None)
         loss_type = loss_param.get('type', 'ener')
 
-        if fitting_type == 'ener':
+        if fitting_type in ('ener', 'hybrid_ener', 'charge_ener'):
             loss_param.pop('type', None)
             loss_param['starter_learning_rate'] = self.lr.start_lr()
             if loss_type == 'ener':

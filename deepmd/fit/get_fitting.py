@@ -1,9 +1,10 @@
 from .fitting import Fitting
 from . import EnerFitting, WFCFitting, PolarFittingLocFrame, PolarFittingSeA, GlobalPolarFittingSeA, DipoleFittingSeA
 from .hybrid_ener import HybridEnerFitting
+from .charge_ener import ChargeEnerFitting
 
 
-def get_fitting(fitting_type: str, descrpt_type: str) -> Fitting:
+def get_fitting_network(fitting_type: str, descrpt_type: str, fitting_param: dict) -> Fitting:
     """Get the fitting network.
     
     Parameters
@@ -20,15 +21,13 @@ def get_fitting(fitting_type: str, descrpt_type: str) -> Fitting:
     """
     # fitting net
     fitting_type = fitting_param.get('type', 'ener')
-    self.fitting_type = fitting_type
     fitting_param.pop('type', None)
-    fitting_param['descrpt'] = self.descrpt
     if fitting_type == 'ener':
         return EnerFitting(**fitting_param)
     elif fitting_type == 'hybrid_ener':
         return HybridEnerFitting(**fitting_param)
     elif fitting_type == 'charge_ener':
-        return HybridEnerFitting(**fitting_param)
+        return ChargeEnerFitting(**fitting_param)
     # elif fitting_type == 'wfc':            
     #     return WFCFitting(fitting_param, self.descrpt)
     elif fitting_type == 'dipole':

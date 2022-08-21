@@ -354,6 +354,7 @@ def fitting_variant_type_args():
 
     return Variant("type", [Argument("ener", dict, fitting_ener()),
                             Argument("hybrid_ener", dict, fitting_hybrid_ener()),
+                            Argument("charge_ener", dict, fitting_ener()),
                             Argument("dipole", dict, fitting_dipole()),
                             Argument("polar", dict, fitting_polar()),
                             ], 
