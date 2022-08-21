@@ -1,4 +1,4 @@
-from abc improt ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 from deepmd.env import tf
 from deepmd.utils import Plugin, PluginVariant
