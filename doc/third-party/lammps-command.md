@@ -106,15 +106,21 @@ Please notice that the DeePMD does nothing to the direct space part of the elect
 
 The [DeePMD-kit](https://github.com/deepmodeling/deepmd-kit) allows also the computation of per-atom stress tensor defined as:
 
-$$dvatom=\sum_{m}( \mathbf{r}_n- \mathbf{r}_m) \frac{de_m}{d\mathbf{r}_n}$$
+$$dvatom=-\sum_{m}( \mathbf{r}_n- \mathbf{r}_m) \frac{de_m}{d\mathbf{r}_n}$$
 
-Where $\mathbf{r}_n$ is the atomic position of nth atom, $\mathbf{v}_n$ velocity of atom and $\frac{de_m}{d\mathbf{r}_n}$ the derivative of the atomic energy.
+Where $\mathbf{r}_n$ is the atomic position of nth atom, $\mathbf{v}_n$ is velocity of atom and $\frac{de_m}{d\mathbf{r}_n}$ is the derivative of the atomic energy.
 
 In LAMMPS one can get the per-atom stress using the command `centroid/stress/atom`:
 ```lammps
 compute ID group-ID centroid/stress/atom NULL virial
 ```
 see [LAMMPS doc page](https://docs.lammps.org/compute_stress_atom.html#thompson2) for more detailes on the meaning of the keywords.
+
+:::：{warning}
+:::{versionchanged} v2.2.0 :::
+The definition of per-atom stress is changed to keep consistent with LAMMPS.
+::::
+
 ### Examples
 In order of computing the 9-component per-atom stress
 ```lammps
