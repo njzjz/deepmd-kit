@@ -4,6 +4,7 @@ import os
 import sys
 
 from skbuild import setup
+from setuptools import find_namespace_packages
 
 topdir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(topdir, 'backend'))
@@ -39,26 +40,7 @@ tf_version = get_tf_version(tf_install_dir)
 # TODO: migrate packages and entry_points to pyproject.toml after scikit-build supports it
 # See also https://scikit-build.readthedocs.io/en/latest/usage.html#setuptools-options
 setup(
-    packages=[
-        "deepmd",
-        "deepmd/descriptor",
-        "deepmd/fit",
-        "deepmd/infer",
-        "deepmd/loss",
-        "deepmd/utils",
-        "deepmd/loggers",
-        "deepmd/cluster",
-        "deepmd/entrypoints",
-        "deepmd/op",
-        "deepmd/model",
-        "deepmd/train",
-        "deepmd/nvnmd",
-        "deepmd/nvnmd/data",
-        "deepmd/nvnmd/descriptor",
-        "deepmd/nvnmd/entrypoints",
-        "deepmd/nvnmd/fit",
-        "deepmd/nvnmd/utils",
-    ],
+    packages=find_namespace_packages(include='deepmd*'),
     cmake_args=[
         f"-DTENSORFLOW_ROOT:PATH={tf_install_dir}",
         "-DBUILD_PY_IF:BOOL=TRUE",
