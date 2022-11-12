@@ -40,7 +40,7 @@ tf_version = get_tf_version(tf_install_dir)
 # TODO: migrate packages and entry_points to pyproject.toml after scikit-build supports it
 # See also https://scikit-build.readthedocs.io/en/latest/usage.html#setuptools-options
 setup(
-    packages=find_namespace_packages(include='deepmd*'),
+    packages=find_namespace_packages(include=['deepmd*']),
     cmake_args=[
         f"-DTENSORFLOW_ROOT:PATH={tf_install_dir}",
         "-DBUILD_PY_IF:BOOL=TRUE",
