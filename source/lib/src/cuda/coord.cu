@@ -45,7 +45,7 @@ __device__ inline int compute_pbc_shift(
         shift = (-idx) / ncell + ((-idx) % ncell != 0);
     }
     else if (idx >= ncell) {
-        shift = - (ncell - idx) / ncell - ((ncell-idx) % ncell != 0);
+        shift = - (idx / ncell + (idx % ncell != 0) - 1);
     }
     return shift;
 }

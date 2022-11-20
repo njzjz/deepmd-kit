@@ -641,8 +641,8 @@ static int compute_pbc_shift (int idx,
     // shift = -1;
     // while (idx + shift * ncell >= ncell) shift --;
     // shift < (ncell - idx) / ncell
-    // -shift >= (idx - ncell) / ncell
-    shift = - (ncell - idx) / ncell - ((ncell-idx) % ncell != 0);
+    // -shift >= (idx - ncell) / ncell = idx / ncell -1
+    shift = - (idx / ncell + (idx % ncell != 0) - 1);
   }
   assert (idx + shift * ncell >= 0 && idx + shift * ncell < ncell);
   return shift;
