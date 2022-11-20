@@ -630,13 +630,19 @@ static int compute_pbc_shift (int idx,
 			      int ncell)
 {
   int shift = 0;
+  // fast ceil: x/y + (x % y != 0) where x,y>0
   if (idx < 0) {
-    shift = 1;
-    while (idx + shift * ncell < 0) shift ++;
+    // shift = 1;
+    // while (idx + shift * ncell < 0) shift ++;
+    // shift >= (-idx) / ncell
+    shift = (-idx) / ncell + ((-idx) % ncell != 0);
   }
   else if (idx >= ncell) {
-    shift = -1;
-    while (idx + shift * ncell >= ncell) shift --;
+    // shift = -1;
+    // while (idx + shift * ncell >= ncell) shift --;
+    // shift < (ncell - idx) / ncell
+    // -shift >= (idx - ncell) / ncell
+    shift = - (ncell - idx) / ncell - ((ncell-idx) % ncell != 0);
   }
   assert (idx + shift * ncell >= 0 && idx + shift * ncell < ncell);
   return shift;

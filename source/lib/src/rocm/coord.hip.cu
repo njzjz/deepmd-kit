@@ -40,13 +40,12 @@ __device__ inline int compute_pbc_shift(
     int ncell)
 {
     int shift = 0;
+    // See comments in the CPU version
     if (idx < 0) {
-    shift = 1;
-    while (idx + shift * ncell < 0) shift ++;
+        shift = (-idx) / ncell + ((-idx) % ncell != 0);
     }
     else if (idx >= ncell) {
-    shift = -1;
-    while (idx + shift * ncell >= ncell) shift --;
+        shift = - (ncell - idx) / ncell - ((ncell-idx) % ncell != 0);
     }
     return shift;
 }
