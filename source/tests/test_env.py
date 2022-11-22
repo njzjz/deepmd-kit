@@ -6,8 +6,8 @@ from unittest import mock
 
 class TestTFThreadCount(unittest.TestCase):
     @mock.patch.dict('os.environ', values={
-        'TF_INTRA_OP_PARALLELISM_THREADS': None,
-        'TF_INTER_OP_PARALLELISM_THREADS': None,
+        'TF_INTRA_OP_PARALLELISM_THREADS': '0',
+        'TF_INTER_OP_PARALLELISM_THREADS': '0',
     })
     def test_empty(self):
         intra, inter = env.get_tf_default_nthreads()
