@@ -26,4 +26,4 @@ make install
 
 #------------------
 
-tar vczf ${SCRIPT_PATH}/../../libdeepmd_c.tar.gz -C ${BUILD_TMP_DIR} libdeepmd_c
+tar vcjf ${SCRIPT_PATH}/../../libdeepmd_c.tar.bz2 -C ${BUILD_TMP_DIR} libdeepmd_c
