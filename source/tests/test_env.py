@@ -5,7 +5,10 @@ from unittest import mock
 
 
 class TestTFThreadCount(unittest.TestCase):
-    @mock.patch.dict('os.environ', values={})
+    @mock.patch.dict('os.environ', values={
+        'TF_INTRA_OP_PARALLELISM_THREADS': None,
+        'TF_INTER_OP_PARALLELISM_THREADS': None,
+    })
     def test_empty(self):
         intra, inter = env.get_tf_default_nthreads()
         self.assertEqual(intra, 0)
