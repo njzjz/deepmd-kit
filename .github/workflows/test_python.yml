@@ -48,6 +48,10 @@ jobs:
         DP_BUILD_TESTING: 1
     - run: dp --version
     - run: pytest --cov=deepmd source/tests --durations=0
+      env:
+        OMP_NUM_THREADS: 1
+        TF_INTRA_OP_PARALLELISM_THREADS: 1
+        TF_INTER_OP_PARALLELISM_THREADS: 2
     - uses: codecov/codecov-action@v3
       with:
         gcov: true
