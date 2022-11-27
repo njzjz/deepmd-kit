@@ -1,0 +1,17 @@
+on:
+  push:
+  pull_request:
+name: Type checker
+jobs:
+  test:
+    name: pyright
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - run: pip install -e .[cpu]
+    - uses: jakebailey/pyright-action@v1
+      # there are lots of existing errors, and we don't want to mark every tests to fail 
+      continue-on-error: true
