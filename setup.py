@@ -84,6 +84,7 @@ setup(
             "sphinx-argparse",
             "pygments-lammps",
             ],
+        "ase": ["ase"],
         **get_tf_requirement(tf_version),
     },
     entry_points={"console_scripts": ["dp = deepmd.entrypoints.main:main"]},
