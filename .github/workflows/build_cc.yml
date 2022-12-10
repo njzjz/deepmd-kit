@@ -28,6 +28,8 @@ jobs:
          && apt-get update \
          && apt-get -y install cuda
       if: matrix.variant == 'cuda'
+      env:
+        DEBIAN_FRONTEND: noninteractive
     - run: |
          apt-get update && apt-get install -y gnupg2 \
          && echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/5.3/ jammy main' | tee /etc/apt/sources.list.d/rocm.list \
