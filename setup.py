@@ -41,6 +41,8 @@ if dp_lammps_version != "":
     cmake_args.append(f"-DLAMMPS_VERSION={dp_lammps_version}")
 else:
     cmake_args.append("-DBUILD_CPP_IF:BOOL=FALSE")
+if os.environ.get("DP_OP_CXX_ABI", "") != "":
+    cmake_args.append("-DOP_CXX_ABI=" + os.environ["DP_OP_CXX_ABI"])
 
 tf_install_dir, _ = find_tensorflow()
 tf_version = get_tf_version(tf_install_dir)
