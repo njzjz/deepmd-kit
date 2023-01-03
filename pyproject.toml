@@ -71,11 +71,11 @@ repair-wheel-command = "auditwheel repair --exclude libtensorflow_framework.so.2
 environment-pass = ["CIBW_BUILD", "DP_VARIANT"]
 environment = { DP_VARIANT="cuda", DP_LAMMPS_VERSION="stable_23Jun2022_update2", MPI_HOME="/usr/lib64/mpich", PATH="/usr/lib64/mpich/bin:$PATH" }
 before-all = [
-    """{ if [ "$(uname -m)" = "x86_64" ] ; then yum config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && yum install -y cuda-11-8; fi }""",
+    """{ if [ "$(uname -m)" = "x86_64" ] ; then yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && subscription-manager repos --enable=rhel-7-workstation-optional-rpms && yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo && yum install -y cuda-11-8; fi }""",
     "yum install -y mpich-devel",
     # install gcc via conda
     "curl -L -o miniconda.sh -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-$(uname -m).sh",
-    "./miniconda.sh -bp /opt/conda",
+    "sh ./miniconda.sh -bp /opt/conda",
     "export PATH=/opt/conda/bin:$PATH",
     "conda install -y gcc=11.* gxx=11.* -c conda-forge",
 ]
