@@ -70,12 +70,12 @@ test-command = [
 [tool.cibuildwheel.linux]
 repair-wheel-command = "auditwheel repair --exclude libtensorflow_framework.so.2 --exclude libtensorflow_framework.so.1 --exclude libtensorflow_framework.so --exclude _pywrap_tensorflow_internal.so -w {dest_dir} {wheel}"
 environment-pass = ["CIBW_BUILD", "DP_VARIANT"]
-environment = { DP_VARIANT="cuda", DP_LAMMPS_VERSION="stable_23Jun2022_update2", MPI_HOME="/usr/lib64/mpich", PATH="/usr/lib64/mpich/bin:/opt/conda/bin:$PATH" }
+environment = { DP_VARIANT="cuda", DP_LAMMPS_VERSION="stable_23Jun2022_update2", MPI_HOME="/usr/lib64/mpich", PATH="/usr/lib64/mpich/bin:/opt/conda/envs/gcc/bin:$PATH" }
 before-all = [
     """{ if [ "$(uname -m)" = "x86_64" ] ; then yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo && yum install -y cuda-11-8; fi }""",
     "yum install -y mpich-devel",
     # install gcc via conda
-    """{ if [ "$(uname -m)" = "x86_64" ] ; then curl -L -o miniconda.sh -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-$(uname -m).sh && sh ./miniconda.sh -bp /opt/conda && conda install -y gcc=11.* gxx=11.* -c conda-forge; fi }""",
+    """{ if [ "$(uname -m)" = "x86_64" ] ; then curl -L -o miniconda.sh -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-$(uname -m).sh && sh ./miniconda.sh -bp /opt/conda && PATH=/opt/conda/bin:$PATH conda create -y gcc=11.* gxx=11.* -c conda-forge -n gcc; fi }""",
 ]
 
 
