@@ -34,7 +34,7 @@ if TYPE_CHECKING:
         from typing import Literal  # python >3.6
     except ImportError:
         from typing_extensions import Literal  # type: ignore
-    _ACTIVATION = Literal["relu", "relu6", "softplus", "sigmoid", "tanh", "gelu", "gelu_tf"]
+    _ACTIVATION = Literal["relu", "relu6", "softplus", "sigmoid", "tanh", "gelu", "gelu_tf", "snake"]
     _PRECISION = Literal["default", "float16", "float32", "float64"]
 
 # define constants
@@ -98,6 +98,34 @@ def gelu_tf(x: tf.Tensor) -> tf.Tensor:
             return op_module.gelu_custom(x)
     return (lambda x: gelu_wrapper(x))(x)
 
+
+def snake(x: tf.Tensor) -> tf.Tensor:
+    r"""Snake activation to learn periodic functions.
+
+    Computes snake activation:
+    $$
+    \mathrm{snake}(x) = \mathrm{x} + \frac{1 - \cos(2 \cdot x)}{2}.
+    $$
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        float Tensor to perform activation
+
+    Returns
+    -------
+    tf.Tensor
+        `x` with the snake activation applied
+
+    References
+    ----------
+    ..[1] Neural Networks Fail to Learn Periodic Functions and How to Fix It,
+      arxiv:2006.08195.
+    """
+    with tf.name_scope("snake"):
+        return x + (1 - tf.cos(2  * x)) / 2
+
+
 # TODO this is not a good way to do things. This is some global variable to which
 # TODO anyone can write and there is no good way to keep track of the changes
 data_requirement = {}
@@ -110,6 +138,7 @@ ACTIVATION_FN_DICT = {
     "tanh": tf.nn.tanh,
     "gelu": gelu,
     "gelu_tf": gelu_tf,
+    "snake": snake,
 }
 
 
