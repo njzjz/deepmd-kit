@@ -1,4 +1,4 @@
-<span style="font-size:larger;">DeePMD-kit Manual</span>
+<span style="font-size:larger;">DeePMD-kit Manual</span> 
 ========
 [![GitHub release](https://img.shields.io/github/release/deepmodeling/deepmd-kit.svg?maxAge=86400)](https://github.com/deepmodeling/deepmd-kit/releases)
 [![doi:10.1016/j.cpc.2018.03.016](https://img.shields.io/badge/DOI-10.1016%2Fj.cpc.2018.03.016-blue)](https://doi.org/10.1016/j.cpc.2020.107206)
