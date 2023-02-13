@@ -479,6 +479,7 @@ class EnerFitting(Fitting):
             input_dict = {}
         bias_atom_e = self.bias_atom_e
         type_embedding = input_dict.get("type_embedding", None)
+        env_type_embedding = input_dict.get("env_type_embedding", None)
         atype = input_dict.get("atype", None)
         if self.numb_fparam > 0:
             if self.fparam_avg is None:
@@ -564,7 +565,9 @@ class EnerFitting(Fitting):
         self.atype_nloc = tf.reshape(
             tf.slice(atype_nall, [0, 0], [-1, natoms[0]]), [-1]
         )  ## lammps will make error
-        if type_embedding is not None:
+        if env_type_embedding is not None:
+            atype_embed = env_type_embedding
+        elif type_embedding is not None:
             atype_embed = tf.nn.embedding_lookup(type_embedding, self.atype_nloc)
         else:
             atype_embed = None

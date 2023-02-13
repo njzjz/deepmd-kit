@@ -71,6 +71,28 @@ def type_embedding_args():
         Argument("seed", [int, None], optional=True, default=None, doc=doc_seed),
     ]
 
+def env_type_embedding_args():
+    doc_neuron = "Number of neurons in each hidden layers of the embedding net. When two layers are of the same size or one layer is twice as large as the previous layer, a skip connection is built."
+    doc_resnet_dt = 'Whether to use a "Timestep" in the skip connection'
+    doc_seed = "Random seed for parameter initialization"
+    doc_activation_function = f'The activation function in the embedding net. Supported activation functions are {list_to_doc(ACTIVATION_FN_DICT.keys())} Note that "gelu" denotes the custom operator version, and "gelu_tf" denotes the TF standard version.'
+    doc_precision = f"The precision of the embedding net parameters, supported options are {list_to_doc(PRECISION_DICT.keys())} Default follows the interface precision."
+    doc_trainable = "If the parameters in the embedding net are trainable"
+
+    return [
+        Argument("neuron", list, optional=True, default=[8], doc=doc_neuron),
+        Argument(
+            "activation_function",
+            str,
+            optional=True,
+            default="tanh",
+            doc=doc_activation_function,
+        ),
+        Argument("resnet_dt", bool, optional=True, default=False, doc=doc_resnet_dt),
+        Argument("precision", str, optional=True, default="default", doc=doc_precision),
+        Argument("trainable", bool, optional=True, default=True, doc=doc_trainable),
+        Argument("seed", [int, None], optional=True, default=None, doc=doc_seed),
+    ]
 
 #  --- Descriptor configurations: --- #
 
@@ -617,6 +639,7 @@ def model_args():
     doc_data_stat_protect = "Protect parameter for atomic energy regression."
     doc_data_bias_nsample = "The number of training samples in a system to compute and change the energy bias."
     doc_type_embedding = "The type embedding."
+    doc_env_type_embedding = "The type embedding with atomic environment."
     doc_descrpt = "The descriptor of atomic environment."
     doc_fitting = "The fitting of physical properties."
     doc_fitting_net_dict = "The dictionary of multiple fitting nets in multi-task mode. Each fitting_net_dict[fitting_key] is the single definition of fitting of physical properties with user-defined name `fitting_key`."
@@ -664,6 +687,14 @@ def model_args():
                 [],
                 optional=True,
                 doc=doc_type_embedding,
+            ),
+            Argument(
+                "env_type_embedding",
+                dict,
+                env_type_embedding_args(),
+                [],
+                optional=True,
+                doc=doc_env_type_embedding,
             ),
             Argument(
                 "descriptor", dict, [], [descrpt_variant_type_args()], doc=doc_descrpt

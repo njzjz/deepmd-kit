@@ -59,6 +59,7 @@ class EnerModel(Model):
         descrpt,
         fitting,
         typeebd=None,
+        envtypeebd=None,
         type_map: List[str] = None,
         data_stat_nbatch: int = 10,
         data_stat_protect: float = 1e-2,
@@ -206,6 +207,17 @@ class EnerModel(Model):
             suffix=suffix,
             reuse=reuse,
         )
+        if self.envtypeebd is not None:
+            env_type_embedding = self.envtypeebd.build(
+                natoms=tf.Tensor,
+                atype=atype,
+                nlist=self.descrpt.get_nlist(),
+                ebd_type=type_embedding,
+                descpt=dout,
+                reuse=reuse,
+                suffix=suffix,
+            )
+            input_dict["env_type_embedding"] = env_type_embedding
 
         if self.srtab is not None:
             nlist, rij, sel_a, sel_r = self.descrpt.get_nlist()

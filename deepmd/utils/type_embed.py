@@ -69,7 +69,7 @@ def embed_atom_type(
 
 
 class TypeEmbedNet:
-    """
+    """Type embedding network.
 
     Parameters
     ----------
@@ -186,3 +186,133 @@ class TypeEmbedNet:
         self.type_embedding_net_variables = (
             get_type_embedding_net_variables_from_graph_def(graph_def, suffix=suffix)
         )
+
+
+class EnvTypeEmbedNet:
+    """Environmental type embedding network.
+
+    Parameters
+    ----------
+    neuron : list[int]
+            Number of neurons in each hidden layers of the embedding net
+    resnet_dt
+            Time-step `dt` in the resnet construction:
+            y = x + dt * \\phi (Wx + b)
+    activation_function
+            The activation function in the embedding net. Supported options are |ACTIVATION_FN|
+    precision
+            The precision of the embedding net parameters. Supported options are |PRECISION|
+    trainable
+            If the weights of embedding net are trainable.
+    seed
+            Random seed for initializing the network parameters.
+    uniform_seed
+            Only for the purpose of backward compatibility, retrieves the old behavior of using the random seed
+    padding
+            Concat the zero padding to the output, as the default embedding of empty type.
+    """
+
+    def __init__(
+        self,
+        neuron: List[int] = [],
+        resnet_dt: bool = False,
+        activation_function: Union[str, None] = "tanh",
+        precision: str = "default",
+        trainable: bool = True,
+        seed: Optional[int] = None,
+        uniform_seed: bool = False,
+        padding: bool = False,
+    ) -> None:
+        self.neuron = neuron
+        self.seed = seed
+        self.filter_resnet_dt = resnet_dt
+        self.filter_precision = get_precision(precision)
+        self.filter_activation_fn = get_activation_func(activation_function)
+        self.trainable = trainable
+        self.uniform_seed = uniform_seed
+        self.type_embedding_net_variables = None
+        self.padding = padding
+
+    def build(
+        self,
+        natoms: tf.Tensor,
+        atype: tf.Tensor,
+        nlist: tf.Tensor,
+        ebd_type: tf.Tensor,
+        descpt: tf.Tensor,
+        reuse=None,
+        suffix="",
+    ) -> tf.Tensor:
+        """Build the computational graph for the descriptor
+
+        Parameters
+        ----------
+        natoms : tf.Tensor
+            The number of atoms
+        atype : tf.Tensor
+            The atom type of the atoms, nframes * natoms
+        nlist : tf.Tensor
+            The neighbor list, -1 if not exist
+        ebd_type : tf.Tensor
+            The type embedding
+        descpt : tf.Tensor
+            The descriptor
+        reuse
+            The weights in the networks should be reused when get the variable.
+        suffix
+            Name suffix to identify this network
+
+        Returns
+        -------
+        embedded_types
+            The computational graph for embedded types
+        """
+        nframes = tf.shape(atype)[0]
+        natoms_loc = tf.shape(atype)[1]
+        natoms_tot = nframes * natoms_loc
+        # (nframes * natoms)
+        atype_loc = tf.reshape(atype, [-1])
+        nebd = ebd_type.shape[1]
+        # (nframes * natoms) * nebd
+        ebd_type_loc = tf.nn.embedding_lookup(ebd_type, atype_nloc)
+        # (nframes * natoms) * nnei
+        nlist = tf.reshape(nlist, [natoms_tot, -1])
+
+        # (nframes, 1)
+        frame_idx = tf.range(nframes)
+        # (nframes, natoms * nnei)
+        idx_i = tf.tile(frame_idx * (natoms_loc + 1), (1, natoms_loc * ndescrpt))
+        # (nframes * natoms), nnei
+        idx_i = tf.reshape(idx_i, [natoms_tot, -1])
+        
+        nlist += idx_i + 1
+        
+        # (nframes * natoms) * ndescrpt
+        descpt = tf.reshape(descpt, [natoms_tot, -1])
+        for ii, nn in enumerate(neuron):
+            # nframes, natoms_loc, nebd
+            ebd_type_loc_padding = tf.reshape(ebd_type_loc, [nframes, natoms_loc, nebd])
+            # concat zero padding
+            ebd_type_loc_padding = tf.concat([tf.zeros([nframes, nebd]), ebd_type_loc], 1)
+
+            # (nframs * natoms) * nnei * nebd
+            ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
+            # (nframes * natoms) * (nnei * ndescrpt)
+            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, -1])
+        
+            input = tf.concat(descpt, ebd_type_loc, ebd_type_nei)
+
+            # (nframes * natoms) * nn
+            ebd_type_loc = one_layer(
+                input,
+                nn,
+                activation_fn=self.activation_fn,
+                precision=self.filter_precision,
+                name=f"env_layer_{ii}{suffix}",
+                reuse=reuse,
+                seed=self.seed,
+                trainable=trainable,
+            )
+            nebd = nn
+        self.ebd_type = tf.identity(ebd_type_loc, name="t_envtypeebd")
+        return ebd_type_loc

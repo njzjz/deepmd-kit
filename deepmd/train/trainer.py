@@ -111,6 +111,7 @@ class DPTrainer(object):
             else j_must_have(model_param, "fitting_net_dict")
         )
         typeebd_param = model_param.get("type_embedding", None)
+        env_typeebd_param = model_param.get("env_type_embedding", None)
         self.model_param = model_param
         self.descrpt_param = descrpt_param
 
@@ -206,6 +207,13 @@ class DPTrainer(object):
             )
         else:
             self.typeebd = None
+        if env_typeebd_param is not None:
+            self.env_typeebd = TypeEmbedNet(
+                **env_typeebd_param,
+                padding=padding,
+            )
+        else:
+            self.env_typeebd = None
 
         # init model
         # infer model type by fitting_type
@@ -215,6 +223,7 @@ class DPTrainer(object):
                     self.descrpt,
                     self.fitting,
                     self.typeebd,
+                    self.env_typeebd,
                     model_param.get("type_map"),
                     model_param.get("data_stat_nbatch", 10),
                     model_param.get("data_stat_protect", 1e-2),
