@@ -1248,7 +1248,7 @@ class ProdEnvMatAMixOp : public OpKernel {
         TensorShape uint64_shape;
         uint64_shape.AddDim(int_64(nloc) * max_nbor_size * 2);
         OP_REQUIRES_OK(context, context->allocate_temp(DT_UINT64, uint64_shape,
-                                                       &uint64_temp));
+                                                      &uint64_temp));
         array_int = int_temp.flat<int>().data();
         array_longlong = uint64_temp.flat<unsigned long long>().data();
 
@@ -1473,8 +1473,8 @@ static int _norm_copy_coord_gpu(OpKernelContext* context,
   // Tensor FPTYPE_temp;
   TensorShape FPTYPE_shape;
   FPTYPE_shape.AddDim(nall * 3);
-  context->allocate_temp(DataTypeToEnum<FPTYPE>::value, FPTYPE_shape,
-                         tensor_list);
+  OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, FPTYPE_shape,
+                         tensor_list));
   FPTYPE* tmp_coord = (*tensor_list).flat<FPTYPE>().data();
   DPErrcheck(cudaMemcpy(tmp_coord, coord, sizeof(FPTYPE) * nall * 3,
                         cudaMemcpyDeviceToDevice));
@@ -1491,14 +1491,14 @@ static int _norm_copy_coord_gpu(OpKernelContext* context,
   // Tensor double_temp;
   TensorShape double_shape;
   double_shape.AddDim(18);
-  context->allocate_temp(DataTypeToEnum<FPTYPE>::value, double_shape,
-                         tensor_list + 1);
+  OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, double_shape,
+                         tensor_list + 1));
   // Tensor int_temp;
   TensorShape int_shape;
   int_shape.AddDim(23 + nloc * 3 + loc_cellnum + total_cellnum * 3 +
                    total_cellnum * 3 + loc_cellnum + 1 + total_cellnum + 1 +
                    nloc);
-  context, context->allocate_temp(DT_INT32, int_shape, tensor_list + 2);
+  OP_REQUIRES_OK(context, context->allocate_temp(DT_INT32, int_shape, tensor_list + 2));
   FPTYPE* box_info_dev = (*(tensor_list + 1)).flat<FPTYPE>().data();
   int* cell_info_dev = (*(tensor_list + 2)).flat<int>().data();
   int* int_data_dev = cell_info_dev + 23;
@@ -1515,12 +1515,12 @@ static int _norm_copy_coord_gpu(OpKernelContext* context,
     // Tensor cpy_temp;
     TensorShape cpy_shape;
     cpy_shape.AddDim(mem_cpy * 3);
-    context->allocate_temp(DataTypeToEnum<FPTYPE>::value, cpy_shape,
-                           tensor_list + 3);
+    OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, cpy_shape,
+                           tensor_list + 3));
     // Tensor t_temp;
     TensorShape t_shape;
     t_shape.AddDim(mem_cpy * 2);
-    context, context->allocate_temp(DT_INT32, t_shape, tensor_list + 4);
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_INT32, t_shape, tensor_list + 4));
     coord_cpy = (*(tensor_list + 3)).flat<FPTYPE>().data();
     type_cpy = (*(tensor_list + 4)).flat<int>().data();
     idx_mapping = type_cpy + mem_cpy;
@@ -1555,7 +1555,7 @@ static int _build_nlist_gpu(OpKernelContext* context,
   // Tensor nlist_temp;
   TensorShape nlist_shape;
   nlist_shape.AddDim(nloc * 2);
-  context->allocate_temp(DT_INT32, nlist_shape, tensor_list);
+  OP_REQUIRES_OK(context,context->allocate_temp(DT_INT32, nlist_shape, tensor_list));
   ilist = (*tensor_list).flat<int>().data();
   numneigh = ilist + nloc;
   // Tensor jlist_temp;
@@ -1566,7 +1566,7 @@ static int _build_nlist_gpu(OpKernelContext* context,
   for (tt = 0; tt < max_nnei_trial; ++tt) {
     TensorShape jlist_shape;
     jlist_shape.AddDim(3 * int_64(nloc) * mem_nnei);
-    context->allocate_temp(DT_INT32, jlist_shape, tensor_list + 1);
+    OP_REQUIRES_OK(context,context->allocate_temp(DT_INT32, jlist_shape, tensor_list + 1));
     jlist = (*(tensor_list + 1)).flat<int>().data();
     ind_data = jlist + nloc * mem_nnei;
     for (int_64 ii = 0; ii < nloc; ++ii) {
@@ -1696,8 +1696,8 @@ static int _norm_copy_coord_gpu_rocm(OpKernelContext* context,
   // Tensor FPTYPE_temp;
   TensorShape FPTYPE_shape;
   FPTYPE_shape.AddDim(nall * 3);
-  context->allocate_temp(DataTypeToEnum<FPTYPE>::value, FPTYPE_shape,
-                         tensor_list);
+  OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, FPTYPE_shape,
+                         tensor_list));
   FPTYPE* tmp_coord = (*tensor_list).flat<FPTYPE>().data();
   DPErrcheck(hipMemcpy(tmp_coord, coord, sizeof(FPTYPE) * nall * 3,
                        hipMemcpyDeviceToDevice));
@@ -1714,14 +1714,14 @@ static int _norm_copy_coord_gpu_rocm(OpKernelContext* context,
   // Tensor double_temp;
   TensorShape double_shape;
   double_shape.AddDim(18);
-  context->allocate_temp(DataTypeToEnum<FPTYPE>::value, double_shape,
-                         tensor_list + 1);
+  OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, double_shape,
+                         tensor_list + 1));
   // Tensor int_temp;
   TensorShape int_shape;
   int_shape.AddDim(23 + nloc * 3 + loc_cellnum + total_cellnum * 3 +
                    total_cellnum * 3 + loc_cellnum + 1 + total_cellnum + 1 +
                    nloc);
-  context, context->allocate_temp(DT_INT32, int_shape, tensor_list + 2);
+  OP_REQUIRES_OK(context,context, context->allocate_temp(DT_INT32, int_shape, tensor_list + 2));
   FPTYPE* box_info_dev = (*(tensor_list + 1)).flat<FPTYPE>().data();
   int* cell_info_dev = (*(tensor_list + 2)).flat<int>().data();
   int* int_data_dev = cell_info_dev + 23;
@@ -1738,12 +1738,12 @@ static int _norm_copy_coord_gpu_rocm(OpKernelContext* context,
     // Tensor cpy_temp;
     TensorShape cpy_shape;
     cpy_shape.AddDim(mem_cpy * 3);
-    context->allocate_temp(DataTypeToEnum<FPTYPE>::value, cpy_shape,
-                           tensor_list + 3);
+    OP_REQUIRES_OK(context,context->allocate_temp(DataTypeToEnum<FPTYPE>::value, cpy_shape,
+                           tensor_list + 3));
     // Tensor t_temp;
     TensorShape t_shape;
     t_shape.AddDim(mem_cpy * 2);
-    context, context->allocate_temp(DT_INT32, t_shape, tensor_list + 4);
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_INT32, t_shape, tensor_list + 4));
     coord_cpy = (*(tensor_list + 3)).flat<FPTYPE>().data();
     type_cpy = (*(tensor_list + 4)).flat<int>().data();
     idx_mapping = type_cpy + mem_cpy;
@@ -1778,7 +1778,7 @@ static int _build_nlist_gpu_rocm(OpKernelContext* context,
   // Tensor nlist_temp;
   TensorShape nlist_shape;
   nlist_shape.AddDim(nloc * 2);
-  context->allocate_temp(DT_INT32, nlist_shape, tensor_list);
+  OP_REQUIRES_OK(context,context->allocate_temp(DT_INT32, nlist_shape, tensor_list));
   ilist = (*tensor_list).flat<int>().data();
   numneigh = ilist + nloc;
   // Tensor jlist_temp;
@@ -1789,7 +1789,7 @@ static int _build_nlist_gpu_rocm(OpKernelContext* context,
   for (tt = 0; tt < max_nnei_trial; ++tt) {
     TensorShape jlist_shape;
     jlist_shape.AddDim(3 * int_64(nloc) * mem_nnei);
-    context->allocate_temp(DT_INT32, jlist_shape, tensor_list + 1);
+    OP_REQUIRES_OK(context,context->allocate_temp(DT_INT32, jlist_shape, tensor_list + 1));
     jlist = (*(tensor_list + 1)).flat<int>().data();
     ind_data = jlist + nloc * mem_nnei;
     for (int_64 ii = 0; ii < nloc; ++ii) {
