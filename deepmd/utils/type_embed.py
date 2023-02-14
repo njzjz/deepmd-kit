@@ -237,6 +237,8 @@ class EnvTypeEmbedNet:
         self,
         natoms: tf.Tensor,
         atype: tf.Tensor,
+        dim_descrpt: int,
+        nnei: int,
         nlist: tf.Tensor,
         ebd_type: tf.Tensor,
         descpt: tf.Tensor,
@@ -251,6 +253,10 @@ class EnvTypeEmbedNet:
             The number of atoms
         atype : tf.Tensor
             The atom type of the atoms, nframes * natoms
+        dim_descrpt : int
+            The dimension of the descriptor
+        nnei : int
+            The number of neighbors
         nlist : tf.Tensor
             The neighbor list, -1 if not exist
         ebd_type : tf.Tensor
@@ -270,49 +276,59 @@ class EnvTypeEmbedNet:
         nframes = tf.shape(atype)[0]
         natoms_loc = tf.shape(atype)[1]
         natoms_tot = nframes * natoms_loc
+        ebd_type = tf.cast(ebd_type, self.filter_precision)
+
+        # (nframes * natoms) * ndescrpt
+        descpt = tf.reshape(descpt, [natoms_tot, dim_descrpt])
+        descpt = tf.cast(descpt, self.filter_precision)
+
         # (nframes * natoms)
-        atype_loc = tf.reshape(atype, [-1])
-        nebd = ebd_type.shape[1]
+        atype_loc = tf.reshape(atype, [natoms_tot])
+        nebd = ebd_type.get_shape().as_list()[1]
         # (nframes * natoms) * nebd
-        ebd_type_loc = tf.nn.embedding_lookup(ebd_type, atype_nloc)
+        ebd_type_loc = tf.nn.embedding_lookup(ebd_type, atype_loc)
         # (nframes * natoms) * nnei
-        nlist = tf.reshape(nlist, [natoms_tot, -1])
+        nlist = tf.reshape(nlist, [natoms_tot, nnei])
 
         # (nframes, 1)
-        frame_idx = tf.range(nframes)
+        frame_idx = tf.range(nframes, dtype=tf.int32)
+        frame_idx = tf.reshape(frame_idx, [nframes, 1])
         # (nframes, natoms * nnei)
-        idx_i = tf.tile(frame_idx * (natoms_loc + 1), (1, natoms_loc * ndescrpt))
+        idx_i = tf.tile(frame_idx * (natoms_loc + 1), (1, natoms_loc * nnei))
         # (nframes * natoms), nnei
-        idx_i = tf.reshape(idx_i, [natoms_tot, -1])
+        idx_i = tf.reshape(idx_i, [natoms_tot, nnei])
         
         nlist += idx_i + 1
         
-        # (nframes * natoms) * ndescrpt
-        descpt = tf.reshape(descpt, [natoms_tot, -1])
-        for ii, nn in enumerate(neuron):
+        for ii, nn in enumerate(self.neuron):
             # nframes, natoms_loc, nebd
             ebd_type_loc_padding = tf.reshape(ebd_type_loc, [nframes, natoms_loc, nebd])
             # concat zero padding
-            ebd_type_loc_padding = tf.concat([tf.zeros([nframes, nebd]), ebd_type_loc], 1)
+            ebd_type_loc_padding = tf.concat([tf.zeros([nframes, 1, nebd], dtype=self.filter_precision), ebd_type_loc_padding], 1)
+            # (nframes * (natoms + 1)) * nebd
+            ebd_type_loc_padding = tf.reshape(ebd_type_loc_padding, [natoms_tot + nframes, nebd])
 
             # (nframs * natoms) * nnei * nebd
             ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
-            # (nframes * natoms) * (nnei * ndescrpt)
-            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, -1])
+            # (nframes * natoms) * (nnei * nebd)
+            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei * nebd])
         
-            input = tf.concat(descpt, ebd_type_loc, ebd_type_nei)
+            input = tf.concat([descpt, ebd_type_loc, ebd_type_nei], 1)
+            print(dim_descrpt, nebd, nnei * nebd, nn)
+            input = tf.reshape(input, [natoms_tot, dim_descrpt + nebd + nnei * nebd])
 
             # (nframes * natoms) * nn
             ebd_type_loc = one_layer(
                 input,
                 nn,
-                activation_fn=self.activation_fn,
+                activation_fn=self.filter_activation_fn,
                 precision=self.filter_precision,
                 name=f"env_layer_{ii}{suffix}",
                 reuse=reuse,
                 seed=self.seed,
-                trainable=trainable,
+                trainable=self.trainable,
             )
             nebd = nn
+        ebd_type_loc = tf.cast(ebd_type_loc, GLOBAL_TF_FLOAT_PRECISION)
         self.ebd_type = tf.identity(ebd_type_loc, name="t_envtypeebd")
         return ebd_type_loc

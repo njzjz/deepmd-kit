@@ -75,6 +75,7 @@ from deepmd.utils.sess import (
 )
 from deepmd.utils.type_embed import (
     TypeEmbedNet,
+    EnvTypeEmbedNet,
 )
 
 log = logging.getLogger(__name__)
@@ -208,7 +209,7 @@ class DPTrainer(object):
         else:
             self.typeebd = None
         if env_typeebd_param is not None:
-            self.env_typeebd = TypeEmbedNet(
+            self.env_typeebd = EnvTypeEmbedNet(
                 **env_typeebd_param,
                 padding=padding,
             )
