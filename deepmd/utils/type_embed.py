@@ -297,24 +297,31 @@ class EnvTypeEmbedNet:
         idx_i = tf.tile(frame_idx * (natoms_loc + 1), (1, natoms_loc * nnei))
         # (nframes * natoms), nnei
         idx_i = tf.reshape(idx_i, [natoms_tot, nnei])
-        
+
         nlist += idx_i + 1
-        
+
         for ii, nn in enumerate(self.neuron):
             # nframes, natoms_loc, nebd
             ebd_type_loc_padding = tf.reshape(ebd_type_loc, [nframes, natoms_loc, nebd])
             # concat zero padding
-            ebd_type_loc_padding = tf.concat([tf.zeros([nframes, 1, nebd], dtype=self.filter_precision), ebd_type_loc_padding], 1)
+            ebd_type_loc_padding = tf.concat(
+                [
+                    tf.zeros([nframes, 1, nebd], dtype=self.filter_precision),
+                    ebd_type_loc_padding,
+                ],
+                1,
+            )
             # (nframes * (natoms + 1)) * nebd
-            ebd_type_loc_padding = tf.reshape(ebd_type_loc_padding, [natoms_tot + nframes, nebd])
+            ebd_type_loc_padding = tf.reshape(
+                ebd_type_loc_padding, [natoms_tot + nframes, nebd]
+            )
 
             # (nframs * natoms) * nnei * nebd
             ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
             # (nframes * natoms) * (nnei * nebd)
             ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei * nebd])
-        
+
             input = tf.concat([descpt, ebd_type_loc, ebd_type_nei], 1)
-            print(dim_descrpt, nebd, nnei * nebd, nn)
             input = tf.reshape(input, [natoms_tot, dim_descrpt + nebd + nnei * nebd])
 
             # (nframes * natoms) * nn
@@ -329,6 +336,28 @@ class EnvTypeEmbedNet:
                 trainable=self.trainable,
             )
             nebd = nn
+        # final neighbor ebd
+        # nframes, natoms_loc, nebd
+        ebd_type_loc_padding = tf.reshape(ebd_type_loc, [nframes, natoms_loc, nebd])
+        # concat zero padding
+        ebd_type_loc_padding = tf.concat(
+            [
+                tf.zeros([nframes, 1, nebd], dtype=self.filter_precision),
+                ebd_type_loc_padding,
+            ],
+            1,
+        )
+        # (nframes * (natoms + 1)) * nebd
+        ebd_type_loc_padding = tf.reshape(
+            ebd_type_loc_padding, [natoms_tot + nframes, nebd]
+        )
+
+        # (nframs * natoms) * nnei * nebd
+        ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
+        # (nframes * natoms) * (nnei * nebd)
+        ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei * nebd])
+        ebd_type_nei = tf.cast(ebd_type_nei, GLOBAL_TF_FLOAT_PRECISION)
+        self.ebd_type_nei = tf.identity(ebd_type_nei, name="t_envtypeebd_nei")
         ebd_type_loc = tf.cast(ebd_type_loc, GLOBAL_TF_FLOAT_PRECISION)
         self.ebd_type = tf.identity(ebd_type_loc, name="t_envtypeebd")
         return ebd_type_loc

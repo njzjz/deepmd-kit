@@ -620,6 +620,12 @@ class EnerFitting(Fitting):
             )
             original_dim_descrpt = self.dim_descrpt
             self.dim_descrpt = self.dim_descrpt + type_shape[1]
+            if env_type_embedding is not None:
+                env_type_embedding_nei = input_dict["env_type_embedding_nei"]
+                inputs = tf.concat([inputs, env_type_embedding_nei], axis=1)
+                self.dim_descrpt = (
+                    self.dim_descrpt + env_type_embedding_nei.get_shape().as_list()[1]
+                )
             inputs = tf.reshape(inputs, [-1, natoms[0], self.dim_descrpt])
             final_layer = self._build_lower(
                 0,

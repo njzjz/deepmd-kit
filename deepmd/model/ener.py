@@ -222,6 +222,7 @@ class EnerModel(Model):
                 suffix=suffix,
             )
             input_dict["env_type_embedding"] = env_type_embedding
+            input_dict["env_type_embedding_nei"] = self.envtypeebd.ebd_type_nei
 
         if self.srtab is not None:
             nlist, rij, sel_a, sel_r = self.descrpt.get_nlist()
