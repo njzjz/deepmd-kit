@@ -74,8 +74,8 @@ from deepmd.utils.sess import (
     run_sess,
 )
 from deepmd.utils.type_embed import (
-    TypeEmbedNet,
     EnvTypeEmbedNet,
+    TypeEmbedNet,
 )
 
 log = logging.getLogger(__name__)
@@ -224,7 +224,6 @@ class DPTrainer(object):
                     self.descrpt,
                     self.fitting,
                     self.typeebd,
-                    self.env_typeebd,
                     model_param.get("type_map"),
                     model_param.get("data_stat_nbatch", 10),
                     model_param.get("data_stat_protect", 1e-2),
@@ -232,6 +231,7 @@ class DPTrainer(object):
                     model_param.get("smin_alpha"),
                     model_param.get("sw_rmin"),
                     model_param.get("sw_rmax"),
+                    self.env_typeebd,
                 )
             # elif fitting_type == 'wfc':
             #     self.model = WFCModel(model_param, self.descrpt, self.fitting)

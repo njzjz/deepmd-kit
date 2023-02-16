@@ -59,7 +59,6 @@ class EnerModel(Model):
         descrpt,
         fitting,
         typeebd=None,
-        envtypeebd=None,
         type_map: List[str] = None,
         data_stat_nbatch: int = 10,
         data_stat_protect: float = 1e-2,
@@ -67,6 +66,7 @@ class EnerModel(Model):
         smin_alpha: float = None,
         sw_rmin: float = None,
         sw_rmax: float = None,
+        envtypeebd=None,
     ) -> None:
         """
         Constructor
