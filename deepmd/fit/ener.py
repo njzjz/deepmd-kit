@@ -484,7 +484,7 @@ class EnerFitting(Fitting):
             input_dict = {}
         bias_atom_e = self.bias_atom_e
         type_embedding = input_dict.get("type_embedding", None)
-        env_type_embedding = input_dict.get("env_type_embedding", None)
+        message_passing_embedding = input_dict.get("message_passing_embedding", None)
         atype = input_dict.get("atype", None)
         if self.numb_fparam > 0:
             if self.fparam_avg is None:
@@ -572,8 +572,8 @@ class EnerFitting(Fitting):
         self.atype_nloc = tf.reshape(
             tf.slice(atype_nall, [0, 0], [-1, natoms[0]]), [-1]
         )  ## lammps will make error
-        if env_type_embedding is not None:
-            atype_embed = env_type_embedding
+        if message_passing_embedding is not None:
+            atype_embed = message_passing_embedding
         elif type_embedding is not None:
             atype_embed = tf.nn.embedding_lookup(type_embedding, self.atype_nloc)
         else:
@@ -627,12 +627,6 @@ class EnerFitting(Fitting):
             )
             original_dim_descrpt = self.dim_descrpt
             self.dim_descrpt = self.dim_descrpt + type_shape[1]
-            if env_type_embedding is not None:
-                env_type_embedding_nei = input_dict["env_type_embedding_nei"]
-                inputs = tf.concat([inputs, env_type_embedding_nei], axis=1)
-                self.dim_descrpt = (
-                    self.dim_descrpt + env_type_embedding_nei.get_shape().as_list()[1]
-                )
             inputs = tf.reshape(inputs, [-1, natoms[0], self.dim_descrpt])
             final_layer = self._build_lower(
                 0,

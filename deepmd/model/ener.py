@@ -6,6 +6,10 @@ from typing import (
 
 import numpy as np
 
+from deepmd.descriptor import (
+    DescrptSeA,
+    DescrptSeR,
+)
 from deepmd.env import (
     GLOBAL_TF_FLOAT_PRECISION,
     MODEL_VERSION,
@@ -66,7 +70,6 @@ class EnerModel(Model):
         smin_alpha: float = None,
         sw_rmin: float = None,
         sw_rmax: float = None,
-        envtypeebd=None,
     ) -> None:
         """
         Constructor
@@ -80,7 +83,6 @@ class EnerModel(Model):
         self.numb_fparam = self.fitting.get_numb_fparam()
         # type embedding
         self.typeebd = typeebd
-        self.envtypeebd = envtypeebd
         # other inputs
         if type_map is None:
             self.type_map = []
@@ -208,21 +210,6 @@ class EnerModel(Model):
             suffix=suffix,
             reuse=reuse,
         )
-        if self.envtypeebd is not None:
-            nlist, rij, sel_a, sel_r = self.descrpt.get_nlist()
-            env_type_embedding = self.envtypeebd.build(
-                natoms=natoms,
-                atype=atype,
-                dim_descrpt=self.descrpt.get_dim_out(),
-                nnei=np.sum(sel_a) + np.sum(sel_r),
-                nlist=nlist,
-                ebd_type=type_embedding,
-                descpt=dout,
-                reuse=reuse,
-                suffix=suffix,
-            )
-            input_dict["env_type_embedding"] = env_type_embedding
-            input_dict["env_type_embedding_nei"] = self.envtypeebd.ebd_type_nei
 
         if self.srtab is not None:
             nlist, rij, sel_a, sel_r = self.descrpt.get_nlist()

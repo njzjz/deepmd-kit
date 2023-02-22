@@ -188,8 +188,8 @@ class TypeEmbedNet:
         )
 
 
-class EnvTypeEmbedNet:
-    """Environmental type embedding network.
+class MessagePassingEmbedNet:
+    """Message Passing embedding network.
 
     Parameters
     ----------
@@ -237,11 +237,11 @@ class EnvTypeEmbedNet:
         self,
         natoms: tf.Tensor,
         atype: tf.Tensor,
-        dim_descrpt: int,
         nnei: int,
         nlist: tf.Tensor,
         ebd_type: tf.Tensor,
-        descpt: tf.Tensor,
+        env_mat: tf.Tensor,
+        dim_env_mat: int,
         reuse=None,
         suffix="",
     ) -> tf.Tensor:
@@ -253,16 +253,16 @@ class EnvTypeEmbedNet:
             The number of atoms
         atype : tf.Tensor
             The atom type of the atoms, nframes * natoms
-        dim_descrpt : int
-            The dimension of the descriptor
         nnei : int
             The number of neighbors
         nlist : tf.Tensor
             The neighbor list, -1 if not exist
         ebd_type : tf.Tensor
             The type embedding
-        descpt : tf.Tensor
-            The descriptor
+        env_mat : tf.Tensor
+            The environemtal matrix, size is nframes * natoms * nnei * dim
+        dim_env_mat : int
+            The dimension of the environmental matrix
         reuse
             The weights in the networks should be reused when get the variable.
         suffix
@@ -278,9 +278,11 @@ class EnvTypeEmbedNet:
         natoms_tot = nframes * natoms_loc
         ebd_type = tf.cast(ebd_type, self.filter_precision)
 
-        # (nframes * natoms) * ndescrpt
-        descpt = tf.reshape(descpt, [natoms_tot, dim_descrpt])
-        descpt = tf.cast(descpt, self.filter_precision)
+        # (nframes * natoms) * nnei * dim
+        env_mat = tf.reshape(env_mat, [natoms_tot, nnei, dim_env_mat])
+        env_mat = tf.cast(env_mat, self.filter_precision)
+        # (nframes * natoms) * dim * dim
+        # env_mat_mul = tf.matmul(env_mat, env_mat, transpose_b=True)
 
         # (nframes * natoms)
         atype_loc = tf.reshape(atype, [natoms_tot])
@@ -318,11 +320,19 @@ class EnvTypeEmbedNet:
 
             # (nframs * natoms) * nnei * nebd
             ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
-            # (nframes * natoms) * (nnei * nebd)
-            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei * nebd])
+            # (nframes * natoms) * nnei * nebd
+            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei, nebd])
 
-            input = tf.concat([descpt, ebd_type_loc, ebd_type_nei], 1)
-            input = tf.reshape(input, [natoms_tot, dim_descrpt + nebd + nnei * nebd])
+            # (nframes * natoms) * nebd * nebd
+            ebd_type_nei_mat1 = tf.matmul(ebd_type_nei, env_mat, transpose_a=True)
+            ebd_type_nei_mat1 /= nnei
+            ebd_type_nei_mat = tf.matmul(
+                ebd_type_nei_mat1, ebd_type_nei_mat1, transpose_b=True
+            )
+            ebd_type_nei_mat = tf.reshape(ebd_type_nei_mat, [natoms_tot, nebd * nebd])
+
+            input = tf.concat([ebd_type_loc, ebd_type_nei_mat], 1)
+            input = tf.reshape(input, [natoms_tot, nebd + nebd * nebd])
 
             # (nframes * natoms) * nn
             ebd_type_loc = one_layer(
@@ -354,8 +364,9 @@ class EnvTypeEmbedNet:
 
         # (nframs * natoms) * nnei * nebd
         ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
-        # (nframes * natoms) * (nnei * nebd)
-        ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei * nebd])
+        # (nframes * natoms) * nnei * nebd
+        ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei, nebd])
+
         ebd_type_nei = tf.cast(ebd_type_nei, GLOBAL_TF_FLOAT_PRECISION)
         self.ebd_type_nei = tf.identity(ebd_type_nei, name="t_envtypeebd_nei")
         ebd_type_loc = tf.cast(ebd_type_loc, GLOBAL_TF_FLOAT_PRECISION)

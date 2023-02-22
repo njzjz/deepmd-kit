@@ -46,6 +46,7 @@ from deepmd.utils.tabulate import (
     DPTabulate,
 )
 from deepmd.utils.type_embed import (
+    MessagePassingEmbedNet,
     embed_atom_type,
 )
 
@@ -126,6 +127,7 @@ class DescrptSeAtten(DescrptSeA):
         attn_dotr: bool = True,
         attn_mask: bool = False,
         multi_task: bool = False,
+        message_passing: Optional[Dict[str, Any]] = None,
     ) -> None:
         DescrptSeA.__init__(
             self,
@@ -156,6 +158,10 @@ class DescrptSeAtten(DescrptSeA):
         self.attn_layer = attn_layer
         self.attn_mask = attn_mask
         self.attn_dotr = attn_dotr
+        if message_passing is None:
+            self.message_passing = None
+        else:
+            self.message_passing = MessagePassingEmbedNet(**message_passing)
 
         # descrpt config
         self.sel_all_a = [sel]
@@ -418,6 +424,23 @@ class DescrptSeAtten(DescrptSeA):
         )  ## lammps will have error without this
         self._identity_tensors(suffix=suffix)
 
+        if self.message_passing:
+            type_embedding = input_dict["type_embedding"]
+            if self.message_passing is not None:
+                message_passing_embedding = self.message_passing.build(
+                    natoms=natoms,
+                    atype=atype,
+                    nnei=self.sel_all_a[0],
+                    nlist=self.nlist,
+                    ebd_type=type_embedding,
+                    dim_env_mat=4,
+                    # do not use descrpt! the gradient is not correct
+                    env_mat=self.descrpt_reshape,
+                    reuse=reuse,
+                    suffix=suffix,
+                )
+                input_dict["message_passing_embedding"] = message_passing_embedding
+
         self.dout, self.qmat = self._pass_filter(
             self.descrpt_reshape,
             self.atype_nloc,
@@ -439,7 +462,11 @@ class DescrptSeAtten(DescrptSeA):
             input_dict is not None
             and input_dict.get("type_embedding", None) is not None
         ), "se_atten desctiptor must use type_embedding"
-        type_embedding = input_dict.get("type_embedding", None)
+        if self.message_passing is None:
+            type_embedding = input_dict.get("type_embedding", None)
+        else:
+            type_embedding = input_dict["message_passing_embedding"]
+        type_embedding_nei = input_dict.get("message_passing_nei", None)
         inputs = tf.reshape(inputs, [-1, natoms[0], self.ndescrpt])
         output = []
         output_qmat = []
@@ -468,6 +495,7 @@ class DescrptSeAtten(DescrptSeA):
             trainable=trainable,
             activation_fn=self.filter_activation_fn,
             type_embedding=type_embedding,
+            type_embedding_nei=type_embedding_nei,
             atype=atype,
         )
         layer = tf.reshape(layer, [tf.shape(inputs)[0], natoms[0], self.get_dim_out()])
@@ -581,6 +609,7 @@ class DescrptSeAtten(DescrptSeA):
         xyz_scatter,
         natype,
         type_embedding,
+        type_embedding_nei,
     ):
         """Concatenate `type_embedding` of neighbors and `xyz_scatter`.
         If not self.type_one_side, concatenate `type_embedding` of center atoms as well.
@@ -603,9 +632,12 @@ class DescrptSeAtten(DescrptSeA):
         """
         te_out_dim = type_embedding.get_shape().as_list()[-1]
         self.test_type_embedding = type_embedding
-        self.test_nei_embed = tf.nn.embedding_lookup(
-            type_embedding, self.nei_type_vec
-        )  # shape is [self.nnei, 1+te_out_dim]
+        if type_embedding_nei is None:
+            self.test_nei_embed = tf.nn.embedding_lookup(
+                type_embedding, self.nei_type_vec
+            )  # shape is [self.nnei, 1+te_out_dim]
+        else:
+            self.test_nei_embed = type_embedding_nei
         # nei_embed = tf.tile(nei_embed, (nframes * natoms[0], 1))  # shape is [nframes*natoms[0]*self.nnei, te_out_dim]
         nei_embed = tf.reshape(self.test_nei_embed, [-1, te_out_dim])
         self.embedding_input = tf.concat(
@@ -794,6 +826,7 @@ class DescrptSeAtten(DescrptSeA):
         incrs_index,
         inputs,
         type_embedding=None,
+        type_embedding_nei=None,
         atype=None,
         is_exclude=False,
         activation_fn=None,
@@ -819,7 +852,9 @@ class DescrptSeAtten(DescrptSeA):
         xyz_scatter = tf.reshape(tf.slice(inputs_reshape, [0, 0], [-1, 1]), [-1, 1])
         assert atype is not None, "atype must exist!!"
         type_embedding = tf.cast(type_embedding, self.filter_precision)
-        xyz_scatter = self._lookup_type_embedding(xyz_scatter, atype, type_embedding)
+        xyz_scatter = self._lookup_type_embedding(
+            xyz_scatter, atype, type_embedding, type_embedding_nei
+        )
         if self.compress:
             raise RuntimeError(
                 "compression of attention descriptor is not supported at the moment"
@@ -885,6 +920,7 @@ class DescrptSeAtten(DescrptSeA):
         type_input,
         natoms,
         type_embedding=None,
+        type_embedding_nei=None,
         atype=None,
         activation_fn=tf.nn.tanh,
         stddev=1.0,

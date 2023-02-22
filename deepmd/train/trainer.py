@@ -74,7 +74,6 @@ from deepmd.utils.sess import (
     run_sess,
 )
 from deepmd.utils.type_embed import (
-    EnvTypeEmbedNet,
     TypeEmbedNet,
 )
 
@@ -112,7 +111,6 @@ class DPTrainer(object):
             else j_must_have(model_param, "fitting_net_dict")
         )
         typeebd_param = model_param.get("type_embedding", None)
-        env_typeebd_param = model_param.get("env_type_embedding", None)
         self.model_param = model_param
         self.descrpt_param = descrpt_param
 
@@ -208,13 +206,6 @@ class DPTrainer(object):
             )
         else:
             self.typeebd = None
-        if env_typeebd_param is not None:
-            self.env_typeebd = EnvTypeEmbedNet(
-                **env_typeebd_param,
-                padding=padding,
-            )
-        else:
-            self.env_typeebd = None
 
         # init model
         # infer model type by fitting_type
@@ -231,7 +222,6 @@ class DPTrainer(object):
                     model_param.get("smin_alpha"),
                     model_param.get("sw_rmin"),
                     model_param.get("sw_rmax"),
-                    self.env_typeebd,
                 )
             # elif fitting_type == 'wfc':
             #     self.model = WFCModel(model_param, self.descrpt, self.fitting)
