@@ -322,6 +322,29 @@ class MessagePassingEmbedNet:
             ebd_type_nei = tf.nn.embedding_lookup(ebd_type_loc_padding, nlist)
             # (nframes * natoms) * nnei * nebd
             ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei, nebd])
+            # (nframes * natoms) * nnei * nebd
+            ebd_type_loc_reshape = tf.tile(
+                tf.reshape(ebd_type_loc, [natoms_tot, 1, nebd]),
+                [1, nnei, 1],
+            )
+
+            input_ebd_type_nei = tf.concat(
+                [ebd_type_loc_reshape, ebd_type_nei, env_mat], axis=2
+            )
+            input_ebd_type_nei = tf.reshape(
+                input_ebd_type_nei, [natoms_tot * nnei, nebd * 2 + dim_env_mat]
+            )
+            ebd_type_nei = one_layer(
+                input_ebd_type_nei,
+                nn,
+                activation_fn=self.filter_activation_fn,
+                precision=self.filter_precision,
+                name=f"message_pass_nei_{ii}{suffix}",
+                reuse=reuse,
+                seed=self.seed,
+                trainable=self.trainable,
+            )
+            ebd_type_nei = tf.reshape(ebd_type_nei, [natoms_tot, nnei, nn])
 
             # (nframes * natoms) * nebd * nebd
             ebd_type_nei_mat1 = tf.matmul(ebd_type_nei, env_mat, transpose_a=True)
@@ -329,10 +352,11 @@ class MessagePassingEmbedNet:
             ebd_type_nei_mat = tf.matmul(
                 ebd_type_nei_mat1, ebd_type_nei_mat1, transpose_b=True
             )
-            ebd_type_nei_mat = tf.reshape(ebd_type_nei_mat, [natoms_tot, nebd * nebd])
+            ebd_type_nei_mat = tf.reshape(ebd_type_nei_mat, [natoms_tot, nn * nn])
 
             input = tf.concat([ebd_type_loc, ebd_type_nei_mat], 1)
-            input = tf.reshape(input, [natoms_tot, nebd + nebd * nebd])
+            input = tf.reshape(input, [natoms_tot, nebd + nn * nn])
+            old_ebd_type_loc = ebd_type_loc
 
             # (nframes * natoms) * nn
             ebd_type_loc = one_layer(
@@ -340,11 +364,14 @@ class MessagePassingEmbedNet:
                 nn,
                 activation_fn=self.filter_activation_fn,
                 precision=self.filter_precision,
-                name=f"env_layer_{ii}{suffix}",
+                name=f"message_pass_layer_{ii}{suffix}",
                 reuse=reuse,
                 seed=self.seed,
                 trainable=self.trainable,
             )
+            shape = old_ebd_type_loc.get_shape().as_list()
+            if nn == shape[1]:
+                ebd_type_loc += old_ebd_type_loc
             nebd = nn
         # final neighbor ebd
         # nframes, natoms_loc, nebd
