@@ -427,6 +427,8 @@ void DeepPot::init(const std::string& model,
     check_status(ReadBinaryProto(Env::Default(), model, graph_def));
   else
     (*graph_def).ParseFromString(file_content);
+  // debug file_content
+  printf("file_content size: %d\n", file_content.size());
   int gpu_num = -1;
 #if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
   DPGetDeviceCount(gpu_num);  // check current device environment
