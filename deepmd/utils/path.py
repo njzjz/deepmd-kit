@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 from abc import (
     ABC,
     abstractmethod,
@@ -21,6 +23,60 @@ from wcmatch.glob import (
 )
 
 
+class Cache:
+    """Globally cache data in another directory.
+
+    This is useful when data is in the remote file system, and the local
+    file system is faster.
+
+    This class should be globally used, so that the cache is shared.
+    """
+
+    def __init__(self) -> None:
+        self.temp_path = os.environ.get("DP_SCRATCH")
+        if self.temp_path is None:
+            self.cache = False
+        else:
+            self.cache = True
+            self.temp_path = Path(self.temp_path)
+        self.temp_files = []
+
+    @lru_cache(maxsize=None)
+    def __call__(self, path: str) -> str:
+        """Cache the path.
+
+        Parameters
+        ----------
+        path : str
+            path to cache
+
+        Returns
+        -------
+        str
+            path to cached file
+        """
+        if not self.cache:
+            return path
+        path = Path(path)
+        if path.is_file():
+            temp_file = tempfile.NamedTemporaryFile(prefix="dp_", dir=self.temp_path)
+            # prevent the file from being deleted
+            self.temp_files.append(temp_file)
+            shutil.copyfile(path, temp_file.name)
+            return temp_file.name
+        elif path.is_dir():
+            temp_file = tempfile.TemporaryDirectory(prefix="dp_", dir=self.temp_path)
+            # prevent the file from being deleted
+            self.temp_files.append(temp_file)
+            shutil.copytree(path, temp_file.name, dirs_exist_ok=True)
+            return temp_file.name
+        else:
+            raise FileNotFoundError(f"{path} not found")
+
+
+global_cache = Cache()
+
+
 class DPPath(ABC):
     """The path class to data system (DeepmdData).
 
@@ -28,9 +84,11 @@ class DPPath(ABC):
     ----------
     path : str
         path
+    cached : bool, optional
+        The path has been cached
     """
 
-    def __new__(cls, path: str):
+    def __new__(cls, path: str, cached: bool = False) -> "DPPath":
         if cls is DPPath:
             if os.path.isdir(path):
                 return super().__new__(DPOSPath)
@@ -129,14 +187,15 @@ class DPOSPath(DPPath):
     ----------
     path : str
         path
+    cached : bool, optional
+        The path has been cached
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, cached: bool = False) -> None:
         super().__init__()
-        if isinstance(path, Path):
-            self.path = path
-        else:
-            self.path = Path(path)
+        if not cached:
+            path = global_cache(path)
+        self.path = Path(path)
 
     def load_numpy(self) -> np.ndarray:
         """Load NumPy array.
@@ -189,7 +248,7 @@ class DPOSPath(DPPath):
         List[DPPath]
             list of paths
         """
-        return list([type(self)(p) for p in self.path.rglob(pattern)])
+        return list([type(self)(p, cached=True) for p in self.path.rglob(pattern)])
 
     def is_file(self) -> bool:
         """Check if self is file."""
@@ -201,7 +260,7 @@ class DPOSPath(DPPath):
 
     def __truediv__(self, key: str) -> "DPPath":
         """Used for / operator."""
-        return type(self)(self.path / key)
+        return type(self)(self.path / key, cached=True)
 
     def __lt__(self, other: "DPOSPath") -> bool:
         """Whether this DPPath is less than other for sorting."""
@@ -225,15 +284,19 @@ class DPH5Path(DPPath):
     ----------
     path : str
         path
+    cached : bool, optional
+        The path has been cached
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, cached: bool = False) -> None:
         super().__init__()
         # we use "#" to split path
         # so we do not support file names containing #...
         s = path.split("#")
         self.root_path = s[0]
-        self.root = self._load_h5py(s[0])
+        if not cached:
+            self.root_path = global_cache(self.root_path)
+        self.root = self._load_h5py(self.root_path)
         # h5 path: default is the root path
         self.name = s[1] if len(s) > 1 else "/"
 
@@ -292,7 +355,7 @@ class DPH5Path(DPPath):
         subpaths = [ii for ii in self._keys if ii.startswith(self.name)]
         return list(
             [
-                type(self)(f"{self.root_path}#{pp}")
+                type(self)(f"{self.root_path}#{pp}", cached=True)
                 for pp in globfilter(subpaths, self._connect_path(pattern))
             ]
         )
@@ -340,7 +403,7 @@ class DPH5Path(DPPath):
 
     def __truediv__(self, key: str) -> "DPPath":
         """Used for / operator."""
-        return type(self)(f"{self.root_path}#{self._connect_path(key)}")
+        return type(self)(f"{self.root_path}#{self._connect_path(key)}", cached=True)
 
     def _connect_path(self, path: str) -> str:
         """Connect self with path."""
