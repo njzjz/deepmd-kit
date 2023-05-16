@@ -905,6 +905,8 @@ class DPTrainer:
         total_train_time = 0.0
 
         while cur_batch < stop_batch:
+            if self.timing_in_training:
+                tic = time.time()
             # first round validation:
             if not self.multi_task_mode:
                 train_batch = train_data.get_batch()
@@ -959,6 +961,8 @@ class DPTrainer:
                 is_first_step = False
 
             if self.timing_in_training:
+                toc = time.time()
+                load_time = toc - tic
                 tic = time.time()
             train_feed_dict = self.get_feed_dict(train_batch, is_training=True)
             # use tensorboard to visualize the training of deepmd-kit
@@ -1026,8 +1030,8 @@ class DPTrainer:
                     toc = time.time()
                     test_time = toc - tic
                     log.info(
-                        "batch %7d training time %.2f s, testing time %.2f s"
-                        % (cur_batch, train_time, test_time)
+                        "batch %7d training time %.2f s, testing time %.2f s, data loading time %.2f s"
+                        % (cur_batch, train_time, test_time, load_time)
                     )
                     # the first training time is not accurate
                     if cur_batch > self.disp_freq or stop_batch < 2 * self.disp_freq:
