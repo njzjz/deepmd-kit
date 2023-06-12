@@ -220,6 +220,7 @@ endif()
 
 file(GLOB SOURCE_FILES "*.cu")
 
+set(CUDA_LINK_LIBRARIES_KEYWORD PRIVATE)
 cuda_add_library(deepmd_op_cuda SHARED ${SOURCE_FILES})
 target_include_directories(
   deepmd_op_cuda
@@ -241,3 +242,7 @@ endif(BUILD_CPP_IF AND NOT BUILD_PY_IF)
 if(BUILD_PY_IF)
   install(TARGETS deepmd_op_cuda DESTINATION deepmd/op/)
 endif(BUILD_PY_IF)
+
+if(CMAKE_TESTING_ENABLED)
+  target_link_libraries(deepmd_op_cuda PRIVATE coverage_config)
+endif()

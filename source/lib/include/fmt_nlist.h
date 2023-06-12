@@ -28,6 +28,7 @@ void format_nbor_list_gpu_cuda(int* nlist,
                                const int max_nbor_size,
                                const int nloc,
                                const int nall,
+                               const int nframes,
                                const float rcut,
                                const std::vector<int> sec);
 

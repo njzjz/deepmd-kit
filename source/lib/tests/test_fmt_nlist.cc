@@ -358,7 +358,7 @@ TEST_F(TestFormatNlist, gpu_cuda) {
   // format nlist
   format_nbor_list_gpu_cuda(nlist_dev, posi_cpy_dev, atype_cpy_dev, gpu_inlist,
                             array_int_dev, array_longlong_dev, max_nbor_size,
-                            nloc, nall, rc, sec_a);
+                            nloc, nall, 1, rc, sec_a);
   deepmd::memcpy_device_to_host(nlist_dev, nlist);
   deepmd::delete_device_memory(nlist_dev);
   deepmd::delete_device_memory(posi_cpy_dev);
@@ -418,7 +418,7 @@ TEST_F(TestFormatNlistShortSel, gpu_cuda) {
   // format nlist
   format_nbor_list_gpu_cuda(nlist_dev, posi_cpy_dev, atype_cpy_dev, gpu_inlist,
                             array_int_dev, array_longlong_dev, max_nbor_size,
-                            nloc, nall, rc, sec_a);
+                            nloc, nall, 1, rc, sec_a);
   deepmd::memcpy_device_to_host(nlist_dev, nlist);
   deepmd::delete_device_memory(nlist_dev);
   deepmd::delete_device_memory(posi_cpy_dev);
@@ -548,7 +548,7 @@ TEST_F(TestFormatNlist, gpu_rocm) {
   // format nlist
   format_nbor_list_gpu_rocm(nlist_dev, posi_cpy_dev, atype_cpy_dev, gpu_inlist,
                             array_int_dev, array_longlong_dev, max_nbor_size,
-                            nloc, nall, rc, sec_a);
+                            nloc, nall, 1, rc, sec_a);
   deepmd::memcpy_device_to_host(nlist_dev, nlist);
   deepmd::delete_device_memory(nlist_dev);
   deepmd::delete_device_memory(posi_cpy_dev);
@@ -608,7 +608,7 @@ TEST_F(TestFormatNlistShortSel, gpu_rocm) {
   // format nlist
   format_nbor_list_gpu_rocm(nlist_dev, posi_cpy_dev, atype_cpy_dev, gpu_inlist,
                             array_int_dev, array_longlong_dev, max_nbor_size,
-                            nloc, nall, rc, sec_a);
+                            nloc, nall, 1, rc, sec_a);
   deepmd::memcpy_device_to_host(nlist_dev, nlist);
   deepmd::delete_device_memory(nlist_dev);
   deepmd::delete_device_memory(posi_cpy_dev);

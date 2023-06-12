@@ -98,12 +98,16 @@ __device__ inline void decoding_nbor_info(int& type,
 }
 
 template <typename FPTYPE>
-__global__ void get_i_idx(FPTYPE* i_idx, const int nloc, const FPTYPE* ilist) {
+__global__ void get_i_idx(FPTYPE* i_idx,
+                          const int nloc,
+                          const int nframes,
+                          const FPTYPE* ilist) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx >= nloc) {
+  if (idx >= nframes * nloc) {
     return;
   }
-  i_idx[ilist[idx]] = idx;
+  int kk = idx / nloc;  // frame index
+  i_idx[kk * nloc + ilist[idx]] = idx;
 }
 
 template <typename FPTYPE>
@@ -114,7 +118,9 @@ __global__ void format_nlist_fill_a(uint_64* key,
                                     int** firstneigh,
                                     const float rcut,
                                     int* i_idx,
-                                    const int MAX_NBOR_SIZE) {
+                                    const int MAX_NBOR_SIZE,
+                                    const int nloc,
+                                    const int nall) {
   // <<<nloc, MAX_NBOR_SIZE>>>
   const int_64 idx = blockIdx.x;
   const unsigned int idy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -128,14 +134,17 @@ __global__ void format_nlist_fill_a(uint_64* key,
   // dev_copy(nei_idx, &jlist[jrange[i_idx]], nsize);
   uint_64* key_in = key + idx * MAX_NBOR_SIZE;
   FPTYPE diff[3];
+  const int kk = idx / nloc;  // frame index
   const int& j_idx = nei_idx[idy];
-  if (type[j_idx] < 0) return;
+  const int j_idx_nall = kk * nall + j_idx;
+  if (type[j_idx_nall] < 0) return;
+  const int i_idx_nall = kk * nall + (i_idx[idx] % nloc);
   for (int dd = 0; dd < 3; dd++) {
-    diff[dd] = coord[j_idx * 3 + dd] - coord[idx * 3 + dd];
+    diff[dd] = coord[j_idx_nall * 3 + dd] - coord[i_idx_nall * 3 + dd];
   }
   FPTYPE rr = _sqrt(dev_dot(diff, diff));
   if (rr <= rcut) {
-    key_in[idy] = encoding_nbor_info(type[j_idx], rr, j_idx);
+    key_in[idy] = encoding_nbor_info(type[j_idx_nall], rr, j_idx);
   }
 }
 
@@ -209,16 +218,18 @@ void format_nbor_list_256(uint_64* key,
                           const int* type,
                           const deepmd::InputNlist& gpu_inlist,
                           const int& nloc,
+                          const int& nall,
+                          const int& nframes,
                           const float& rcut,
                           int* i_idx) {
   const int LEN = 256;
   const int MAX_NBOR_SIZE = 256;
   const int nblock = (MAX_NBOR_SIZE + LEN - 1) / LEN;
-  dim3 block_grid(nloc, nblock);
+  dim3 block_grid(nframes * nloc, nblock);
   dim3 thread_grid(1, LEN);
   format_nlist_fill_a<<<block_grid, thread_grid>>>(
       key, coord, type, gpu_inlist.numneigh, gpu_inlist.firstneigh, rcut, i_idx,
-      MAX_NBOR_SIZE);
+      MAX_NBOR_SIZE, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
   const int ITEMS_PER_THREAD = 4;
@@ -226,7 +237,8 @@ void format_nbor_list_256(uint_64* key,
   // BlockSortKernel<NeighborInfo, BLOCK_THREADS,
   // ITEMS_PER_THREAD><<<g_grid_size, BLOCK_THREADS>>> (
   BlockSortKernel<uint_64, BLOCK_THREADS, ITEMS_PER_THREAD>
-      <<<nloc, BLOCK_THREADS>>>(key, key + nloc * MAX_NBOR_SIZE);
+      <<<nframes * nloc, BLOCK_THREADS>>>(key,
+                                          key + nframes * nloc * MAX_NBOR_SIZE);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -237,16 +249,18 @@ void format_nbor_list_512(uint_64* key,
                           const int* type,
                           const deepmd::InputNlist& gpu_inlist,
                           const int& nloc,
+                          const int& nall,
+                          const int& nframes,
                           const float& rcut,
                           int* i_idx) {
   const int LEN = 256;
   const int MAX_NBOR_SIZE = 512;
   const int nblock = (MAX_NBOR_SIZE + LEN - 1) / LEN;
-  dim3 block_grid(nloc, nblock);
+  dim3 block_grid(nframes * nloc, nblock);
   dim3 thread_grid(1, LEN);
   format_nlist_fill_a<<<block_grid, thread_grid>>>(
       key, coord, type, gpu_inlist.numneigh, gpu_inlist.firstneigh, rcut, i_idx,
-      MAX_NBOR_SIZE);
+      MAX_NBOR_SIZE, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
   const int ITEMS_PER_THREAD = 4;
@@ -254,7 +268,8 @@ void format_nbor_list_512(uint_64* key,
   // BlockSortKernel<NeighborInfo, BLOCK_THREADS,
   // ITEMS_PER_THREAD><<<g_grid_size, BLOCK_THREADS>>> (
   BlockSortKernel<uint_64, BLOCK_THREADS, ITEMS_PER_THREAD>
-      <<<nloc, BLOCK_THREADS>>>(key, key + nloc * MAX_NBOR_SIZE);
+      <<<nframes * nloc, BLOCK_THREADS>>>(key,
+                                          key + nframes * nloc * MAX_NBOR_SIZE);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -265,16 +280,18 @@ void format_nbor_list_1024(uint_64* key,
                            const int* type,
                            const deepmd::InputNlist& gpu_inlist,
                            const int& nloc,
+                           const int& nall,
+                           const int& nframes,
                            const float& rcut,
                            int* i_idx) {
   const int LEN = 256;
   const int MAX_NBOR_SIZE = 1024;
   const int nblock = (MAX_NBOR_SIZE + LEN - 1) / LEN;
-  dim3 block_grid(nloc, nblock);
+  dim3 block_grid(nframes * nloc, nblock);
   dim3 thread_grid(1, LEN);
   format_nlist_fill_a<<<block_grid, thread_grid>>>(
       key, coord, type, gpu_inlist.numneigh, gpu_inlist.firstneigh, rcut, i_idx,
-      MAX_NBOR_SIZE);
+      MAX_NBOR_SIZE, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
   const int ITEMS_PER_THREAD = 8;
@@ -282,7 +299,8 @@ void format_nbor_list_1024(uint_64* key,
   // BlockSortKernel<NeighborInfo, BLOCK_THREADS,
   // ITEMS_PER_THREAD><<<g_grid_size, BLOCK_THREADS>>> (
   BlockSortKernel<uint_64, BLOCK_THREADS, ITEMS_PER_THREAD>
-      <<<nloc, BLOCK_THREADS>>>(key, key + nloc * MAX_NBOR_SIZE);
+      <<<nframes * nloc, BLOCK_THREADS>>>(key,
+                                          key + nframes * nloc * MAX_NBOR_SIZE);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -293,16 +311,18 @@ void format_nbor_list_2048(uint_64* key,
                            const int* type,
                            const deepmd::InputNlist& gpu_inlist,
                            const int& nloc,
+                           const int& nall,
+                           const int& nframes,
                            const float& rcut,
                            int* i_idx) {
   const int LEN = 256;
   const int MAX_NBOR_SIZE = 2048;
   const int nblock = (MAX_NBOR_SIZE + LEN - 1) / LEN;
-  dim3 block_grid(nloc, nblock);
+  dim3 block_grid(nframes * nloc, nblock);
   dim3 thread_grid(1, LEN);
   format_nlist_fill_a<<<block_grid, thread_grid>>>(
       key, coord, type, gpu_inlist.numneigh, gpu_inlist.firstneigh, rcut, i_idx,
-      MAX_NBOR_SIZE);
+      MAX_NBOR_SIZE, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
   const int ITEMS_PER_THREAD = 8;
@@ -310,7 +330,8 @@ void format_nbor_list_2048(uint_64* key,
   // BlockSortKernel<NeighborInfo, BLOCK_THREADS,
   // ITEMS_PER_THREAD><<<g_grid_size, BLOCK_THREADS>>> (
   BlockSortKernel<uint_64, BLOCK_THREADS, ITEMS_PER_THREAD>
-      <<<nloc, BLOCK_THREADS>>>(key, key + nloc * MAX_NBOR_SIZE);
+      <<<nframes * nloc, BLOCK_THREADS>>>(key,
+                                          key + nframes * nloc * MAX_NBOR_SIZE);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -321,16 +342,18 @@ void format_nbor_list_4096(uint_64* key,
                            const int* type,
                            const deepmd::InputNlist& gpu_inlist,
                            const int& nloc,
+                           const int& nall,
+                           const int& nframes,
                            const float& rcut,
                            int* i_idx) {
   const int LEN = 256;
   const int MAX_NBOR_SIZE = 4096;
   const int nblock = (MAX_NBOR_SIZE + LEN - 1) / LEN;
-  dim3 block_grid(nloc, nblock);
+  dim3 block_grid(nframes * nloc, nblock);
   dim3 thread_grid(1, LEN);
   format_nlist_fill_a<<<block_grid, thread_grid>>>(
       key, coord, type, gpu_inlist.numneigh, gpu_inlist.firstneigh, rcut, i_idx,
-      MAX_NBOR_SIZE);
+      MAX_NBOR_SIZE, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
   const int ITEMS_PER_THREAD = 16;
@@ -338,7 +361,8 @@ void format_nbor_list_4096(uint_64* key,
   // BlockSortKernel<NeighborInfo, BLOCK_THREADS,
   // ITEMS_PER_THREAD><<<g_grid_size, BLOCK_THREADS>>> (
   BlockSortKernel<uint_64, BLOCK_THREADS, ITEMS_PER_THREAD>
-      <<<nloc, BLOCK_THREADS>>>(key, key + nloc * MAX_NBOR_SIZE);
+      <<<nframes * nloc, BLOCK_THREADS>>>(key,
+                                          key + nframes * nloc * MAX_NBOR_SIZE);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -354,11 +378,16 @@ __global__ void compute_env_mat_a(FPTYPE* em,
                                   const int* nlist,
                                   const int nnei,
                                   const float rmin,
-                                  const float rmax) {
+                                  const float rmax,
+                                  const int nloc,
+                                  const int nall) {
   // <<<nloc, TPB>>>
   const int_64 bid = blockIdx.x;
   const unsigned int tid = threadIdx.x;
-  if (type[bid] < 0) return;
+  const int f_idx = bid / nloc;  // frame id
+  const int ll = bid % nloc;     // atom id
+  const int i_idx_nall = f_idx * nall + ll;
+  if (type[i_idx_nall] < 0) return;
   if (tid >= nnei) {
     return;
   }
@@ -374,9 +403,9 @@ __global__ void compute_env_mat_a(FPTYPE* em,
       FPTYPE rr[3] = {0};
       FPTYPE dd[4] = {0};
       FPTYPE vv[12] = {0};
-      const int j_idx = row_nlist[ii];
+      const int j_idx = f_idx * nall + row_nlist[ii];
       for (int kk = 0; kk < 3; kk++) {
-        rr[kk] = coord[j_idx * 3 + kk] - coord[bid * 3 + kk];
+        rr[kk] = coord[j_idx * 3 + kk] - coord[i_idx_nall * 3 + kk];
         row_rij[ii * 3 + kk] = rr[kk];
       }
       // const FPTYPE * rr = &row_rij[ii * 3];
@@ -460,17 +489,17 @@ __global__ void compute_env_mat_a(FPTYPE* em,
                     // idx_value + 3];
       for (int ii = 0; ii < 12; ii++) {
         row_descript_deriv[idx_deriv + ii] =
-            vv[ii] / std[type[bid] * ndescrpt + idx_value + ii / 3];
+            vv[ii] / std[type[i_idx_nall] * ndescrpt + idx_value + ii / 3];
       }
       for (int ii = 0; ii < 4; ii++) {
         row_descript[idx_value + ii] =
-            (dd[ii] - avg[type[bid] * ndescrpt + idx_value + ii]) /
-            std[type[bid] * ndescrpt + idx_value + ii];
+            (dd[ii] - avg[type[i_idx_nall] * ndescrpt + idx_value + ii]) /
+            std[type[i_idx_nall] * ndescrpt + idx_value + ii];
       }
     } else {
       // TODO: move it to the memset.
-      row_descript[idx_value] -= avg[type[bid] * ndescrpt + idx_value] /
-                                 std[type[bid] * ndescrpt + idx_value];
+      row_descript[idx_value] -= avg[type[i_idx_nall] * ndescrpt + idx_value] /
+                                 std[type[i_idx_nall] * ndescrpt + idx_value];
     }
   }
 }
@@ -486,13 +515,18 @@ __global__ void compute_env_mat_r(FPTYPE* em,
                                   const int* nlist,
                                   const int nnei,
                                   const float rmin,
-                                  const float rmax) {
+                                  const float rmax,
+                                  const int nloc,
+                                  const int nall) {
   // <<<nloc, TPB>>>
   const int_64 bid = blockIdx.x;
   const unsigned int tid = threadIdx.x;
   if (tid >= nnei) {
     return;
   }
+  const int f_idx = bid / nloc;  // frame id
+  const int ll = bid % nloc;     // atom id
+  const int i_idx_nall = f_idx * nall + ll;
   const int ndescrpt = nnei;
   const int* row_nlist = nlist + bid * nnei;
   FPTYPE* row_rij = rij + bid * nnei * 3;
@@ -505,9 +539,9 @@ __global__ void compute_env_mat_r(FPTYPE* em,
       FPTYPE rr[3] = {0};
       FPTYPE vv[3] = {0};
       FPTYPE dd = 0;
-      const int& j_idx = row_nlist[ii];
+      const int j_idx = f_idx * nall + row_nlist[ii];
       for (int kk = 0; kk < 3; kk++) {
-        rr[kk] = coord[j_idx * 3 + kk] - coord[bid * 3 + kk];
+        rr[kk] = coord[j_idx * 3 + kk] - coord[i_idx_nall * 3 + kk];
         row_rij[ii * 3 + kk] = rr[kk];
       }
       // const FPTYPE * rr = &row_rij[ii * 3];
@@ -539,14 +573,14 @@ __global__ void compute_env_mat_r(FPTYPE* em,
                  // idx_value + 0];
       for (int ii = 0; ii < 3; ii++) {
         row_em_deriv[idx_deriv + ii] =
-            vv[ii] / std[type[bid] * ndescrpt + idx_value + ii / 3];
+            vv[ii] / std[type[i_idx_nall] * ndescrpt + idx_value + ii / 3];
       }
-      row_em[idx_value] = (dd - avg[type[bid] * ndescrpt + idx_value]) /
-                          std[type[bid] * ndescrpt + idx_value];
+      row_em[idx_value] = (dd - avg[type[i_idx_nall] * ndescrpt + idx_value]) /
+                          std[type[i_idx_nall] * ndescrpt + idx_value];
     } else {
       // TODO: move it to the memset.
-      row_em[idx_value] -= avg[type[bid] * ndescrpt + idx_value] /
-                           std[type[bid] * ndescrpt + idx_value];
+      row_em[idx_value] -= avg[type[i_idx_nall] * ndescrpt + idx_value] /
+                           std[type[i_idx_nall] * ndescrpt + idx_value];
     }
   }
 }
@@ -562,45 +596,54 @@ void format_nbor_list_gpu_cuda(int* nlist,
                                const int max_nbor_size,
                                const int nloc,
                                const int nall,
+                               const int nframes,
                                const float rcut,
                                const std::vector<int> sec) {
   const int LEN = 256;
   const int nnei = sec.back();
-  const int nblock = (nloc + LEN - 1) / LEN;
+  const int nblock = (nframes * nloc + LEN - 1) / LEN;
   int* sec_dev = array_int;
   int* nei_iter = array_int + sec.size();  // = new int[sec_size];
-  int* i_idx = array_int + sec.size() + nloc * sec.size();
+  int* i_idx = array_int + sec.size() + nframes * nloc * sec.size();
   uint_64* key = array_longlong;
   assert(max_nbor_size == 256 || max_nbor_size == 512 ||
          max_nbor_size == 1024 || max_nbor_size == 2048 ||
          max_nbor_size == 4096);
-  DPErrcheck(cudaMemset(nlist, -1, sizeof(int) * int_64(nloc) * nnei));
-  DPErrcheck(cudaMemset(key, 0xffffffff,
-                        sizeof(uint_64) * int_64(nloc) * max_nbor_size));
+  DPErrcheck(cudaMemset(nlist, -1,
+                        sizeof(int) * int_64(nframes) * int_64(nloc) * nnei));
+  DPErrcheck(cudaMemset(
+      key, 0xffffffff,
+      sizeof(uint_64) * int_64(nframes) * int_64(nloc) * max_nbor_size));
   DPErrcheck(cudaMemcpy(sec_dev, &sec[0], sizeof(int) * sec.size(),
                         cudaMemcpyHostToDevice));
 
-  get_i_idx<<<nblock, LEN>>>(i_idx, nloc, gpu_inlist.ilist);
+  get_i_idx<<<nblock, LEN>>>(i_idx, nloc, nframes, gpu_inlist.ilist);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 
   if (max_nbor_size == 256) {
-    format_nbor_list_256(key, coord, type, gpu_inlist, nloc, rcut, i_idx);
+    format_nbor_list_256(key, coord, type, gpu_inlist, nloc, nall, nframes,
+                         rcut, i_idx);
   } else if (max_nbor_size == 512) {
-    format_nbor_list_512(key, coord, type, gpu_inlist, nloc, rcut, i_idx);
+    format_nbor_list_512(key, coord, type, gpu_inlist, nloc, nall, nframes,
+                         rcut, i_idx);
   } else if (max_nbor_size == 1024) {
-    format_nbor_list_1024(key, coord, type, gpu_inlist, nloc, rcut, i_idx);
+    format_nbor_list_1024(key, coord, type, gpu_inlist, nloc, nall, nframes,
+                          rcut, i_idx);
   } else if (max_nbor_size == 2048) {
-    format_nbor_list_2048(key, coord, type, gpu_inlist, nloc, rcut, i_idx);
+    format_nbor_list_2048(key, coord, type, gpu_inlist, nloc, nall, nframes,
+                          rcut, i_idx);
   } else if (max_nbor_size == 4096) {
-    format_nbor_list_4096(key, coord, type, gpu_inlist, nloc, rcut, i_idx);
+    format_nbor_list_4096(key, coord, type, gpu_inlist, nloc, nall, nframes,
+                          rcut, i_idx);
   }
 
-  fill_nei_iter<<<dim3(nloc, (max_nbor_size + LEN - 1) / LEN), LEN>>>(
-      nei_iter, key, nloc, max_nbor_size, sec.size());
+  fill_nei_iter<<<dim3(nframes * nloc, (max_nbor_size + LEN - 1) / LEN), LEN>>>(
+      nei_iter, key, nframes * nloc, max_nbor_size, sec.size());
 
-  format_nlist_fill_b<<<dim3(nloc, (max_nbor_size + LEN - 1) / LEN), LEN>>>(
-      nlist, nnei, nloc, key, sec_dev, sec.size(), nei_iter, max_nbor_size);
+  format_nlist_fill_b<<<dim3(nframes * nloc, (max_nbor_size + LEN - 1) / LEN),
+                        LEN>>>(nlist, nnei, nframes * nloc, key, sec_dev,
+                               sec.size(), nei_iter, max_nbor_size);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -620,6 +663,7 @@ void prod_env_mat_a_gpu_cuda(FPTYPE* em,
                              const FPTYPE* std,
                              const int nloc,
                              const int nall,
+                             const int nframes,
                              const float rcut,
                              const float rcut_smth,
                              const std::vector<int> sec,
@@ -629,19 +673,23 @@ void prod_env_mat_a_gpu_cuda(FPTYPE* em,
   }
   const int nnei = sec.back();
   const int ndescrpt = nnei * 4;
-  DPErrcheck(cudaMemset(em, 0, sizeof(FPTYPE) * int_64(nloc) * ndescrpt));
-  DPErrcheck(
-      cudaMemset(em_deriv, 0, sizeof(FPTYPE) * int_64(nloc) * ndescrpt * 3));
-  DPErrcheck(cudaMemset(rij, 0, sizeof(FPTYPE) * int_64(nloc) * nnei * 3));
+  DPErrcheck(cudaMemset(
+      em, 0, sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * ndescrpt));
+  DPErrcheck(cudaMemset(
+      em_deriv, 0,
+      sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * ndescrpt * 3));
+  DPErrcheck(cudaMemset(
+      rij, 0, sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * nnei * 3));
 
   format_nbor_list_gpu_cuda(nlist, coord, f_type, gpu_inlist, array_int,
-                            array_longlong, max_nbor_size, nloc, nall, rcut,
-                            sec);
+                            array_longlong, max_nbor_size, nloc, nall, nframes,
+                            rcut, sec);
   nborErrcheck(cudaGetLastError());
   nborErrcheck(cudaDeviceSynchronize());
 
-  compute_env_mat_a<FPTYPE, TPB><<<nloc, TPB>>>(
-      em, em_deriv, rij, coord, avg, std, type, nlist, nnei, rcut_smth, rcut);
+  compute_env_mat_a<FPTYPE, TPB>
+      <<<nframes * nloc, TPB>>>(em, em_deriv, rij, coord, avg, std, type, nlist,
+                                nnei, rcut_smth, rcut, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -661,24 +709,29 @@ void prod_env_mat_r_gpu_cuda(FPTYPE* em,
                              const FPTYPE* std,
                              const int nloc,
                              const int nall,
+                             const int nframes,
                              const float rcut,
                              const float rcut_smth,
                              const std::vector<int> sec) {
   const int nnei = sec.back();
   const int ndescrpt = nnei * 1;
-  DPErrcheck(cudaMemset(em, 0, sizeof(FPTYPE) * int_64(nloc) * ndescrpt));
-  DPErrcheck(
-      cudaMemset(em_deriv, 0, sizeof(FPTYPE) * int_64(nloc) * ndescrpt * 3));
-  DPErrcheck(cudaMemset(rij, 0, sizeof(FPTYPE) * int_64(nloc) * nnei * 3));
+  DPErrcheck(cudaMemset(
+      em, 0, sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * ndescrpt));
+  DPErrcheck(cudaMemset(
+      em_deriv, 0,
+      sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * ndescrpt * 3));
+  DPErrcheck(cudaMemset(
+      rij, 0, sizeof(FPTYPE) * int_64(nframes) * int_64(nloc) * nnei * 3));
 
   format_nbor_list_gpu_cuda(nlist, coord, type, gpu_inlist, array_int,
-                            array_longlong, max_nbor_size, nloc, nall, rcut,
-                            sec);
+                            array_longlong, max_nbor_size, nloc, nall, nframes,
+                            rcut, sec);
   nborErrcheck(cudaGetLastError());
   nborErrcheck(cudaDeviceSynchronize());
 
-  compute_env_mat_r<FPTYPE, TPB><<<nloc, TPB>>>(
-      em, em_deriv, rij, coord, avg, std, type, nlist, nnei, rcut_smth, rcut);
+  compute_env_mat_r<FPTYPE, TPB>
+      <<<nframes * nloc, TPB>>>(em, em_deriv, rij, coord, avg, std, type, nlist,
+                                nnei, rcut_smth, rcut, nloc, nall);
   DPErrcheck(cudaGetLastError());
   DPErrcheck(cudaDeviceSynchronize());
 }
@@ -712,6 +765,7 @@ template void prod_env_mat_a_gpu_cuda<float>(float* em,
                                              const float* std,
                                              const int nloc,
                                              const int nall,
+                                             const int nframes,
                                              const float rcut,
                                              const float rcut_smth,
                                              const std::vector<int> sec,
@@ -731,6 +785,7 @@ template void prod_env_mat_a_gpu_cuda<double>(
     const double* std,
     const int nloc,
     const int nall,
+    const int nframes,
     const float rcut,
     const float rcut_smth,
     const std::vector<int> sec,
@@ -749,6 +804,7 @@ template void prod_env_mat_r_gpu_cuda<float>(float* em,
                                              const float* std,
                                              const int nloc,
                                              const int nall,
+                                             const int nframes,
                                              const float rcut,
                                              const float rcut_smth,
                                              const std::vector<int> sec);
@@ -767,6 +823,7 @@ template void prod_env_mat_r_gpu_cuda<double>(
     const double* std,
     const int nloc,
     const int nall,
+    const int nframes,
     const float rcut,
     const float rcut_smth,
     const std::vector<int> sec);
@@ -780,6 +837,7 @@ template void format_nbor_list_gpu_cuda<float>(
     const int max_nbor_size,
     const int nloc,
     const int nall,
+    const int nframes,
     const float rcut,
     const std::vector<int> sec);
 template void format_nbor_list_gpu_cuda<double>(
@@ -792,6 +850,7 @@ template void format_nbor_list_gpu_cuda<double>(
     const int max_nbor_size,
     const int nloc,
     const int nall,
+    const int nframes,
     const float rcut,
     const std::vector<int> sec);
 template void test_encoding_decoding_nbor_info_gpu_cuda(
