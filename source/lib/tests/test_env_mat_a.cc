@@ -8,6 +8,32 @@
 #include "neighbor_list.h"
 #include "prod_env_mat.h"
 
+template <typename T>
+inline void double_vec(std::vector<T> &v) {
+  v.insert(std::end(v), std::begin(v), std::end(v));
+}
+
+void merge_neighbor_list(InputNlist &nlist,
+                         std::vector<InputNlist> &nlist_list) {
+  int inum = 0;
+  for (InputNlist nlist_i : nlist_list) {
+    inum += nlist_i.inum;
+  }
+  int *ilist = new int[inum];
+  int *numneigh = new int[inum];
+  int **firstneigh = new int *[inum];
+  inum = 0;
+  for (InputNlist nlist_i : nlist_list) {
+    std::copy(nlist_i.ilist, nlist_i.ilist + nlist_i.inum, ilist + inum);
+    std::copy(nlist_i.numneigh, nlist_i.numneigh + nlist_i.inum,
+              numneigh + inum);
+    std::copy(nlist_i.firstneigh, nlist_i.firstneigh + nlist_i.inum,
+              firstneigh + inum);
+    inum += nlist_i.inum;
+  }
+  nlist = InputNlist(inum, ilist, numneigh, firstneigh);
+}
+
 class TestEnvMatA : public ::testing::Test {
  protected:
   std::vector<double> posi = {12.83, 2.56, 2.18, 12.09, 2.87, 2.74,
@@ -17,6 +43,7 @@ class TestEnvMatA : public ::testing::Test {
   std::vector<double> posi_cpy;
   std::vector<int> atype_cpy;
   int nloc, nall;
+  const int nframes = 2;
   double rc = 6;
   double rc_smth = 0.8;
   SimulationRegion<double> region;
@@ -187,7 +214,7 @@ TEST_F(TestEnvMatA, orig_cpy) {
   bool pbc = false;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, -1);
     env_mat_a(env, env_deriv, rij_a, posi_cpy, ntypes, atype_cpy, region, pbc,
               ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -239,8 +266,9 @@ TEST_F(TestEnvMatA, orig_cpy_equal_pbc) {
   std::vector<double> env_0, env_deriv_0, rij_a_0;
   std::vector<double> env_1, env_deriv_1, rij_a_1;
   for (int ii = 0; ii < nloc; ++ii) {
-    int ret_0 = format_nlist_i_cpu<double>(fmt_nlist_a_0, posi_cpy, atype_cpy,
-                                           ii, nlist_a_cpy[ii], rc, sec_a);
+    int ret_0 =
+        format_nlist_i_cpu<double>(fmt_nlist_a_0, posi_cpy, atype_cpy, ii,
+                                   nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret_0, -1);
     env_mat_a(env_0, env_deriv_0, rij_a_0, posi_cpy, ntypes, atype_cpy, region,
               false, ii, fmt_nlist_a_0, sec_a, rc_smth, rc);
@@ -272,7 +300,7 @@ TEST_F(TestEnvMatA, orig_cpy_num_deriv) {
   double hh = 1e-5;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, -1);
     env_mat_a(env, env_deriv, rij_a, posi_cpy, ntypes, atype_cpy, region, pbc,
               ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -314,7 +342,7 @@ TEST_F(TestEnvMatA, cpu) {
   bool pbc = false;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, -1);
     deepmd::env_mat_a_cpu<double>(env, env_deriv, rij_a, posi_cpy, atype_cpy,
                                   ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -337,14 +365,16 @@ TEST_F(TestEnvMatA, cpu_equal_orig_cpy) {
   std::vector<double> env_0, env_deriv_0, rij_a_0;
   std::vector<double> env_1, env_deriv_1, rij_a_1;
   for (int ii = 0; ii < nloc; ++ii) {
-    int ret_0 = format_nlist_i_cpu<double>(fmt_nlist_a_0, posi_cpy, atype_cpy,
-                                           ii, nlist_a_cpy[ii], rc, sec_a);
+    int ret_0 =
+        format_nlist_i_cpu<double>(fmt_nlist_a_0, posi_cpy, atype_cpy, ii,
+                                   nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret_0, -1);
     env_mat_a(env_0, env_deriv_0, rij_a_0, posi_cpy, ntypes, atype_cpy, region,
               false, ii, fmt_nlist_a_0, sec_a, rc_smth, rc);
 
-    int ret_1 = format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy,
-                                           ii, nlist_a_cpy[ii], rc, sec_a);
+    int ret_1 =
+        format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy, ii,
+                                   nlist_a_cpy[ii], rc, sec_a, nall);
 
     EXPECT_EQ(ret_1, -1);
     deepmd::env_mat_a_cpu<double>(env_1, env_deriv_1, rij_a_1, posi_cpy,
@@ -373,7 +403,7 @@ TEST_F(TestEnvMatA, cpu_num_deriv) {
   double hh = 1e-5;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, -1);
     deepmd::env_mat_a_cpu<double>(env, env_deriv, rij_a, posi_cpy, atype_cpy,
                                   ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -415,7 +445,7 @@ TEST_F(TestEnvMatAShortSel, orig_cpy) {
   bool pbc = false;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, 1);
     env_mat_a(env, env_deriv, rij_a, posi_cpy, ntypes, atype_cpy, region, pbc,
               ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -467,7 +497,7 @@ TEST_F(TestEnvMatAShortSel, cpu) {
   bool pbc = false;
   for (int ii = 0; ii < nloc; ++ii) {
     int ret = format_nlist_i_cpu<double>(fmt_nlist_a, posi_cpy, atype_cpy, ii,
-                                         nlist_a_cpy[ii], rc, sec_a);
+                                         nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret, 1);
     deepmd::env_mat_a_cpu<double>(env, env_deriv, rij_a, posi_cpy, atype_cpy,
                                   ii, fmt_nlist_a, sec_a, rc_smth, rc);
@@ -540,13 +570,15 @@ TEST_F(TestEnvMatA, prod_cpu_equal_cpu) {
   std::vector<double> std(ntypes * ndescrpt, 1);
   deepmd::prod_env_mat_a_cpu(&em[0], &em_deriv[0], &rij[0], &nlist[0],
                              &posi_cpy[0], &atype_cpy[0], inlist, max_nbor_size,
-                             &avg[0], &std[0], nloc, nall, rc, rc_smth, sec_a);
+                             &avg[0], &std[0], nloc, nall, 1, rc, rc_smth,
+                             sec_a);
 
   std::vector<int> fmt_nlist_a_1, fmt_nlist_r_1;
   std::vector<double> env_1, env_deriv_1, rij_a_1;
   for (int ii = 0; ii < nloc; ++ii) {
-    int ret_1 = format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy,
-                                           ii, nlist_a_cpy[ii], rc, sec_a);
+    int ret_1 =
+        format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy, ii,
+                                   nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret_1, -1);
     deepmd::env_mat_a_cpu<double>(env_1, env_deriv_1, rij_a_1, posi_cpy,
                                   atype_cpy, ii, fmt_nlist_a_1, sec_a, rc_smth,
@@ -609,11 +641,19 @@ TEST_F(TestEnvMatA, prod_gpu_cuda) {
   deepmd::InputNlist inlist(nloc, &ilist[0], &numneigh[0], &firstneigh[0]),
       gpu_inlist;
   convert_nlist(inlist, nlist_a_cpy);
-  std::vector<double> em(nloc * ndescrpt, 0.0),
-      em_deriv(nloc * ndescrpt * 3, 0.0), rij(nloc * nnei * 3, 0.0);
-  std::vector<int> nlist(nloc * nnei, 0);
+  std::vector<double> em(nframes * nloc * ndescrpt, 0.0),
+      em_deriv(nframes * nloc * ndescrpt * 3, 0.0),
+      rij(nframes * nloc * nnei * 3, 0.0);
+  std::vector<int> nlist(nframes * nloc * nnei, 0);
   std::vector<double> avg(ntypes * ndescrpt, 0);
   std::vector<double> std(ntypes * ndescrpt, 1);
+
+  double_vec(posi_cpy);
+  double_vec(atype_cpy);
+  double_vec(expected_env);
+  deepmd::InputNlist inlist2;
+  std::vector<deepmd::InputNlist> inlist_list({inlist, inlist});
+  merge_neighbor_list(inlist2, inlist_list);
 
   double *em_dev = NULL, *em_deriv_dev = NULL, *rij_dev = NULL;
   double *posi_cpy_dev = NULL, *avg_dev = NULL, *std_dev = NULL;
@@ -628,19 +668,21 @@ TEST_F(TestEnvMatA, prod_gpu_cuda) {
   deepmd::malloc_device_memory_sync(std_dev, std);
   deepmd::malloc_device_memory_sync(atype_cpy_dev, atype_cpy);
   deepmd::malloc_device_memory_sync(nlist_dev, nlist);
-  deepmd::malloc_device_memory(array_int_dev,
-                               sec_a.size() + nloc * sec_a.size() + nloc);
+  deepmd::malloc_device_memory(
+      array_int_dev,
+      sec_a.size() + nframes * nloc * sec_a.size() + nframes * nloc);
   deepmd::malloc_device_memory(array_longlong_dev,
-                               nloc * GPU_MAX_NBOR_SIZE * 2);
-  deepmd::malloc_device_memory(memory_dev, nloc * max_nbor_size);
-  deepmd::convert_nlist_gpu_device(gpu_inlist, inlist, memory_dev,
+                               nframes * nloc * GPU_MAX_NBOR_SIZE * 2);
+  deepmd::malloc_device_memory(memory_dev, nframes * nloc * max_nbor_size);
+  deepmd::convert_nlist_gpu_device(gpu_inlist, inlist2, memory_dev,
                                    max_nbor_size);
 
   deepmd::prod_env_mat_a_gpu_cuda(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_cpy_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a);
+      std_dev, nloc, nall, nframes, rc, rc_smth, sec_a);
   deepmd::memcpy_device_to_host(em_dev, em);
+  deepmd::memcpy_device_to_host(rij_dev, rij);
   deepmd::delete_device_memory(em_dev);
   deepmd::delete_device_memory(em_deriv_dev);
   deepmd::delete_device_memory(nlist_dev);
@@ -653,12 +695,18 @@ TEST_F(TestEnvMatA, prod_gpu_cuda) {
   deepmd::delete_device_memory(memory_dev);
   deepmd::free_nlist_gpu_device(gpu_inlist);
 
-  for (int ii = 0; ii < nloc; ++ii) {
+  for (int ii = 0; ii < nframes * nloc; ++ii) {
     for (int jj = 0; jj < nnei; ++jj) {
       for (int dd = 0; dd < 4; ++dd) {
         EXPECT_LT(fabs(em[ii * nnei * 4 + jj * 4 + dd] -
                        expected_env[ii * nnei * 4 + jj * 4 + dd]),
-                  1e-5);
+                  1e-5)
+            << "ii: " << ii << " jj: " << jj << " dd: " << dd
+            << " em: " << em[ii * nnei * 4 + jj * 4 + dd]
+            << " expected_env: " << expected_env[ii * nnei * 4 + jj * 4 + dd]
+            << " rij: " << rij[ii * nnei * 3 + jj * 3 + 0] << " "
+            << rij[ii * nnei * 3 + jj * 3 + 1] << " "
+            << rij[ii * nnei * 3 + jj * 3 + 2];
       }
     }
   }
@@ -718,7 +766,7 @@ TEST_F(TestEnvMatA, prod_gpu_cuda_equal_cpu) {
   deepmd::prod_env_mat_a_gpu_cuda(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_cpy_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a);
+      std_dev, nloc, nall, 1, rc, rc_smth, sec_a);
   deepmd::memcpy_device_to_host(em_dev, em);
   deepmd::memcpy_device_to_host(em_deriv_dev, em_deriv);
   deepmd::memcpy_device_to_host(rij_dev, rij);
@@ -833,7 +881,7 @@ TEST_F(TestEnvMatA, prod_gpu_rocm) {
   deepmd::prod_env_mat_a_gpu_rocm(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_cpy_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a);
+      std_dev, nloc, nall, 1, rc, rc_smth, sec_a);
   deepmd::memcpy_device_to_host(em_dev, em);
   deepmd::delete_device_memory(em_dev);
   deepmd::delete_device_memory(em_deriv_dev);
@@ -912,7 +960,7 @@ TEST_F(TestEnvMatA, prod_gpu_rocm_equal_cpu) {
   deepmd::prod_env_mat_a_gpu_rocm(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_cpy_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a);
+      std_dev, nloc, nall, 1, rc, rc_smth, sec_a);
   deepmd::memcpy_device_to_host(em_dev, em);
   deepmd::memcpy_device_to_host(em_deriv_dev, em_deriv);
   deepmd::memcpy_device_to_host(rij_dev, rij);
@@ -932,8 +980,9 @@ TEST_F(TestEnvMatA, prod_gpu_rocm_equal_cpu) {
   std::vector<int> fmt_nlist_a_1, fmt_nlist_r_1;
   std::vector<double> env_1, env_deriv_1, rij_a_1;
   for (int ii = 0; ii < nloc; ++ii) {
-    int ret_1 = format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy,
-                                           ii, nlist_a_cpy[ii], rc, sec_a);
+    int ret_1 =
+        format_nlist_i_cpu<double>(fmt_nlist_a_1, posi_cpy, atype_cpy, ii,
+                                   nlist_a_cpy[ii], rc, sec_a, nall);
     EXPECT_EQ(ret_1, -1);
     deepmd::env_mat_a_cpu<double>(env_1, env_deriv_1, rij_a_1, posi_cpy,
                                   atype_cpy, ii, fmt_nlist_a_1, sec_a, rc_smth,
