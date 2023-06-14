@@ -686,7 +686,7 @@ TEST_F(TestEnvMatAMix, prod_gpu_cuda) {
   deepmd::prod_env_mat_a_gpu_cuda(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a, f_atype_cpy_dev);
+      std_dev, nloc, nall, 1, rc, rc_smth, sec_a, f_atype_cpy_dev);
 
   deepmd::use_nei_info_gpu(nlist_dev, ntype_dev, nmask_dev, atype_dev,
                            mapping_dev, nloc, nnei, ntypes, true);
@@ -779,7 +779,7 @@ TEST_F(TestEnvMatAMix, prod_gpu_cuda_equal_cpu) {
   deepmd::prod_env_mat_a_gpu_cuda(
       em_dev, em_deriv_dev, rij_dev, nlist_dev, posi_cpy_dev, atype_dev,
       gpu_inlist, array_int_dev, array_longlong_dev, max_nbor_size, avg_dev,
-      std_dev, nloc, nall, rc, rc_smth, sec_a, f_atype_cpy_dev);
+      std_dev, nloc, nall, 1, rc, rc_smth, sec_a, f_atype_cpy_dev);
   deepmd::memcpy_device_to_host(em_dev, em);
   deepmd::memcpy_device_to_host(em_deriv_dev, em_deriv);
   deepmd::memcpy_device_to_host(rij_dev, rij);
