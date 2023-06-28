@@ -32,7 +32,6 @@ file(
   soft_min_force.cc
   soft_min_virial.cc
   ewald_recp.cc
-  gelu_multi_device.cc
   map_aparam.cc
   neighbor_stat.cc
   unaggregated_grad.cc
