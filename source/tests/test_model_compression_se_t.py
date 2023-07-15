@@ -72,13 +72,45 @@ def _init_models():
     return INPUT, frozen_model, compressed_model
 
 
+def _init_models_exclude_types():
+    data_file = str(tests_path / os.path.join("model_compression", "data"))
+    frozen_model = str(tests_path / "dp-original-se-t-exclude-types.pb")
+    compressed_model = str(tests_path / "dp-compressed-se-t-exclude-types.pb")
+    INPUT = str(tests_path / "input.json")
+    jdata = j_loader(str(tests_path / os.path.join("model_compression", "input.json")))
+    jdata["model"]["descriptor"] = {}
+    jdata["model"]["descriptor"]["type"] = "se_e3"
+    jdata["model"]["descriptor"]["sel"] = [46, 92]
+    jdata["model"]["descriptor"]["rcut_smth"] = 0.5
+    jdata["model"]["descriptor"]["rcut"] = 6.0
+    jdata["model"]["descriptor"]["neuron"] = [4, 8, 16]
+    jdata["model"]["descriptor"]["resnet_dt"] = False
+    jdata["model"]["descriptor"]["seed"] = 1
+    jdata["training"]["training_data"]["systems"] = data_file
+    jdata["training"]["validation_data"]["systems"] = data_file
+    with open(INPUT, "w") as fp:
+        json.dump(jdata, fp, indent=4)
+
+    ret = run_dp("dp train " + INPUT)
+    np.testing.assert_equal(ret, 0, "DP train failed!")
+    ret = run_dp("dp freeze -o " + frozen_model)
+    np.testing.assert_equal(ret, 0, "DP freeze failed!")
+    ret = run_dp("dp compress " + " -i " + frozen_model + " -o " + compressed_model)
+    np.testing.assert_equal(ret, 0, "DP model compression failed!")
+    return INPUT, frozen_model, compressed_model
+
+
 INPUT, FROZEN_MODEL, COMPRESSED_MODEL = _init_models()
+INPUT_ET, FROZEN_MODEL_ET, COMPRESSED_MODEL_ET = _init_models_exclude_types()
 
 
 def tearDownModule():
     _file_delete(INPUT)
     _file_delete(FROZEN_MODEL)
     _file_delete(COMPRESSED_MODEL)
+    _file_delete(INPUT_ET)
+    _file_delete(FROZEN_MODEL_ET)
+    _file_delete(COMPRESSED_MODEL_ET)
     _file_delete("out.json")
     _file_delete("compress.json")
     _file_delete("checkpoint")
@@ -440,8 +472,8 @@ class TestDeepPotALargeBoxNoPBC(unittest.TestCase):
 class TestDeepPotAPBCExcludeTypes(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.dp_original = DeepPot(FROZEN_MODEL)
-        self.dp_compressed = DeepPot(COMPRESSED_MODEL)
+        self.dp_original = DeepPot(FROZEN_MODEL_ET)
+        self.dp_compressed = DeepPot(COMPRESSED_MODEL_ET)
         self.coords = np.array(
             [
                 12.83,
