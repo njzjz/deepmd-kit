@@ -79,6 +79,7 @@ def _init_models_exclude_types():
     INPUT = str(tests_path / "input.json")
     jdata = j_loader(str(tests_path / os.path.join("model_compression", "input.json")))
     jdata["model"]["descriptor"] = {}
+    jdata["model"]["descriptor"]["exclude_types"] = [[0, 1]]
     jdata["model"]["descriptor"]["type"] = "se_e3"
     jdata["model"]["descriptor"]["sel"] = [46, 92]
     jdata["model"]["descriptor"]["rcut_smth"] = 0.5
