@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
 import logging
 from typing import (
     TYPE_CHECKING,
@@ -48,6 +49,8 @@ class DeepPot(DeepEval):
     auto_batch_size : bool or int or AutomaticBatchSize, default: True
         If True, automatic batch size will be used. If int, it will be used
         as the initial batch size.
+    input_map : dict, optional
+        The input map for tf.import_graph_def. Only work with default tf graph
 
     Examples
     --------
@@ -74,6 +77,7 @@ class DeepPot(DeepEval):
         load_prefix: str = "load",
         default_tf_graph: bool = False,
         auto_batch_size: Union[bool, int, AutoBatchSize] = True,
+        input_map: Optional[dict] = None,
     ) -> None:
         # add these tensors on top of what is defined by DeepTensor Class
         # use this in favor of dict update to move attribute from class to
@@ -107,21 +111,23 @@ class DeepPot(DeepEval):
             load_prefix=load_prefix,
             default_tf_graph=default_tf_graph,
             auto_batch_size=auto_batch_size,
+            input_map=input_map,
         )
 
         # load optional tensors
         operations = [op.name for op in self.graph.get_operations()]
         # check if the graph has these operations:
         # if yes add them
-        if "t_efield" in operations:
-            self._get_tensor("t_efield:0", "t_efield")
+
+        if ("%s/t_efield" % load_prefix) in operations:
+            self.tensors.update({"t_efield": "t_efield:0"})
             self.has_efield = True
         else:
             log.debug("Could not get tensor 't_efield:0'")
             self.t_efield = None
             self.has_efield = False
 
-        if "load/t_fparam" in operations:
+        if ("%s/t_fparam" % load_prefix) in operations:
             self.tensors.update({"t_fparam": "t_fparam:0"})
             self.has_fparam = True
         else:
@@ -129,7 +135,7 @@ class DeepPot(DeepEval):
             self.t_fparam = None
             self.has_fparam = False
 
-        if "load/t_aparam" in operations:
+        if ("%s/t_aparam" % load_prefix) in operations:
             self.tensors.update({"t_aparam": "t_aparam:0"})
             self.has_aparam = True
         else:
@@ -137,7 +143,7 @@ class DeepPot(DeepEval):
             self.t_aparam = None
             self.has_aparam = False
 
-        if "load/spin_attr/ntypes_spin" in operations:
+        if ("%s/spin_attr/ntypes_spin" % load_prefix) in operations:
             self.tensors.update({"t_ntypes_spin": "spin_attr/ntypes_spin:0"})
             self.has_spin = True
         else:
@@ -398,7 +404,6 @@ class DeepPot(DeepEval):
         atom_types,
         fparam=None,
         aparam=None,
-        atomic=False,
         efield=None,
         mixed_type=False,
     ):
@@ -465,6 +470,10 @@ class DeepPot(DeepEval):
             efield = np.reshape(efield, [nframes, natoms, 3])
             efield = efield[:, imap, :]
             efield = np.reshape(efield, [nframes, natoms * 3])
+        if self.has_aparam:
+            aparam = np.reshape(aparam, [nframes, natoms, fdim])
+            aparam = aparam[:, imap, :]
+            aparam = np.reshape(aparam, [nframes, natoms * fdim])
 
         # make natoms_vec and default_mesh
         natoms_vec = self.make_natoms_vec(atom_types, mixed_type=mixed_type)
@@ -489,10 +498,7 @@ class DeepPot(DeepEval):
             raise RuntimeError
         if self.has_efield:
             feed_dict_test[self.t_efield] = np.reshape(efield, [-1])
-        if pbc:
-            feed_dict_test[self.t_mesh] = make_default_mesh(cells)
-        else:
-            feed_dict_test[self.t_mesh] = np.array([], dtype=np.int32)
+        feed_dict_test[self.t_mesh] = make_default_mesh(pbc, mixed_type)
         if self.has_fparam:
             feed_dict_test[self.t_fparam] = np.reshape(fparam, [-1])
         if self.has_aparam:

@@ -137,7 +137,9 @@ __global__ void format_nlist_fill_a(uint_64* key,
   const int kk = idx / nloc;  // frame index
   const int& j_idx = nei_idx[idy];
   const int j_idx_nall = kk * nall + j_idx;
-  if (type[j_idx_nall] < 0) return;
+  if (type[j_idx_nall] < 0) {
+    return;
+  }
   const int i_idx_nall = kk * nall + (i_idx[idx] % nloc);
   for (int dd = 0; dd < 3; dd++) {
     diff[dd] = coord[j_idx_nall * 3 + dd] - coord[i_idx_nall * 3 + dd];
@@ -160,8 +162,9 @@ __global__ void fill_nei_iter(int* nei_iter_dev,
   int nei_type_cur = -1, nbor_idx_cur = 0;
   int nei_type_pre = -1, nbor_idx_pre = 0;
   if (col < max_nbor_size && key_out[col] != key_out[max_nbor_size - 1]) {
-    if (col >= 1)
+    if (col >= 1) {
       decoding_nbor_info(nei_type_pre, nbor_idx_pre, key_out[col - 1]);
+    }
     decoding_nbor_info(nei_type_cur, nbor_idx_cur, key_out[col]);
   }
   if (nei_type_cur != nei_type_pre) {
@@ -387,7 +390,9 @@ __global__ void compute_env_mat_a(FPTYPE* em,
   const int f_idx = bid / nloc;  // frame id
   const int ll = bid % nloc;     // atom id
   const int i_idx_nall = f_idx * nall + ll;
-  if (type[i_idx_nall] < 0) return;
+  if (type[i_idx_nall] < 0) {
+    return;
+  }
   if (tid >= nnei) {
     return;
   }
@@ -599,6 +604,8 @@ void format_nbor_list_gpu_cuda(int* nlist,
                                const int nframes,
                                const float rcut,
                                const std::vector<int> sec) {
+  DPErrcheck(cudaGetLastError());
+  DPErrcheck(cudaDeviceSynchronize());
   const int LEN = 256;
   const int nnei = sec.back();
   const int nblock = (nframes * nloc + LEN - 1) / LEN;
@@ -668,6 +675,8 @@ void prod_env_mat_a_gpu_cuda(FPTYPE* em,
                              const float rcut_smth,
                              const std::vector<int> sec,
                              const int* f_type) {
+  DPErrcheck(cudaGetLastError());
+  DPErrcheck(cudaDeviceSynchronize());
   if (f_type == NULL) {
     f_type = type;
   }
@@ -713,6 +722,8 @@ void prod_env_mat_r_gpu_cuda(FPTYPE* em,
                              const float rcut,
                              const float rcut_smth,
                              const std::vector<int> sec) {
+  DPErrcheck(cudaGetLastError());
+  DPErrcheck(cudaDeviceSynchronize());
   const int nnei = sec.back();
   const int ndescrpt = nnei * 1;
   DPErrcheck(cudaMemset(

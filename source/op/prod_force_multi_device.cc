@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 #include "custom_op.h"
 #include "errors.h"
 #include "prod_force.h"
@@ -49,12 +50,15 @@ template <typename Device, typename FPTYPE>
 class ProdForceSeAOp : public OpKernel {
  public:
   explicit ProdForceSeAOp(OpKernelConstruction* context) : OpKernel(context) {
-    if (context->HasAttr("parallel"))
+    if (context->HasAttr("parallel")) {
       OP_REQUIRES_OK(context, context->GetAttr("parallel", &parallel));
-    if (context->HasAttr("start_frac"))
+    }
+    if (context->HasAttr("start_frac")) {
       OP_REQUIRES_OK(context, context->GetAttr("start_frac", &start_frac));
-    if (context->HasAttr("end_frac"))
+    }
+    if (context->HasAttr("end_frac")) {
       OP_REQUIRES_OK(context, context->GetAttr("end_frac", &end_frac));
+    }
   }
 
   void Compute(OpKernelContext* context) override {
@@ -124,9 +128,10 @@ class ProdForceSeAOp : public OpKernel {
 
     int start_index = 0, end_index = nloc, nloc_loc = nloc;
     if (parallel) {
-      if (device != "CPU")
+      if (device != "CPU") {
         throw deepmd::deepmd_exception(
             "Auto parallelization for ProdForceA is not supported on GPUs!");
+      }
       // we split in_deriv, net_deriv, and nlist along nloc
       // compute start and end index along nloc
       // frac belongs to [0, 1]

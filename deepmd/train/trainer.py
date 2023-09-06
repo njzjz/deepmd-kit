@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
 import glob
 import logging
 import os
@@ -324,6 +325,9 @@ class DPTrainer:
         log.info("built lr")
 
     def _build_loss(self):
+        if self.stop_batch == 0:
+            # l2 is not used if stop_batch is zero
+            return None, None
         if not self.multi_task_mode:
             l2_l, l2_more = self.loss.build(
                 self.learning_rate,
@@ -448,6 +452,11 @@ class DPTrainer:
         return optimizer
 
     def _build_training(self):
+        if self.stop_batch == 0:
+            # self.train_op is not used if stop_batch is zero
+            self.train_op = None
+            return
+
         trainable_variables = tf.trainable_variables()
 
         if not self.multi_task_mode:
@@ -831,7 +840,7 @@ class DPTrainer:
                 pass
             if platform.system() != "Windows":
                 # by default one does not have access to create symlink on Windows
-                os.symlink(ori_ff, new_ff)
+                os.symlink(os.path.relpath(ori_ff, os.path.dirname(new_ff)), new_ff)
             else:
                 shutil.copyfile(ori_ff, new_ff)
         log.info("saved checkpoint %s" % self.save_ckpt)
