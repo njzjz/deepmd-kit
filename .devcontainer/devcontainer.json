@@ -12,7 +12,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y mpich && DP_BUILD_TESTING=1 LMP_CXX11_ABI_0=1 DP_LAMMPS_VERSION=stable_2Aug2023 DP_ENABLE_IPI=1 pip3 install --user .[cpu,test,lmp]",
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y mpich && DP_BUILD_TESTING=1 LMP_CXX11_ABI_0=1 DP_LAMMPS_VERSION=stable_2Aug2023 DP_ENABLE_IPI=1 pip3 install --user -e .[cpu,test,lmp]",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
