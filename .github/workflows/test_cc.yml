@@ -28,6 +28,7 @@ jobs:
         CMAKE_GENERATOR: Ninja
         CMAKE_C_COMPILER_LAUNCHER: ccache
         CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        CCACHE_COMPILERCHECK: content
     # test lammps
     # ASE issue: https://gitlab.com/ase/ase/-/merge_requests/2843
     # TODO: remove ase version when ase has new release

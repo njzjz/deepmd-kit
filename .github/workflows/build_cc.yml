@@ -58,6 +58,7 @@ jobs:
         CMAKE_GENERATOR: Ninja
         CMAKE_C_COMPILER_LAUNCHER: ccache
         CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        CCACHE_COMPILERCHECK: content
       if: matrix.variant != 'clang'
     - run: source/install/build_cc.sh
       env:
@@ -68,6 +69,7 @@ jobs:
         CMAKE_GENERATOR: Ninja
         CMAKE_C_COMPILER_LAUNCHER: ccache
         CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        CCACHE_COMPILERCHECK: content
       if: matrix.variant == 'clang'
     - name: Test files exist
       run: |
