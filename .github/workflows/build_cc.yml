@@ -28,6 +28,7 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
     - uses: lukka/get-cmake@latest
+    - uses: hendrikmuhs/ccache-action@v1.2
     - run: python -m pip install tensorflow
     - run: |
          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb \
@@ -55,6 +56,8 @@ jobs:
         DP_VARIANT: ${{ matrix.dp_variant }}
         DOWNLOAD_TENSORFLOW: "FALSE"
         CMAKE_GENERATOR: Ninja
+        CMAKE_C_COMPILER_LAUNCHER: ccache
+        CMAKE_CXX_COMPILER_LAUNCHER: ccache
       if: matrix.variant != 'clang'
     - run: source/install/build_cc.sh
       env:
@@ -63,6 +66,8 @@ jobs:
         CC: clang
         CXX: clang++
         CMAKE_GENERATOR: Ninja
+        CMAKE_C_COMPILER_LAUNCHER: ccache
+        CMAKE_CXX_COMPILER_LAUNCHER: ccache
       if: matrix.variant == 'clang'
     - name: Test files exist
       run: |
