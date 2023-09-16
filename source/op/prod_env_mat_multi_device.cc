@@ -602,10 +602,10 @@ class ProdEnvMatAOp : public OpKernel {
         array_longlong = uint64_temp.flat<unsigned long long>().data();
 
         // launch the gpu(nv) compute function
-        deepmd::prod_env_mat_a_gpu_cuda(em, em_deriv, rij, nlist, coord, type,
-                                        gpu_inlist, array_int, array_longlong,
-                                        max_nbor_size, avg, std, nloc, nall, 1,
-                                        frame_nall, rcut_r, rcut_r_smth, sec_a);
+        deepmd::prod_env_mat_a_gpu_cuda(
+            em, em_deriv, rij, nlist, coord, type, gpu_inlist, array_int,
+            array_longlong, max_nbor_size, avg, std, nloc, frame_nall, 1,
+            rcut_r, rcut_r_smth, sec_a);
         if (b_nlist_map) {
           _map_nlist_gpu(nlist, idx_mapping, nloc, nnei);
         }
@@ -897,7 +897,7 @@ class ProdEnvMatROp : public OpKernel {
         deepmd::prod_env_mat_r_gpu_cuda(em, em_deriv, rij, nlist, coord, type,
                                         gpu_inlist, array_int, array_longlong,
                                         max_nbor_size, avg, std, nloc,
-                                        frame_nall, rcut, rcut_smth, sec);
+                                        frame_nall, 1, rcut, rcut_smth, sec);
         if (b_nlist_map) {
           _map_nlist_gpu(nlist, idx_mapping, nloc, nnei);
         }
@@ -1241,7 +1241,7 @@ class ProdEnvMatAMixOp : public OpKernel {
         // launch the gpu(nv) compute function
         deepmd::prod_env_mat_a_gpu_cuda(
             em, em_deriv, rij, nlist, coord, type, gpu_inlist, array_int,
-            array_longlong, max_nbor_size, avg, std, nloc, nall, 1, frame_nall,
+            array_longlong, max_nbor_size, avg, std, nloc, frame_nall, 1,
             rcut_r, rcut_r_smth, sec_a, f_type);
         _map_nei_info_gpu(nlist, ntype, nmask, type, idx_mapping, nloc, nnei,
                           ntypes, b_nlist_map);
