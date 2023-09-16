@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import argparse
-import imp
+import importlib.util
 import logging
+import os
+import sys
 import textwrap
 from typing import (
     List,
@@ -12,11 +14,15 @@ from typing import (
 def load_child_module(name):
     """Load a child module without loading its parent module."""
     names = name.split(".")
-    path = None
-    for name in names:
-        f, path, info = imp.find_module(name, path)
-        path = [path]
-    return imp.load_module(name, f, path[0], info)
+    parent_spec = importlib.util.find_spec(names[0])
+    paths = os.path.join(*names[1:]) + ".py"
+    spec = importlib.util.spec_from_file_location(
+        name, os.path.join(parent_spec.submodule_search_locations[0], paths)
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 __version__ = load_child_module("deepmd._version").__version__
@@ -306,7 +312,7 @@ def main_parser() -> argparse.ArgumentParser:
     # The table is composed of fifth-order polynomial coefficients and is assembled
     # from two sub-tables. The first table takes the step(parameter) as it's uniform
     # step, while the second table takes 10 * step as it\s uniform step
-    #  The range of the first table is automatically detected by deepmd-kit, while the
+    #  The range of the first table is automatically detected by deepmd-kit, while the
     # second table ranges from the first table's upper boundary(upper) to the
     # extrapolate(parameter) * upper.
     parser_compress = subparsers.add_parser(
@@ -447,6 +453,22 @@ def main_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Calculate the RMS real error of the model. The real data should be given in the systems.",
+    )
+    parser_model_devi.add_argument(
+        "--atomic",
+        action="store_true",
+        default=False,
+        help="Print the force model deviation of each atom.",
+    )
+    parser_model_devi.add_argument(
+        "--relative",
+        type=float,
+        help="Calculate the relative model deviation of force. The level parameter for computing the relative model deviation of the force should be given.",
+    )
+    parser_model_devi.add_argument(
+        "--relative_v",
+        type=float,
+        help="Calculate the relative model deviation of virial. The level parameter for computing the relative model deviation of the virial should be given.",
     )
 
     # * convert models
