@@ -1,0 +1,24 @@
+on:
+  pull_request:
+    types:
+      - "labeled"
+  workflow_dispatch:
+name: Test CUDA
+jobs:
+  testcuda:
+    name: Test CUDA
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'Test CUDA' || github.event_name == 'workflow_dispatch'
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Run on kaggle
+      uses: lvyufeng/action-kaggle-gpu-test@7c678a593ccdcbc89df1aa6b1a5f9c2dbe3e5c15
+      with:
+        kaggle_username: "${{ secrets.KANGGLE_USERNAME }}"
+        kaggle_key: "${{ secrets.KANGGLE_API_KEY }}"
+        kernel_name: Cybertron
+        kernel_job_file: source/install/test_on_kaggle.py
