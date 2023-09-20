@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import os
 import subprocess
+import sys
 
 
 def test_on_kaggle():
@@ -8,6 +9,7 @@ def test_on_kaggle():
         ["git", "clone", "https://github.com/njzjz/deepmd-kit", "-b", "test_on_kaggle"]
     )
     os.chdir("deepmd-kit")
+    subprocess.check_output([sys.executable, "-m", "pip", "install", "-U", "cmake"])
     subprocess.check_output(
         ["bash", "./source/install/test_cc_local.sh"],
         env={
