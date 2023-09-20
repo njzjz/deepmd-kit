@@ -5,7 +5,14 @@ name: Test C++
 jobs:
   testcc:
     name: Test C++
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runson }}
+    strategy:
+      matrix:
+        include:
+          - runson: "ubuntu-latest"
+            variant: "cpu"
+          - runson: "cirun-gpu-runner--${{ github.run_id }}"
+            variant: "cuda"
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v4

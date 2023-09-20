@@ -1,0 +1,9 @@
+runners:
+  - name: "gpu-runner"
+    cloud: "gcp"
+    gpu: "nvidia-tesla-t4"
+    instance_type: "n1-standard-1"
+    machine_image: "c1-deeplearning-tf-2-13-gpu-v20230822-debian-11-py310"
+    preemptible: true
+    labels:
+      - "cirun-gpu-runner"
