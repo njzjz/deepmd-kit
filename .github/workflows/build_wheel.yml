@@ -134,6 +134,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
   build_singularity:
+    needs: [build_wheels]
     runs-on: ubuntu-latest
     container:
       image: quay.io/singularity/singularity:v3.11.5
@@ -156,7 +157,7 @@ jobs:
 
   pass:
     name: Pass testing build wheels
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist, build_docker, build_singularity]
     runs-on: ubuntu-latest
     if: always()
     steps:
