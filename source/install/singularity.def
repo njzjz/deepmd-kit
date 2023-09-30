@@ -1,0 +1,21 @@
+Bootstrap: docker
+From: python:3.10
+Stage: build
+
+%post
+  python -m venv /opt/deepmd-kit
+  export PATH="/opt/deepmd-kit/bin:$PATH"
+  pip install --pre --find-links dist deepmd-kit[gpu,cu11,lmp,ipi]
+
+%environment
+  export PATH="/opt/deepmd-kit/bin:$PATH"
+
+%test
+  dp -h && lmp -h && dp_ipi && python -m deepmd -h
+
+Stage: final
+%files from build
+  /opt/deepmd-kit /opt/deepmd-kit
+
+%environment
+  export PATH="/opt/deepmd-kit/bin:$PATH"

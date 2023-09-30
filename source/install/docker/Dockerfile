@@ -4,7 +4,7 @@ RUN python -m venv /opt/deepmd-kit
 ENV PATH="/opt/deepmd-kit/bin:$PATH"
 # Install package
 COPY dist /dist
-RUN pip install "$(ls /dist/deepmd_kit-*manylinux*_x86_64.whl)[gpu,cu11,lmp,ipi]" \
+RUN pip install --pre --find-links /dist deepmd-kit[gpu,cu11,lmp,ipi] \
     && dp -h \
     && lmp -h \
     && dp_ipi \
