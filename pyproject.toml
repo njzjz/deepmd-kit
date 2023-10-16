@@ -157,6 +157,8 @@ before-all = [
 ]
 
 [tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
 environment = { PIP_PREFER_BINARY="1" }
 test-extras = ["cpu"]
 test-command = [
