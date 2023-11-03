@@ -91,7 +91,7 @@ def find_tensorflow() -> Tuple[Optional[str], List[str]]:
             # CUDA 12.2
             requires.extend(
                 [
-                    "tensorflow-cpu>=2.15.0rc0; platform_machine=='x86_64' and platform_system == 'Linux'",
+                    "tensorflow-cpu>=2.15.0rc0",
                 ]
             )
         requires.extend(get_tf_requirement()["cpu"])
