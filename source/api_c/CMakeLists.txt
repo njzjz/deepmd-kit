@@ -80,7 +80,7 @@ if(PACKAGE_C)
     DESTINATION ${cmake_files_install_dir})
   set(config_file "${generated_dir}/${CMAKE_PROJECT_NAME}Config.cmake")
   configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in" "${config_file}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Config.cmake.in" "${config_file}"
     INSTALL_DESTINATION ${cmake_files_install_dir})
   install(FILES ${version_file} ${config_file}
           DESTINATION ${cmake_files_install_dir})
