@@ -563,7 +563,7 @@ void inline convert_nlist(InputNlist &to_nlist,
     to_nlist.numneigh[ii] = from_nlist[ii].size();
     to_nlist.firstneigh[ii] = &from_nlist[ii][0];
   }
-  DP_DeleteNlist(to_nlist.nl);
+  // DP_DeleteNlist(to_nlist.nl);
   to_nlist.nl = DP_NewNlist(to_nlist.inum, to_nlist.ilist, to_nlist.numneigh,
                             to_nlist.firstneigh);
 }
