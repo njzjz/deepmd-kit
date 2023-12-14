@@ -25,6 +25,8 @@ DP_Nlist* DP_NewNlist(int inum_,
             DP_Nlist* new_nl = new DP_Nlist(nl); return new_nl;)
 }
 
+void DP_DeleteNlist(DP_Nlist* nlist) { delete nlist; }
+
 DP_DeepPot::DP_DeepPot() {}
 DP_DeepPot::DP_DeepPot(deepmd::DeepPot& dp) : dp(dp) {
   dfparam = dp.dim_fparam();

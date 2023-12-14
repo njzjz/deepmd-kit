@@ -508,7 +508,12 @@ struct InputNlist {
         numneigh(nullptr),
         firstneigh(nullptr),
         nl(DP_NewNlist(0, nullptr, nullptr, nullptr)) {
-    DP_CHECK_OK(DP_NlistCheckOK, nl);
+    try {
+      DP_CHECK_OK(DP_NlistCheckOK, nl);
+    } catch (...) {
+      DP_DeleteNlist(nl);
+      throw;
+    }
   };
   InputNlist(int inum_, int *ilist_, int *numneigh_, int **firstneigh_)
       : inum(inum_),
@@ -516,8 +521,14 @@ struct InputNlist {
         numneigh(numneigh_),
         firstneigh(firstneigh_),
         nl(DP_NewNlist(inum_, ilist_, numneigh_, firstneigh_)) {
-    DP_CHECK_OK(DP_NlistCheckOK, nl);
+    try {
+      DP_CHECK_OK(DP_NlistCheckOK, nl);
+    } catch (...) {
+      DP_DeleteNlist(nl);
+      throw;
+    }
   };
+  ~InputNlist() { DP_DeleteNlist(nl); };
   /// @brief C API neighbor list.
   DP_Nlist *nl;
   /// @brief Number of core region atoms
@@ -552,6 +563,7 @@ void inline convert_nlist(InputNlist &to_nlist,
     to_nlist.numneigh[ii] = from_nlist[ii].size();
     to_nlist.firstneigh[ii] = &from_nlist[ii][0];
   }
+  DP_DeleteNlist(to_nlist.nl);
   to_nlist.nl = DP_NewNlist(to_nlist.inum, to_nlist.ilist, to_nlist.numneigh,
                             to_nlist.firstneigh);
 }

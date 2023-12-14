@@ -26,6 +26,13 @@ extern DP_Nlist* DP_NewNlist(int inum_,
                              int** firstneigh_);
 
 /**
+ * @brief Delete a neighbor list.
+ *
+ * @param nlist The neighbor list to delete.
+ */
+extern void DP_DeleteNlist(DP_Nlist* nlist);
+
+/**
  * @brief Check if there is any exceptions throw.
  *
  * @param dp The neighbor list to use.
