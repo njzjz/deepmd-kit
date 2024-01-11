@@ -255,6 +255,7 @@ def _lammps(data_file, units="metal") -> PyLammps:
     lammps.units(units)
     lammps.boundary("p p p")
     lammps.atom_style("atomic")
+    lammps.atom_modify("map array sort 0 0.0")
     if units == "metal" or units == "real":
         lammps.neighbor("2.0 bin")
     elif units == "si":
@@ -701,3 +702,9 @@ def test_pair_deepmd_si(lammps_si):
             expected_f[lammps_si.atoms[ii].id - 1] * constants.force_metal2si
         )
     lammps_si.run(1)
+
+def test_dynamical_matrix(lammps):
+    # See #3126
+    lammps.pair_style(f"deepmd {pb_file.resolve()}")
+    lammps.pair_coeff("* *")
+    lammps.dynamical_matrix("all regular 1.0e-6 file Dyn.form binary no")
