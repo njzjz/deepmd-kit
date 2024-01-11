@@ -708,3 +708,4 @@ def test_dynamical_matrix(lammps):
     lammps.pair_style(f"deepmd {pb_file.resolve()}")
     lammps.pair_coeff("* *")
     lammps.dynamical_matrix("all regular 1.0e-6 file Dyn.form binary no")
+    lammps.run(0)
