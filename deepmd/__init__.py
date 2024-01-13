@@ -1,4 +1,16 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+# workaround to fix https://github.com/conda-forge/tensorflow-feedstock/issues/364
+import ctypes
+import importlib
+from pathlib import (
+    Path,
+)
+
+module_spec = importlib.util.find_spec("tensorflow")
+ctypes.CDLL(
+    str(Path(module_spec.origin).parent / "python" / "_pywrap_tensorflow_internal.so")
+)
+
 """Root of the deepmd package, exposes all public classes and submodules."""
 
 try:
