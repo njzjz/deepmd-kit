@@ -169,6 +169,8 @@ jobs:
           build-args: |
             VARIANT=${{ matrix.variant }}
             CUDA_VERSION=${{ matrix.cuda_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build_pypi_index:
     needs: [build_wheels, build_sdist]
