@@ -12,6 +12,12 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
+    - name: ccache
+      # https://github.com/hendrikmuhs/ccache-action/issues/181
+      uses: hendrikmuhs/ccache-action@v1.2.11
+      with:
+        create-symlink: true
+        key: ${{ github.job }}
     - name: Setup MPI
       uses: mpi4py/setup-mpi@v1
       with:

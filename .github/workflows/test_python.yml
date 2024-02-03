@@ -22,6 +22,12 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
         cache: 'pip'
+    - name: ccache
+      # https://github.com/hendrikmuhs/ccache-action/issues/181
+      uses: hendrikmuhs/ccache-action@v1.2.11
+      with:
+        create-symlink: true
+        key: ${{ github.job }}
     - uses: mpi4py/setup-mpi@v1
       with:
         mpi: openmpi
