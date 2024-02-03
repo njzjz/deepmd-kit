@@ -6,8 +6,8 @@ if(DEFINED LAMMPS_SOURCE_ROOT OR DEFINED LAMMPS_VERSION)
     include(FetchContent)
     FetchContent_Declare(
       lammps_download
-      GIT_REPOSITORY https://github.com/lammps/lammps
-      GIT_TAG ${LAMMPS_VERSION})
+      URL https://github.com/lammps/lammps/archive/refs/tags/${LAMMPS_VERSION}.zip
+    )
     FetchContent_GetProperties(lammps_download)
     if(NOT lammps_download_POPULATED)
       FetchContent_Populate(lammps_download)
