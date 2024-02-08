@@ -35,8 +35,6 @@ jobs:
       env:
         TENSORFLOW_VERSION: ${{ matrix.tf }}
         DP_BUILD_TESTING: 1
-    - run: pip install tensorflow-metal
-      if: matrix.os == 'macos-14'
     - run: pip install horovod mpi4py
       env:
         HOROVOD_WITH_TENSORFLOW: 1
