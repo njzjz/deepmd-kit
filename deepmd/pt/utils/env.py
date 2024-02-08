@@ -25,7 +25,8 @@ LOCAL_RANK = int(0 if LOCAL_RANK is None else LOCAL_RANK)
 if torch.cuda.is_available():
     # One can use CUDA_VISIBLE_DEVICES to disable CUDA devices
     DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
-elif torch.backends.mps.is_available():
+elif torch.backends.mps.is_available() and GLOBAL_NP_FLOAT_PRECISION != np.float64:
+    # float64 is not supported by mps
     DEVICE = torch.device("mps")
 else:
     DEVICE = torch.device("cpu")

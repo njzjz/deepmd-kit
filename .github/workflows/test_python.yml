@@ -44,6 +44,7 @@ jobs:
     - run: pytest --cov=deepmd source/tests --durations=0
       env:
         NUM_WORKERS: 0
+        DP_INTERFACE_PREC: ${{ matrix.os == 'macos-14' && 'low' || 'high' }}
     - uses: codecov/codecov-action@v4
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
