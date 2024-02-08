@@ -22,10 +22,13 @@ NUM_WORKERS = int(os.environ.get("NUM_WORKERS", min(8, ncpus)))
 LOCAL_RANK = os.environ.get("LOCAL_RANK")
 LOCAL_RANK = int(0 if LOCAL_RANK is None else LOCAL_RANK)
 
-if os.environ.get("DEVICE") == "cpu" or torch.cuda.is_available() is False:
-    DEVICE = torch.device("cpu")
-else:
+if torch.cuda.is_available():
+    # One can use CUDA_VISIBLE_DEVICES to disable CUDA devices
     DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cpu")
 
 JIT = False
 CACHE_PER_SYS = 5  # keep at most so many sets per sys in memory

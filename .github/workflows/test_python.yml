@@ -12,9 +12,13 @@ jobs:
           - python: 3.8
             tf:
             torch:
+            os: ubuntu-22.04
           - python: "3.11"
             tf:
             torch:
+            os: ubuntu-22.04
+          - python: "3.11"
+            os: macos-14
 
     steps:
     - uses: actions/checkout@v4
@@ -27,12 +31,12 @@ jobs:
         mpi: openmpi
     # https://github.com/pypa/pip/issues/11770
     - run: python -m pip install -U "pip>=21.3.1,!=23.0.0"
-    - run: python -m pip install -U "torch==${{ matrix.torch }}" "numpy<1.20"
-      if: matrix.torch != ''
     - run: pip install -e .[cpu,test,torch]
       env:
         TENSORFLOW_VERSION: ${{ matrix.tf }}
         DP_BUILD_TESTING: 1
+    - run: pip install tensorflow-metal
+      if: matrix.os == 'macos-14'
     - run: pip install horovod mpi4py
       env:
         HOROVOD_WITH_TENSORFLOW: 1
