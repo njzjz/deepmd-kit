@@ -65,3 +65,8 @@ else(BUILD_PY_IF)
   install(TARGETS ${libipiname} DESTINATION lib/)
   install(TARGETS ${ipiname} DESTINATION bin/)
 endif(BUILD_PY_IF)
+
+if(PACKAGE_C)
+  install(TARGETS ${libipiname} DESTINATION ${CMAKE_BINARY_DIR}/libdeepmd_c/lib)
+  install(TARGETS ${ipiname} DESTINATION ${CMAKE_BINARY_DIR}/libdeepmd_c/bin)
+endif()
