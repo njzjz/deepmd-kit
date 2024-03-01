@@ -10,6 +10,9 @@ from deepmd.env import (
     get_default_nthreads,
     set_default_nthreads,
 )
+from deepmd.pt.utils import (
+    hvd,
+)
 
 SAMPLER_RECORD = os.environ.get("SAMPLER_RECORD", False)
 try:
@@ -21,6 +24,8 @@ NUM_WORKERS = int(os.environ.get("NUM_WORKERS", min(8, ncpus)))
 # Make sure DDP uses correct device if applicable
 LOCAL_RANK = os.environ.get("LOCAL_RANK")
 LOCAL_RANK = int(0 if LOCAL_RANK is None else LOCAL_RANK)
+if hvd.size > 1:
+    LOCAL_RANK = hvd.local_rank
 
 if os.environ.get("DEVICE") == "cpu" or torch.cuda.is_available() is False:
     DEVICE = torch.device("cpu")

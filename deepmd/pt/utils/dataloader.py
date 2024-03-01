@@ -31,6 +31,7 @@ from torch.utils.data.distributed import (
 
 from deepmd.pt.utils import (
     env,
+    hvd,
 )
 from deepmd.pt.utils.dataset import (
     DeepmdDataSetForLoader,
@@ -95,6 +96,11 @@ class DpLoaderSet(Dataset):
             if dist.is_initialized():
                 system_sampler = DistributedSampler(system)
                 self.sampler_list.append(system_sampler)
+            elif hvd.size > 1:
+                system_sampler = DistributedSampler(
+                    system, num_replicas=hvd.size, rank=hvd.rank
+                )
+                self.sampler_list.append(system_sampler)
             else:
                 system_sampler = None
             if isinstance(batch_size, str):
@@ -116,7 +122,7 @@ class DpLoaderSet(Dataset):
                 num_workers=0,  # Should be 0 to avoid too many threads forked
                 sampler=system_sampler,
                 collate_fn=collate_batch,
-                shuffle=(not dist.is_initialized()) and shuffle,
+                shuffle=(not dist.is_initialized() and not hvd.size > 1) and shuffle,
             )
             self.dataloaders.append(system_dataloader)
             self.index.append(len(system_dataloader))

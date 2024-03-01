@@ -41,6 +41,9 @@ from deepmd.pt.model.model import (
 from deepmd.pt.train import (
     training,
 )
+from deepmd.pt.utils import (
+    hvd,
+)
 from deepmd.pt.utils.dataloader import (
     DpLoaderSet,
 )
@@ -152,6 +155,8 @@ def get_trainer(
         )
 
     rank = dist.get_rank() if dist.is_initialized() else 0
+    if hvd.size > 1:
+        rank = hvd.rank
     if not multi_task:
         (
             train_data,

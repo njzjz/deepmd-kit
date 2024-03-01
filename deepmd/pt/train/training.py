@@ -35,6 +35,7 @@ from deepmd.pt.train.wrapper import (
 )
 from deepmd.pt.utils import (
     dp_random,
+    hvd,
 )
 from deepmd.pt.utils.dataloader import (
     BufferedIterator,
@@ -110,6 +111,9 @@ class Trainer:
         )
         self.rank = dist.get_rank() if dist.is_initialized() else 0
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
+        if hvd.size > 1:
+            self.rank = hvd.rank
+            self.world_size = hvd.size
         self.num_model = len(self.model_keys)
 
         # Iteration config
@@ -471,6 +475,12 @@ class Trainer:
             )
         else:
             raise ValueError("Not supported optimizer type '%s'" % self.opt_type)
+        if hvd.size > 1:
+            assert hvd.hvd is not None
+            self.optimizer = hvd.hvd.DistributedOptimizer(
+                self.optimizer, named_parameters=self.wrapper.named_parameters()
+            )
+            hvd.hvd.broadcast_parameters(self.wrapper.model.state_dict(), root_rank=0)
 
         # Get model prob for multi-task
         if self.multi_task:
