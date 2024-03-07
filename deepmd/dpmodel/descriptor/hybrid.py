@@ -7,6 +7,7 @@ from typing import (
     Union,
 )
 
+import array_api_compat
 import numpy as np
 
 from deepmd.dpmodel.common import (
@@ -174,6 +175,7 @@ class DescrptHybrid(BaseDescriptor, NativeOP):
         sw
             The smooth switch function.
         """
+        xp = array_api_compat.array_namespace(coord_ext)
         out_descriptor = []
         out_gr = []
         out_g2 = None
@@ -200,8 +202,8 @@ class DescrptHybrid(BaseDescriptor, NativeOP):
             if gr is not None:
                 out_gr.append(gr)
 
-        out_descriptor = np.concatenate(out_descriptor, axis=-1)
-        out_gr = np.concatenate(out_gr, axis=-2) if out_gr else None
+        out_descriptor = xp.concatenate(out_descriptor, axis=-1)
+        out_gr = xp.concatenate(out_gr, axis=-2) if out_gr else None
         return out_descriptor, out_gr, out_g2, out_h2, out_sw
 
     @classmethod

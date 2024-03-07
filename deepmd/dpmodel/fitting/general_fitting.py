@@ -10,6 +10,7 @@ from typing import (
     Optional,
 )
 
+import array_api_compat
 import numpy as np
 
 from deepmd.dpmodel import (
@@ -17,9 +18,11 @@ from deepmd.dpmodel import (
     NativeOP,
 )
 from deepmd.dpmodel.utils import (
-    AtomExcludeMask,
+    DPModelNetworkCollection,
     FittingNet,
-    NetworkCollection,
+)
+from deepmd.dpmodel.utils.exclude_mask import (
+    DPModelAtomExcludeMask,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -141,7 +144,7 @@ class GeneralFitting(NativeOP, BaseFitting):
             self.aparam_avg, self.aparam_inv_std = None, None
         # init networks
         in_dim = self.dim_descrpt + self.numb_fparam + self.numb_aparam
-        self.nets = NetworkCollection(
+        self.nets = DPModelNetworkCollection(
             1 if not self.mixed_types else 0,
             self.ntypes,
             network_type="fitting_network",
@@ -218,7 +221,7 @@ class GeneralFitting(NativeOP, BaseFitting):
         exclude_types: List[int] = [],
     ):
         self.exclude_types = exclude_types
-        self.emask = AtomExcludeMask(self.ntypes, self.exclude_types)
+        self.emask = DPModelAtomExcludeMask(self.ntypes, self.exclude_types)
 
     def serialize(self) -> dict:
         """Serialize the fitting to dict."""
@@ -264,7 +267,7 @@ class GeneralFitting(NativeOP, BaseFitting):
         obj = cls(**data)
         for kk in variables.keys():
             obj[kk] = variables[kk]
-        obj.nets = NetworkCollection.deserialize(nets)
+        obj.nets = DPModelNetworkCollection.deserialize(nets)
         return obj
 
     def _call_common(
@@ -300,6 +303,7 @@ class GeneralFitting(NativeOP, BaseFitting):
             The atomic parameter. shape: nf x nloc x nap. nap being `numb_aparam`
 
         """
+        xp = array_api_compat.array_namespace(descriptor)
         nf, nloc, nd = descriptor.shape
         net_dim_out = self._net_out_dim()
         # check input dim
@@ -314,7 +318,7 @@ class GeneralFitting(NativeOP, BaseFitting):
             # we consider it as always zero for convenience.
             # Needs a compute_input_stats for vaccum passed from the
             # descriptor.
-            xx_zeros = np.zeros_like(xx)
+            xx_zeros = xp.zeros_like(xx)
         else:
             xx_zeros = None
         # check fparam dim, concate to input descriptor
@@ -326,13 +330,13 @@ class GeneralFitting(NativeOP, BaseFitting):
                     "which is not consistent with {self.numb_fparam}.",
                 )
             fparam = (fparam - self.fparam_avg) * self.fparam_inv_std
-            fparam = np.tile(fparam.reshape([nf, 1, self.numb_fparam]), [1, nloc, 1])
-            xx = np.concatenate(
+            fparam = xp.tile(fparam.reshape([nf, 1, self.numb_fparam]), [1, nloc, 1])
+            xx = xp.concatenate(
                 [xx, fparam],
                 axis=-1,
             )
             if xx_zeros is not None:
-                xx_zeros = np.concatenate(
+                xx_zeros = xp.concatenate(
                     [xx_zeros, fparam],
                     axis=-1,
                 )
@@ -346,21 +350,21 @@ class GeneralFitting(NativeOP, BaseFitting):
                 )
             aparam = aparam.reshape([nf, nloc, self.numb_aparam])
             aparam = (aparam - self.aparam_avg) * self.aparam_inv_std
-            xx = np.concatenate(
+            xx = xp.concatenate(
                 [xx, aparam],
                 axis=-1,
             )
             if xx_zeros is not None:
-                xx_zeros = np.concatenate(
+                xx_zeros = xp.concatenate(
                     [xx_zeros, aparam],
                     axis=-1,
                 )
 
         # calcualte the prediction
         if not self.mixed_types:
-            outs = np.zeros([nf, nloc, net_dim_out])
+            outs = xp.zeros([nf, nloc, net_dim_out])
             for type_i in range(self.ntypes):
-                mask = np.tile(
+                mask = xp.tile(
                     (atype == type_i).reshape([nf, nloc, 1]), [1, 1, net_dim_out]
                 )
                 atom_property = self.nets[(type_i,)](xx)

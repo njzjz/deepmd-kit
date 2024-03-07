@@ -6,6 +6,7 @@ from typing import (
     Union,
 )
 
+import array_api_compat
 import numpy as np
 
 from .region import (
@@ -56,6 +57,7 @@ def build_neighbor_list(
         xx xx xx xx -1 -1 -1 xx xx xx -1 -1 -1 -1
 
     """
+    xp = array_api_compat.array_namespace(coord1)
     batch_size = coord1.shape[0]
     coord1 = coord1.reshape(batch_size, -1)
     nall = coord1.shape[1] // 3
@@ -68,9 +70,9 @@ def build_neighbor_list(
         - coord0.reshape([batch_size, -1, 3])[:, :, None, :]
     )
     assert list(diff.shape) == [batch_size, nloc, nall, 3]
-    rr = np.linalg.norm(diff, axis=-1)
-    nlist = np.argsort(rr, axis=-1)
-    rr = np.sort(rr, axis=-1)
+    rr = xp.linalg.norm(diff, axis=-1)
+    nlist = xp.argsort(rr, axis=-1)
+    rr = xp.sort(rr, axis=-1)
     rr = rr[:, :, 1:]
     nlist = nlist[:, :, 1:]
     nnei = rr.shape[2]
@@ -78,15 +80,22 @@ def build_neighbor_list(
         rr = rr[:, :, :nsel]
         nlist = nlist[:, :, :nsel]
     else:
-        rr = np.concatenate(
-            [rr, np.ones([batch_size, nloc, nsel - nnei]) + rcut], axis=-1
+        rr = xp.concatenate(
+            [rr, xp.ones([batch_size, nloc, nsel - nnei], device=rr.device) + rcut],
+            axis=-1,
         )
-        nlist = np.concatenate(
-            [nlist, np.ones([batch_size, nloc, nsel - nnei], dtype=nlist.dtype)],
+        nlist = xp.concatenate(
+            [
+                nlist,
+                xp.ones(
+                    [batch_size, nloc, nsel - nnei], dtype=nlist.dtype, device=rr.device
+                ),
+            ],
             axis=-1,
         )
     assert list(nlist.shape) == [batch_size, nloc, nsel]
-    nlist = np.where((rr > rcut), -1, nlist)
+    one = xp.ones([1], dtype=nlist.dtype, device=nlist.device)[0]
+    nlist = xp.where((rr > rcut), -one, nlist)
 
     if distinguish_types:
         return nlist_distinguish_types(nlist, atype, sel)
@@ -103,23 +112,26 @@ def nlist_distinguish_types(
     distinguish atom types.
 
     """
+    xp = array_api_compat.array_namespace(nlist)
     nf, nloc, _ = nlist.shape
     ret_nlist = []
-    tmp_atype = np.tile(atype[:, None], [1, nloc, 1])
+    tmp_atype = xp.tile(atype[:, None], [1, nloc, 1])
     mask = nlist == -1
-    tnlist_0 = nlist.copy()
+    tnlist_0 = xp.asarray(nlist, copy=True)
     tnlist_0[mask] = 0
-    tnlist = np.take_along_axis(tmp_atype, tnlist_0, axis=2).squeeze()
-    tnlist = np.where(mask, -1, tnlist)
+    # TODO: torch doesn't have take_along_axis
+    tnlist = xp.take_along_axis(tmp_atype, tnlist_0, axis=2).squeeze()
+    one = xp.ones([1], dtype=nlist.dtype, device=nlist.device)[0]
+    tnlist = xp.where(mask, one, tnlist)
     snsel = tnlist.shape[2]
     for ii, ss in enumerate(sel):
         pick_mask = (tnlist == ii).astype(np.int32)
-        sorted_indices = np.argsort(-pick_mask, kind="stable", axis=-1)
-        pick_mask_sorted = -np.sort(-pick_mask, axis=-1)
-        inlist = np.take_along_axis(nlist, sorted_indices, axis=2)
-        inlist = np.where(~pick_mask_sorted.astype(bool), -1, inlist)
-        ret_nlist.append(np.split(inlist, [ss, snsel - ss], axis=-1)[0])
-    ret = np.concatenate(ret_nlist, axis=-1)
+        sorted_indices = xp.argsort(-pick_mask, kind="stable", axis=-1)
+        pick_mask_sorted = -xp.sort(-pick_mask, axis=-1)
+        inlist = xp.take_along_axis(nlist, sorted_indices, axis=2)
+        inlist = xp.where(~pick_mask_sorted.astype(bool), -1, inlist)
+        ret_nlist.append(xp.split(inlist, [ss, snsel - ss], axis=-1)[0])
+    ret = xp.concatenate(ret_nlist, axis=-1)
     return ret
 
 
@@ -217,8 +229,9 @@ def extend_coord_with_ghosts(
         maping extended index to the local index
 
     """
+    xp = array_api_compat.array_namespace(coord)
     nf, nloc = atype.shape
-    aidx = np.tile(np.arange(nloc)[np.newaxis, :], (nf, 1))
+    aidx = xp.tile(xp.arange(nloc)[xp.newaxis, :], (nf, 1))
     if cell is None:
         nall = nloc
         extend_coord = coord.copy()
@@ -228,22 +241,25 @@ def extend_coord_with_ghosts(
         coord = coord.reshape((nf, nloc, 3))
         cell = cell.reshape((nf, 3, 3))
         to_face = to_face_distance(cell)
-        nbuff = np.ceil(rcut / to_face).astype(int)
-        nbuff = np.max(nbuff, axis=0)
-        xi = np.arange(-nbuff[0], nbuff[0] + 1, 1)
-        yi = np.arange(-nbuff[1], nbuff[1] + 1, 1)
-        zi = np.arange(-nbuff[2], nbuff[2] + 1, 1)
-        xyz = np.outer(xi, np.array([1, 0, 0]))[:, np.newaxis, np.newaxis, :]
-        xyz = xyz + np.outer(yi, np.array([0, 1, 0]))[np.newaxis, :, np.newaxis, :]
-        xyz = xyz + np.outer(zi, np.array([0, 0, 1]))[np.newaxis, np.newaxis, :, :]
+        nbuff = xp.astype(xp.ceil(rcut / to_face), int)
+        nbuff = xp.max(nbuff, axis=0)
+        nbuff = xp.to_device(nbuff, "cpu")
+        xi = xp.arange(-nbuff[0], nbuff[0] + 1, 1, device=coord.device)
+        yi = xp.arange(-nbuff[1], nbuff[1] + 1, 1, device=coord.device)
+        zi = xp.arange(-nbuff[2], nbuff[2] + 1, 1, device=coord.device)
+        eye3 = xp.eye(3, dtype=xp.int32, device=coord.device)
+        xyz = xp.outer(xi, eye3[0])[:, xp.newaxis, xp.newaxis, :]
+        xyz = xyz + xp.outer(yi, eye3[1])[xp.newaxis, :, xp.newaxis, :]
+        xyz = xyz + xp.outer(zi, eye3[2])[xp.newaxis, xp.newaxis, :, :]
         xyz = xyz.reshape(-1, 3)
-        shift_idx = xyz[np.argsort(np.linalg.norm(xyz, axis=1))]
+        xyz = xp.astype(xyz, coord.dtype)
+        shift_idx = xyz[xp.argsort(xp.linalg.norm(xyz, axis=1))]
         ns, _ = shift_idx.shape
         nall = ns * nloc
-        shift_vec = np.einsum("sd,fdk->fsk", shift_idx, cell)
+        shift_vec = xp.einsum("sd,fdk->fsk", shift_idx, cell)
         extend_coord = coord[:, None, :, :] + shift_vec[:, :, None, :]
-        extend_atype = np.tile(atype[:, :, np.newaxis], (1, ns, 1))
-        extend_aidx = np.tile(aidx[:, :, np.newaxis], (1, ns, 1))
+        extend_atype = xp.tile(atype[:, :, xp.newaxis], (1, ns, 1))
+        extend_aidx = xp.tile(aidx[:, :, xp.newaxis], (1, ns, 1))
 
     return (
         extend_coord.reshape((nf, nall * 3)),

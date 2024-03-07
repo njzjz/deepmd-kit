@@ -11,6 +11,7 @@ from typing import (
     Union,
 )
 
+import array_api_compat
 import numpy as np
 
 from deepmd.dpmodel.model.base_model import (
@@ -79,6 +80,7 @@ class DeepEval(DeepEvalBackend):
         *args: List[Any],
         auto_batch_size: Union[bool, int, AutoBatchSize] = True,
         neighbor_list: Optional["ase.neighborlist.NewPrimitiveNeighborList"] = None,
+        backend: str = "numpy",
         **kwargs: Dict[str, Any],
     ):
         self.output_def = output_def
@@ -99,6 +101,33 @@ class DeepEval(DeepEvalBackend):
             self.auto_batch_size = auto_batch_size
         else:
             raise TypeError("auto_batch_size should be bool, int, or AutoBatchSize")
+        self.backend = backend
+        sampled_array = self.get_sampled_array(backend)
+        self.xp = array_api_compat.array_namespace(sampled_array)
+        self.device = array_api_compat.device(sampled_array)
+        self.dp.to(sampled_array)
+
+    def get_sampled_array(self, backend: str):
+        if backend == "numpy":
+            return np.zeros(1)
+        elif backend == "cupy":
+            import cupy as cp
+
+            return cp.zeros(1)
+        elif backend == "torch":
+            import torch
+
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            else:
+                device = torch.device("cpu")
+            return torch.zeros(1, device=device)
+        elif backend == "jax":
+            import jax.experimental.array_api as jax
+
+            return jax.zeros(1)
+        else:
+            raise NotImplementedError
 
     def get_rcut(self) -> float:
         """Get the cutoff radius of this model."""
@@ -301,6 +330,11 @@ class DeepEval(DeepEvalBackend):
         nframes = coords.shape[0]
         return natoms, nframes
 
+    def to_backend_array(self, array):
+        if array is None:
+            return None
+        return array_api_compat.to_device(self.xp.from_dlpack(array), self.device)
+
     def _eval_model(
         self,
         coords: np.ndarray,
@@ -327,6 +361,9 @@ class DeepEval(DeepEvalBackend):
         do_atomic_virial = any(
             x.category == OutputVariableCategory.DERV_C_REDU for x in request_defs
         )
+        coord_input = self.to_backend_array(coord_input)
+        type_input = self.to_backend_array(type_input)
+        box_input = self.to_backend_array(box_input)
         batch_output = model(
             coord_input, type_input, box=box_input, do_atomic_virial=do_atomic_virial
         )
@@ -341,7 +378,7 @@ class DeepEval(DeepEvalBackend):
             if dp_name in batch_output:
                 shape = self._get_output_shape(odef, nframes, natoms)
                 if batch_output[dp_name] is not None:
-                    out = batch_output[dp_name].reshape(shape)
+                    out = self.xp.to_device(batch_output[dp_name].reshape(shape), "cpu")
                 else:
                     out = np.full(shape, np.nan)
                 results.append(out)

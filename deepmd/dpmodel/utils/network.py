@@ -17,9 +17,13 @@ from typing import (
     Union,
 )
 
+import array_api_compat
 import h5py
 import numpy as np
 
+from deepmd.dpmodel.common import (
+    Array,
+)
 from deepmd.utils.version import (
     check_version_compatibility,
 )
@@ -307,10 +311,11 @@ class NativeLayer(NativeOP):
         np.ndarray
             The output.
         """
+        xp = array_api_compat.array_namespace(x)
         if self.w is None or self.activation_function is None:
             raise ValueError("w, b, and activation_function must be set")
         if self.activation_function == "tanh":
-            fn = np.tanh
+            fn = xp.tanh
         elif self.activation_function.lower() == "none":
 
             def fn(x):
@@ -318,9 +323,9 @@ class NativeLayer(NativeOP):
         else:
             raise NotImplementedError(self.activation_function)
         y = (
-            np.matmul(x, self.w) + self.b
+            xp.matmul(x, self.w) + self.b
             if self.b is not None
-            else np.matmul(x, self.w)
+            else xp.matmul(x, self.w)
         )
         y = fn(y)
         if self.idt is not None:
@@ -328,7 +333,7 @@ class NativeLayer(NativeOP):
         if self.resnet and self.w.shape[1] == self.w.shape[0]:
             y += x
         elif self.resnet and self.w.shape[1] == 2 * self.w.shape[0]:
-            y += np.concatenate([x, x], axis=-1)
+            y += xp.concatenate([x, x], axis=-1)
         return y
 
 
@@ -423,7 +428,10 @@ def make_multilayer_network(T_NetworkLayer, ModuleBase):
     return NN
 
 
-NativeNet = make_multilayer_network(NativeLayer, NativeOP)
+class NativeNet(make_multilayer_network(NativeLayer, NativeOP)):
+    def to(self, sampled_array: Array):
+        for layer in self.layers:
+            layer.to(sampled_array)
 
 
 def make_embedding_network(T_Network, T_NetworkLayer):
@@ -711,7 +719,7 @@ class NetworkCollection:
         network_type_map_inv = {v: k for k, v in self.NETWORK_TYPE_MAP.items()}
         network_type_name = network_type_map_inv[self.network_type]
         return {
-            "@class": "NetworkCollection",
+            "@class": "DPModelNetworkCollection",
             "@version": 1,
             "ndim": self.ndim,
             "ntypes": self.ntypes,
@@ -720,7 +728,7 @@ class NetworkCollection:
         }
 
     @classmethod
-    def deserialize(cls, data: dict) -> "NetworkCollection":
+    def deserialize(cls, data: dict) -> "DPModelNetworkCollection":
         """Deserialize the networks from a dict.
 
         Parameters
@@ -732,3 +740,13 @@ class NetworkCollection:
         check_version_compatibility(data.pop("@version", 1), 1, 1)
         data.pop("@class", None)
         return cls(**data)
+
+
+class DPModelNetworkCollection(NetworkCollection, NativeOP):
+    def to(self, sampled_array: Array):
+        for ii in range(len(self._networks)):
+            if self._networks[ii] is not None:
+                self._networks[ii].to(sampled_array)
+
+    def call(self):
+        raise NotImplementedError("DPModelNetworkCollection does not support call")

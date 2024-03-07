@@ -7,11 +7,11 @@ from .exclude_mask import (
     PairExcludeMask,
 )
 from .network import (
+    DPModelNetworkCollection,
     EmbeddingNet,
     FittingNet,
     NativeLayer,
     NativeNet,
-    NetworkCollection,
     load_dp_model,
     make_embedding_network,
     make_fitting_network,
@@ -42,7 +42,7 @@ __all__ = [
     "FittingNet",
     "NativeLayer",
     "NativeNet",
-    "NetworkCollection",
+    "DPModelNetworkCollection",
     "load_dp_model",
     "save_dp_model",
     "traverse_model_dict",

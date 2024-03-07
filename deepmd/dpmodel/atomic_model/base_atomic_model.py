@@ -12,9 +12,9 @@ from deepmd.dpmodel.output_def import (
     FittingOutputDef,
     OutputVariableDef,
 )
-from deepmd.dpmodel.utils import (
-    AtomExcludeMask,
-    PairExcludeMask,
+from deepmd.dpmodel.utils.exclude_mask import (
+    DPModelAtomExcludeMask,
+    DPModelPairExcludeMask,
 )
 
 from .make_base_atomic_model import (
@@ -42,7 +42,9 @@ class BaseAtomicModel(BaseAtomicModel_):
         if exclude_types == []:
             self.atom_excl = None
         else:
-            self.atom_excl = AtomExcludeMask(self.get_ntypes(), self.atom_exclude_types)
+            self.atom_excl = DPModelAtomExcludeMask(
+                self.get_ntypes(), self.atom_exclude_types
+            )
 
     def reinit_pair_exclude(
         self,
@@ -52,7 +54,9 @@ class BaseAtomicModel(BaseAtomicModel_):
         if exclude_types == []:
             self.pair_excl = None
         else:
-            self.pair_excl = PairExcludeMask(self.get_ntypes(), self.pair_exclude_types)
+            self.pair_excl = DPModelPairExcludeMask(
+                self.get_ntypes(), self.pair_exclude_types
+            )
 
     def atomic_output_def(self) -> FittingOutputDef:
         old_def = self.fitting_output_def()

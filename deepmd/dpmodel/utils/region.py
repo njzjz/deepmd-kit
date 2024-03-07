@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import array_api_compat
 import numpy as np
 
 
@@ -21,8 +22,9 @@ def phys2inter(
         the internal coordinates
 
     """
-    rec_cell = np.linalg.inv(cell)
-    return np.matmul(coord, rec_cell)
+    xp = array_api_compat.array_namespace(coord)
+    rec_cell = xp.linalg.inv(cell)
+    return xp.matmul(coord, rec_cell)
 
 
 def inter2phys(
@@ -44,7 +46,8 @@ def inter2phys(
         the physical coordinates
 
     """
-    return np.matmul(coord, cell)
+    xp = array_api_compat.array_namespace(coord)
+    return xp.matmul(coord, cell)
 
 
 def normalize_coord(
@@ -66,8 +69,10 @@ def normalize_coord(
         wrapped coordinates of shape [*, na, 3].
 
     """
+    xp = array_api_compat.array_namespace(coord)
     icoord = phys2inter(coord, cell)
-    icoord = np.remainder(icoord, 1.0)
+    one = xp.ones_like(icoord)
+    icoord = xp.remainder(icoord, one)
     return inter2phys(icoord, cell)
 
 
@@ -93,11 +98,12 @@ def to_face_distance(
 
 
 def b_to_face_distance(cell):
-    volume = np.linalg.det(cell)
-    c_yz = np.cross(cell[:, 1], cell[:, 2], axis=-1)
-    _h2yz = volume / np.linalg.norm(c_yz, axis=-1)
-    c_zx = np.cross(cell[:, 2], cell[:, 0], axis=-1)
-    _h2zx = volume / np.linalg.norm(c_zx, axis=-1)
-    c_xy = np.cross(cell[:, 0], cell[:, 1], axis=-1)
-    _h2xy = volume / np.linalg.norm(c_xy, axis=-1)
-    return np.stack([_h2yz, _h2zx, _h2xy], axis=1)
+    xp = array_api_compat.array_namespace(cell)
+    volume = xp.linalg.det(cell)
+    c_yz = xp.cross(cell[:, 1], cell[:, 2], axis=-1)
+    _h2yz = volume / xp.linalg.norm(c_yz, axis=-1)
+    c_zx = xp.cross(cell[:, 2], cell[:, 0], axis=-1)
+    _h2zx = volume / xp.linalg.norm(c_zx, axis=-1)
+    c_xy = xp.cross(cell[:, 0], cell[:, 1], axis=-1)
+    _h2xy = volume / xp.linalg.norm(c_xy, axis=-1)
+    return xp.stack([_h2yz, _h2zx, _h2xy], axis=1)

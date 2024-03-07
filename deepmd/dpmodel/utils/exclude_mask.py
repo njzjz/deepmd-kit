@@ -6,6 +6,10 @@ from typing import (
 
 import numpy as np
 
+from deepmd.dpmodel.common import (
+    NativeOP,
+)
+
 
 class AtomExcludeMask:
     """Computes the type exclusion mask for atoms."""
@@ -45,6 +49,11 @@ class AtomExcludeMask:
         """
         nf, natom = atype.shape
         return self.type_mask[atype].reshape(nf, natom)
+
+
+class DPModelAtomExcludeMask(AtomExcludeMask, NativeOP):
+    def call(self):
+        raise NotImplementedError
 
 
 class PairExcludeMask:
@@ -118,3 +127,8 @@ class PairExcludeMask:
 
     def __contains__(self, item):
         return item in self.exclude_types
+
+
+class DPModelPairExcludeMask(PairExcludeMask, NativeOP):
+    def call(self):
+        raise NotImplementedError

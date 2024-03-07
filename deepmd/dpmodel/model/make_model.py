@@ -6,6 +6,7 @@ from typing import (
     Tuple,
 )
 
+import array_api_compat
 import numpy as np
 
 from deepmd.dpmodel.common import (
@@ -71,6 +72,8 @@ def make_model(T_AtomicModel):
             self.reverse_precision_dict = RESERVED_PRECISON_DICT
             self.global_np_float_precision = GLOBAL_NP_FLOAT_PRECISION
             self.global_ener_float_precision = GLOBAL_ENER_FLOAT_PRECISION
+            # to get global dtype
+            self.sampled_data = np.zeros(1, dtype=self.global_np_float_precision)
 
         def model_output_def(self):
             """Get the output def for the model."""
@@ -239,14 +242,16 @@ def make_model(T_AtomicModel):
             str,
         ]:
             """Cast the input data to global float type."""
+            xp = array_api_compat.array_namespace(coord)
             input_prec = self.reverse_precision_dict[
-                self.precision_dict[coord.dtype.name]
+                # hack, need better way
+                self.precision_dict[str(coord.dtype).split(".")[-1]]
             ]
             ###
             ### type checking would not pass jit, convert to coord prec anyway
             ###
             _lst: List[Optional[np.ndarray]] = [
-                vv.astype(coord.dtype) if vv is not None else None
+                xp.astype(vv, coord.dtype) if vv is not None else None
                 for vv in [box, fparam, aparam]
             ]
             box, fparam, aparam = _lst
@@ -256,12 +261,12 @@ def make_model(T_AtomicModel):
             ):
                 return coord, box, fparam, aparam, input_prec
             else:
-                pp = self.global_np_float_precision
+                pp = self.sampled_data.dtype
                 return (
-                    coord.astype(pp),
-                    box.astype(pp) if box is not None else None,
-                    fparam.astype(pp) if fparam is not None else None,
-                    aparam.astype(pp) if aparam is not None else None,
+                    xp.astype(coord, pp),
+                    xp.astype(box, pp) if box is not None else None,
+                    xp.astype(fparam, pp) if fparam is not None else None,
+                    xp.astype(aparam, pp) if aparam is not None else None,
                     input_prec,
                 )
 

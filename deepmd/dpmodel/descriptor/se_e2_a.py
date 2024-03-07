@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import itertools
 
+import array_api_compat
 import numpy as np
 
 from deepmd.dpmodel.utils.update_sel import (
@@ -315,14 +316,15 @@ class DescrptSeA(NativeOP, BaseDescriptor):
         sw
             The smooth switch function.
         """
+        xp = array_api_compat.array_namespace(coord_ext)
         del mapping
         # nf x nloc x nnei x 4
         rr, ww = self.env_mat.call(coord_ext, atype_ext, nlist, self.davg, self.dstd)
         nf, nloc, nnei, _ = rr.shape
-        sec = np.append([0], np.cumsum(self.sel))
+        sec = [0, *np.cumsum(self.sel)]
 
         ng = self.neuron[-1]
-        gr = np.zeros([nf * nloc, ng, 4], dtype=PRECISION_DICT[self.precision])
+        gr = xp.zeros([nf * nloc, ng, 4], dtype=PRECISION_DICT[self.precision])
         exclude_mask = self.emask.build_type_exclude_mask(nlist, atype_ext)
         # merge nf and nloc axis, so for type_one_side == False,
         # we don't require atype is the same in all frames
@@ -334,7 +336,7 @@ class DescrptSeA(NativeOP, BaseDescriptor):
         ):
             if self.type_one_side:
                 (tt,) = embedding_idx
-                ti_mask = np.s_[:]
+                ti_mask = xp.s_[:]
             else:
                 ti, tt = embedding_idx
                 ti_mask = atype_ext[:, :nloc].ravel() == ti
@@ -343,14 +345,14 @@ class DescrptSeA(NativeOP, BaseDescriptor):
             tr = tr * mm[:, :, None]
             ss = tr[..., 0:1]
             gg = self.cal_g(ss, embedding_idx)
-            gr_tmp = np.einsum("lni,lnj->lij", gg, tr)
+            gr_tmp = xp.einsum("lni,lnj->lij", gg, tr)
             gr[ti_mask] += gr_tmp
         gr = gr.reshape(nf, nloc, ng, 4)
         # nf x nloc x ng x 4
         gr /= self.nnei
         gr1 = gr[:, :, : self.axis_neuron, :]
         # nf x nloc x ng x ng1
-        grrg = np.einsum("flid,fljd->flij", gr, gr1)
+        grrg = xp.einsum("flid,fljd->flij", gr, gr1)
         # nf x nloc x (ng x ng1)
         grrg = grrg.reshape(nf, nloc, ng * self.axis_neuron).astype(
             GLOBAL_NP_FLOAT_PRECISION

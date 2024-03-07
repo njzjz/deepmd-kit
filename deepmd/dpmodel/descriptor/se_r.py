@@ -29,9 +29,9 @@ from deepmd.dpmodel import (
     NativeOP,
 )
 from deepmd.dpmodel.utils import (
+    DPModelNetworkCollection,
     EmbeddingNet,
     EnvMat,
-    NetworkCollection,
     PairExcludeMask,
 )
 from deepmd.env import (
@@ -135,7 +135,7 @@ class DescrptSeR(NativeOP, BaseDescriptor):
         self.emask = PairExcludeMask(self.ntypes, self.exclude_types)
 
         in_dim = 1  # not considiering type embedding
-        self.embeddings = NetworkCollection(
+        self.embeddings = DPModelNetworkCollection(
             ntypes=self.ntypes,
             ndim=(1 if self.type_one_side else 2),
             network_type="embedding_network",
@@ -332,7 +332,7 @@ class DescrptSeR(NativeOP, BaseDescriptor):
 
         obj["davg"] = variables["davg"]
         obj["dstd"] = variables["dstd"]
-        obj.embeddings = NetworkCollection.deserialize(embeddings)
+        obj.embeddings = DPModelNetworkCollection.deserialize(embeddings)
         obj.env_mat = EnvMat.deserialize(env_mat)
         return obj
 
