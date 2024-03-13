@@ -12,6 +12,9 @@ import pytest
 from lammps import (
     PyLammps,
 )
+from mpi_helper import (
+    RANK,
+)
 from write_lmp_data import (
     write_lmp_data_full,
 )
@@ -263,34 +266,41 @@ beta = 0.4
 mesh = 10
 
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-
-
 def setup_module():
-    write_lmp_data_full(
-        box, coord, mol_list, type_OH, charge, data_file, bond_list, mass_list
-    )
-    write_lmp_data_full(
-        box, coord, mol_list, type_HO, charge, data_type_map_file, bond_list, mass_list
-    )
-    write_lmp_data_full(
-        box * constants.dist_metal2si,
-        coord * constants.dist_metal2si,
-        mol_list,
-        type_OH,
-        charge * constants.charge_metal2si,
-        data_file_si,
-        bond_list,
-        mass_list * constants.mass_metal2si,
-    )
+    if RANK == 0:
+        sp.check_output(
+            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+        )
+        write_lmp_data_full(
+            box, coord, mol_list, type_OH, charge, data_file, bond_list, mass_list
+        )
+        write_lmp_data_full(
+            box,
+            coord,
+            mol_list,
+            type_HO,
+            charge,
+            data_type_map_file,
+            bond_list,
+            mass_list,
+        )
+        write_lmp_data_full(
+            box * constants.dist_metal2si,
+            coord * constants.dist_metal2si,
+            mol_list,
+            type_OH,
+            charge * constants.charge_metal2si,
+            data_file_si,
+            bond_list,
+            mass_list * constants.mass_metal2si,
+        )
 
 
 def teardown_module():
-    os.remove(data_file)
-    os.remove(data_type_map_file)
-    os.remove(data_file_si)
+    if RANK == 0:
+        os.remove(data_file)
+        os.remove(data_type_map_file)
+        os.remove(data_file_si)
 
 
 def _lammps(data_file, exclude_type="1 3", units="metal") -> PyLammps:
@@ -343,12 +353,13 @@ def test_pair_deepmd_sr(lammps):
     lammps.pair_style(f"deepmd {pb_file.resolve()}")
     lammps.pair_coeff("* *")
     lammps.run(0)
-    assert lammps.eval("pe") == pytest.approx(expected_e_sr)
-    id_list = lammps.lmp.numpy.extract_atom("id")
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_sr[ii]
-        )
+    if RANK == 0:
+        assert lammps.eval("pe") == pytest.approx(expected_e_sr)
+        id_list = lammps.lmp.numpy.extract_atom("id")
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_sr[ii])
     lammps.run(1)
 
 
@@ -367,16 +378,17 @@ def test_pair_deepmd_sr_virial(lammps):
     lammps.run(0)
     id_list = lammps.lmp.numpy.extract_atom("id")
     idx_list = [np.where(id_list == i)[0][0] for i in range(1, 7)]
-    assert lammps.eval("pe") == pytest.approx(expected_e_sr)
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_sr[ii]
-        )
-    for ii in range(9):
-        assert np.array(lammps.variables[f"virial{ii}"].value)[
-            idx_list
-        ] / constants.nktv2p == pytest.approx(expected_v_sr[:, ii])
-    os.remove("dump")
+    if RANK == 0:
+        assert lammps.eval("pe") == pytest.approx(expected_e_sr)
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_sr[ii])
+        for ii in range(9):
+            assert np.array(lammps.variables[f"virial{ii}"].value)[
+                idx_list
+            ] / constants.nktv2p == pytest.approx(expected_v_sr[:, ii])
+        os.remove("dump")
 
 
 def test_pair_deepmd_lr(lammps):
@@ -390,18 +402,19 @@ def test_pair_deepmd_lr(lammps):
     lammps.fix(f"0 all dplr model {pb_file.resolve()} type_associate 1 3 bond_type 1")
     lammps.fix_modify("0 virial yes")
     lammps.run(0)
-    for ii in range(8):
-        if lammps.atoms[ii].id > 6:
-            assert lammps.atoms[ii].position == pytest.approx(
-                expected_WC[lammps.atoms[ii].id - 7]
-            )
-    assert lammps.eval("elong") == pytest.approx(expected_e_kspace)
-    assert lammps.eval("pe") == pytest.approx(expected_e_lr)
-    for ii in range(8):
-        if lammps.atoms[ii].id <= 6:
-            assert lammps.atoms[ii].force == pytest.approx(
-                expected_f_lr[lammps.atoms[ii].id - 1]
-            )
+    if RANK == 0:
+        for ii in range(8):
+            if lammps.atoms[ii].id > 6:
+                assert lammps.atoms[ii].position == pytest.approx(
+                    expected_WC[lammps.atoms[ii].id - 7]
+                )
+        assert lammps.eval("elong") == pytest.approx(expected_e_kspace)
+        assert lammps.eval("pe") == pytest.approx(expected_e_lr)
+        for ii in range(8):
+            if lammps.atoms[ii].id <= 6:
+                assert lammps.atoms[ii].force == pytest.approx(
+                    expected_f_lr[lammps.atoms[ii].id - 1]
+                )
     lammps.run(1)
 
 
@@ -417,27 +430,29 @@ def test_pair_deepmd_lr_efield_constant(lammps):
     lammps.fix_modify("0 energy yes virial yes")
     lammps.run(0)
     id_list = lammps.lmp.numpy.extract_atom("id")
-    assert lammps.eval("evdwl") == pytest.approx(expected_evdwl_lr_efield_constant)
-    assert lammps.eval("f_0") == pytest.approx(expected_e_efield_constant)
-    assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_constant)
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_lr_efield_constant[ii]
-        )
+    if RANK == 0:
+        assert lammps.eval("evdwl") == pytest.approx(expected_evdwl_lr_efield_constant)
+        assert lammps.eval("f_0") == pytest.approx(expected_e_efield_constant)
+        assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_constant)
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_lr_efield_constant[ii])
     lammps.run(1)
-    assert lammps.eval("evdwl") == pytest.approx(
-        expected_evdwl_lr_efield_constant_step1
-    )
-    assert lammps.eval("f_0") == pytest.approx(expected_e_efield_constant_step1)
-    assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_constant_step1)
-    for ii in range(8):
-        assert lammps.atoms[
-            np.where(id_list == (ii + 1))[0][0]
-        ].position == pytest.approx(expected_x_lr_efield_constant_step1[ii])
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_lr_efield_constant_step1[ii]
+    if RANK == 0:
+        assert lammps.eval("evdwl") == pytest.approx(
+            expected_evdwl_lr_efield_constant_step1
         )
+        assert lammps.eval("f_0") == pytest.approx(expected_e_efield_constant_step1)
+        assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_constant_step1)
+        for ii in range(8):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].position == pytest.approx(expected_x_lr_efield_constant_step1[ii])
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_lr_efield_constant_step1[ii])
 
 
 def test_pair_deepmd_lr_efield_variable(lammps):
@@ -453,27 +468,29 @@ def test_pair_deepmd_lr_efield_variable(lammps):
     lammps.fix_modify("0 energy yes virial yes")
     lammps.run(0)
     id_list = lammps.lmp.numpy.extract_atom("id")
-    assert lammps.eval("evdwl") == pytest.approx(expected_evdwl_lr_efield_variable)
-    assert lammps.eval("f_0") == pytest.approx(expected_e_efield_variable)
-    assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_variable)
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_lr_efield_variable[ii]
-        )
+    if RANK == 0:
+        assert lammps.eval("evdwl") == pytest.approx(expected_evdwl_lr_efield_variable)
+        assert lammps.eval("f_0") == pytest.approx(expected_e_efield_variable)
+        assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_variable)
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_lr_efield_variable[ii])
     lammps.run(1)
-    assert lammps.eval("evdwl") == pytest.approx(
-        expected_evdwl_lr_efield_variable_step1
-    )
-    assert lammps.eval("f_0") == pytest.approx(expected_e_efield_variable_step1)
-    assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_variable_step1)
-    for ii in range(8):
-        assert lammps.atoms[
-            np.where(id_list == (ii + 1))[0][0]
-        ].position == pytest.approx(expected_x_lr_efield_variable_step1[ii])
-    for ii in range(6):
-        assert lammps.atoms[np.where(id_list == (ii + 1))[0][0]].force == pytest.approx(
-            expected_f_lr_efield_variable_step1[ii]
+    if RANK == 0:
+        assert lammps.eval("evdwl") == pytest.approx(
+            expected_evdwl_lr_efield_variable_step1
         )
+        assert lammps.eval("f_0") == pytest.approx(expected_e_efield_variable_step1)
+        assert lammps.eval("pe") == pytest.approx(expected_e_lr_efield_variable_step1)
+        for ii in range(8):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].position == pytest.approx(expected_x_lr_efield_variable_step1[ii])
+        for ii in range(6):
+            assert lammps.atoms[
+                np.where(id_list == (ii + 1))[0][0]
+            ].force == pytest.approx(expected_f_lr_efield_variable_step1[ii])
 
 
 def test_min_dplr(lammps):
@@ -488,16 +505,17 @@ def test_min_dplr(lammps):
     lammps.fix_modify("0 virial yes")
     lammps.min_style("cg")
     lammps.minimize("0 1.0e-6 2 2")
-    for ii in range(8):
-        assert lammps.atoms[ii].position == pytest.approx(
-            expected_x_min_step1[lammps.atoms[ii].id - 1]
-        )
-    assert lammps.eval("pe") == pytest.approx(expected_e_min_step1)
-    assert lammps.eval("elong") == pytest.approx(expected_e_kspace_min_step1)
-    for ii in range(8):
-        assert lammps.atoms[ii].force == pytest.approx(
-            expected_f_min_step1[lammps.atoms[ii].id - 1]
-        )
+    if RANK == 0:
+        for ii in range(8):
+            assert lammps.atoms[ii].position == pytest.approx(
+                expected_x_min_step1[lammps.atoms[ii].id - 1]
+            )
+        assert lammps.eval("pe") == pytest.approx(expected_e_min_step1)
+        assert lammps.eval("elong") == pytest.approx(expected_e_kspace_min_step1)
+        for ii in range(8):
+            assert lammps.atoms[ii].force == pytest.approx(
+                expected_f_min_step1[lammps.atoms[ii].id - 1]
+            )
 
 
 def test_pair_deepmd_lr_type_map(lammps_type_map):
@@ -515,18 +533,19 @@ def test_pair_deepmd_lr_type_map(lammps_type_map):
     )
     lammps_type_map.fix_modify("0 virial yes")
     lammps_type_map.run(0)
-    for ii in range(8):
-        if lammps_type_map.atoms[ii].id > 6:
-            assert lammps_type_map.atoms[ii].position == pytest.approx(
-                expected_WC[lammps_type_map.atoms[ii].id - 7]
-            )
-    assert lammps_type_map.eval("elong") == pytest.approx(expected_e_kspace)
-    assert lammps_type_map.eval("pe") == pytest.approx(expected_e_lr)
-    for ii in range(8):
-        if lammps_type_map.atoms[ii].id <= 6:
-            assert lammps_type_map.atoms[ii].force == pytest.approx(
-                expected_f_lr[lammps_type_map.atoms[ii].id - 1]
-            )
+    if RANK == 0:
+        for ii in range(8):
+            if lammps_type_map.atoms[ii].id > 6:
+                assert lammps_type_map.atoms[ii].position == pytest.approx(
+                    expected_WC[lammps_type_map.atoms[ii].id - 7]
+                )
+        assert lammps_type_map.eval("elong") == pytest.approx(expected_e_kspace)
+        assert lammps_type_map.eval("pe") == pytest.approx(expected_e_lr)
+        for ii in range(8):
+            if lammps_type_map.atoms[ii].id <= 6:
+                assert lammps_type_map.atoms[ii].force == pytest.approx(
+                    expected_f_lr[lammps_type_map.atoms[ii].id - 1]
+                )
     lammps_type_map.run(1)
 
 
@@ -545,20 +564,21 @@ def test_pair_deepmd_lr_si(lammps_si):
     )
     lammps_si.fix_modify("0 virial yes")
     lammps_si.run(0)
-    for ii in range(8):
-        if lammps_si.atoms[ii].id > 6:
-            assert lammps_si.atoms[ii].position == pytest.approx(
-                expected_WC[lammps_si.atoms[ii].id - 7] * constants.dist_metal2si
-            )
-    assert lammps_si.eval("elong") == pytest.approx(
-        expected_e_kspace * constants.ener_metal2si
-    )
-    assert lammps_si.eval("pe") == pytest.approx(
-        expected_e_lr * constants.ener_metal2si
-    )
-    for ii in range(8):
-        if lammps_si.atoms[ii].id <= 6:
-            assert lammps_si.atoms[ii].force == pytest.approx(
-                expected_f_lr[lammps_si.atoms[ii].id - 1] * constants.force_metal2si
-            )
+    if RANK == 0:
+        for ii in range(8):
+            if lammps_si.atoms[ii].id > 6:
+                assert lammps_si.atoms[ii].position == pytest.approx(
+                    expected_WC[lammps_si.atoms[ii].id - 7] * constants.dist_metal2si
+                )
+        assert lammps_si.eval("elong") == pytest.approx(
+            expected_e_kspace * constants.ener_metal2si
+        )
+        assert lammps_si.eval("pe") == pytest.approx(
+            expected_e_lr * constants.ener_metal2si
+        )
+        for ii in range(8):
+            if lammps_si.atoms[ii].id <= 6:
+                assert lammps_si.atoms[ii].force == pytest.approx(
+                    expected_f_lr[lammps_si.atoms[ii].id - 1] * constants.force_metal2si
+                )
     lammps_si.run(1)

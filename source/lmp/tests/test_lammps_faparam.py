@@ -14,6 +14,9 @@ import pytest
 from lammps import (
     PyLammps,
 )
+from mpi_helper import (
+    RANK,
+)
 from write_lmp_data import (
     write_lmp_data,
 )
@@ -134,17 +137,17 @@ coord = np.array(
 type_OH = np.array([1, 1, 1, 1, 1, 1])
 
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-
-
 def setup_module():
-    write_lmp_data(box, coord, type_OH, data_file)
+    if RANK == 0:
+        sp.check_output(
+            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+        )
+        write_lmp_data(box, coord, type_OH, data_file)
 
 
 def teardown_module():
-    os.remove(data_file)
+    if RANK == 0:
+        os.remove(data_file)
 
 
 def _lammps(data_file, units="metal") -> PyLammps:
@@ -189,11 +192,12 @@ def test_pair_deepmd(lammps):
     lammps.pair_style(f"deepmd {pb_file.resolve()} fparam 0.25852028 aparam 0.25852028")
     lammps.pair_coeff("* *")
     lammps.run(0)
-    assert lammps.eval("pe") == pytest.approx(expected_e)
-    for ii in range(6):
-        assert lammps.atoms[ii].force == pytest.approx(
-            expected_f[lammps.atoms[ii].id - 1]
-        )
+    if RANK == 0:
+        assert lammps.eval("pe") == pytest.approx(expected_e)
+        for ii in range(6):
+            assert lammps.atoms[ii].force == pytest.approx(
+                expected_f[lammps.atoms[ii].id - 1]
+            )
     lammps.run(1)
 
 
@@ -208,13 +212,14 @@ def test_pair_deepmd_virial(lammps):
         "1 all custom 1 dump id " + " ".join([f"v_virial{ii}" for ii in range(9)])
     )
     lammps.run(0)
-    assert lammps.eval("pe") == pytest.approx(expected_e)
-    for ii in range(6):
-        assert lammps.atoms[ii].force == pytest.approx(
-            expected_f[lammps.atoms[ii].id - 1]
-        )
-    idx_map = lammps.lmp.numpy.extract_atom("id") - 1
-    for ii in range(9):
-        assert np.array(
-            lammps.variables[f"virial{ii}"].value
-        ) / constants.nktv2p == pytest.approx(expected_v[idx_map, ii])
+    if RANK == 0:
+        assert lammps.eval("pe") == pytest.approx(expected_e)
+        for ii in range(6):
+            assert lammps.atoms[ii].force == pytest.approx(
+                expected_f[lammps.atoms[ii].id - 1]
+            )
+        idx_map = lammps.lmp.numpy.extract_atom("id") - 1
+        for ii in range(9):
+            assert np.array(
+                lammps.variables[f"virial{ii}"].value
+            ) / constants.nktv2p == pytest.approx(expected_v[idx_map, ii])

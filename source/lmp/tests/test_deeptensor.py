@@ -12,6 +12,9 @@ import pytest
 from lammps import (
     PyLammps,
 )
+from mpi_helper import (
+    RANK,
+)
 from write_lmp_data import (
     write_lmp_data,
 )
@@ -56,31 +59,31 @@ type_OH = np.array([1, 2, 2, 1, 2, 2])
 # type_HO = np.array([2, 1, 1, 2, 1, 1])
 
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
-)
-
-
 def setup_module():
-    write_lmp_data(box, coord, type_OH, data_file)
-    # TODO
-    # write_lmp_data(box, coord, type_HO, data_type_map_file)
-    write_lmp_data(
-        box * constants.dist_metal2si,
-        coord * constants.dist_metal2si,
-        type_OH,
-        data_file_si,
-    )
+    if RANK == 0:
+        sp.check_output(
+            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+        )
+
+        sp.check_output(
+            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
+        )
+        write_lmp_data(box, coord, type_OH, data_file)
+        # TODO
+        # write_lmp_data(box, coord, type_HO, data_type_map_file)
+        write_lmp_data(
+            box * constants.dist_metal2si,
+            coord * constants.dist_metal2si,
+            type_OH,
+            data_file_si,
+        )
 
 
 def teardown_module():
-    os.remove(data_file)
-    # os.remove(data_type_map_file)
-    os.remove(data_file_si)
+    if RANK == 0:
+        os.remove(data_file)
+        # os.remove(data_type_map_file)
+        os.remove(data_file_si)
 
 
 def _lammps(data_file, units="metal") -> PyLammps:
@@ -143,9 +146,10 @@ def test_compute_deeptensor_atom(lammps):
     lammps.dump("1 all custom 1 dump id c_tensor[1]")
     lammps.run(0)
     idx_map = lammps.lmp.numpy.extract_atom("id") - 1
-    assert np.array(lammps.variables["tensor"].value) == pytest.approx(
-        expected_d[idx_map]
-    )
+    if RANK == 0:
+        assert np.array(lammps.variables["tensor"].value) == pytest.approx(
+            expected_d[idx_map]
+        )
 
 
 def test_compute_deeptensor_atom_si(lammps_si):
@@ -156,6 +160,7 @@ def test_compute_deeptensor_atom_si(lammps_si):
     lammps_si.dump("1 all custom 1 dump id c_tensor[1]")
     lammps_si.run(0)
     idx_map = lammps_si.lmp.numpy.extract_atom("id") - 1
-    assert np.array(lammps_si.variables["tensor"].value) == pytest.approx(
-        expected_d[idx_map] * constants.dist_metal2si
-    )
+    if RANK == 0:
+        assert np.array(lammps_si.variables["tensor"].value) == pytest.approx(
+            expected_d[idx_map] * constants.dist_metal2si
+        )
