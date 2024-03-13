@@ -12,12 +12,11 @@ import pytest
 from lammps import (
     PyLammps,
 )
+from mpi_helper import (
+    RANK,
+)
 from write_lmp_data import (
     write_lmp_data,
-)
-
-from .mpi_helper import (
-    RANK,
 )
 
 pbtxt_file2 = (
