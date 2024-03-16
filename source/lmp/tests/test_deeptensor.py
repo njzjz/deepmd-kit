@@ -61,13 +61,14 @@ type_OH = np.array([1, 2, 2, 1, 2, 2])
 
 def setup_module():
     if RANK == 0:
-        sp.check_output(
-            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-        )
+        if os.environ.get("DP_TEST_REUSE_MODELS", "0") == "0":
+            sp.check_output(
+                f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+            )
 
-        sp.check_output(
-            f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
-        )
+            sp.check_output(
+                f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
+            )
         write_lmp_data(box, coord, type_OH, data_file)
         # TODO
         # write_lmp_data(box, coord, type_HO, data_type_map_file)
