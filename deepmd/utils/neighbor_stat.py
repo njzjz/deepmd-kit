@@ -181,7 +181,7 @@ class NeighborStat:
         """Constructor."""
         self.ntypes = ntypes
         self.rcut = rcut
-        self.one_type = one_type
+        self.mixed_type = one_type
         self.auto_batch_size = AutoBatchSize()
         self.neighbor_stat = NeighborStatOP(ntypes, rcut, not one_type)
         self.place_holders = {}
