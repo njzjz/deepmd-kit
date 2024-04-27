@@ -13,13 +13,16 @@ from packaging.version import (
     Version,
 )
 
+from .find_pytorch import (
+    find_pytorch,
+)
 from .find_tensorflow import (
     find_tensorflow,
     get_tf_version,
 )
 
 
-@lru_cache()
+@lru_cache
 def get_argument_from_env() -> Tuple[str, list, list, dict, str]:
     """Get the arguments from environment variables.
 
@@ -57,8 +60,8 @@ def get_argument_from_env() -> Tuple[str, list, list, dict, str]:
         if rocm_root:
             cmake_args.append(f"-DCMAKE_HIP_COMPILER_ROCM_ROOT:STRING={rocm_root}")
         hipcc_flags = os.environ.get("HIP_HIPCC_FLAGS")
-        if hipcc_flags:
-            cmake_args.append(f"-DHIP_HIPCC_FLAGS:STRING={hipcc_flags}")
+        if hipcc_flags is not None:
+            os.environ["HIPFLAGS"] = os.environ.get("HIPFLAGS", "") + " " + hipcc_flags
     else:
         raise RuntimeError("Unsupported DP_VARIANT option: %s" % dp_variant)
 
@@ -78,18 +81,41 @@ def get_argument_from_env() -> Tuple[str, list, list, dict, str]:
         cmake_args.append(f"-DLAMMPS_VERSION={dp_lammps_version}")
     if dp_ipi == "1":
         cmake_args.append("-DENABLE_IPI:BOOL=TRUE")
-        extra_scripts["dp_ipi"] = "deepmd.entrypoints.ipi:dp_ipi"
+        extra_scripts["dp_ipi"] = "deepmd.tf.entrypoints.ipi:dp_ipi"
 
-    tf_install_dir, _ = find_tensorflow()
-    tf_version = get_tf_version(tf_install_dir)
-    if tf_version == "" or Version(tf_version) >= Version("2.12"):
-        find_libpython_requires = []
+    if os.environ.get("DP_ENABLE_TENSORFLOW", "1") == "1":
+        tf_install_dir, _ = find_tensorflow()
+        tf_version = get_tf_version(tf_install_dir)
+        if tf_version == "" or Version(tf_version) >= Version("2.12"):
+            find_libpython_requires = []
+        else:
+            find_libpython_requires = ["find_libpython"]
+        cmake_args.extend(
+            [
+                "-DENABLE_TENSORFLOW=ON",
+                f"-DTENSORFLOW_VERSION={tf_version}",
+                f"-DTENSORFLOW_ROOT:PATH={tf_install_dir}",
+            ]
+        )
     else:
-        find_libpython_requires = ["find_libpython"]
-    cmake_args.append(f"-DTENSORFLOW_VERSION={tf_version}")
+        find_libpython_requires = []
+        cmake_args.append("-DENABLE_TENSORFLOW=OFF")
+        tf_version = None
+
+    if os.environ.get("DP_ENABLE_PYTORCH", "0") == "1":
+        pt_install_dir = find_pytorch()
+        if pt_install_dir is None:
+            raise RuntimeError("Cannot find installed PyTorch.")
+        cmake_args.extend(
+            [
+                "-DENABLE_PYTORCH=ON",
+                f"-DCMAKE_PREFIX_PATH={pt_install_dir}",
+            ]
+        )
+    else:
+        cmake_args.append("-DENABLE_PYTORCH=OFF")
 
     cmake_args = [
-        f"-DTENSORFLOW_ROOT:PATH={tf_install_dir}",
         "-DBUILD_PY_IF:BOOL=TRUE",
         *cmake_args,
     ]

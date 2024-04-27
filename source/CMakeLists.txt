@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(DeePMD)
 
+option(ENABLE_TENSORFLOW "Enable TensorFlow interface" OFF)
+option(ENABLE_PYTORCH "Enable PyTorch interface" OFF)
 option(BUILD_TESTING "Build test and enable converage" OFF)
 set(DEEPMD_C_ROOT
     ""
@@ -25,10 +27,6 @@ if((NOT BUILD_PY_IF) AND (NOT BUILD_CPP_IF))
 endif()
 
 if(BUILD_CPP_IF AND BUILD_TESTING)
-  if(NOT INSTALL_TENSORFLOW)
-    # some errors in conda packages...
-    find_package(GTest)
-  endif()
   if(NOT GTEST_LIBRARIES)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake.in
                    googletest-download/CMakeLists.txt @ONLY)
@@ -115,10 +113,14 @@ endif(USE_CUDA_TOOLKIT)
 # define USE_ROCM_TOOLKIT
 if(USE_ROCM_TOOLKIT)
   cmake_minimum_required(VERSION 3.21)
-  find_package(ROCM REQUIRED)
+  include(CMakeDetermineHIPCompiler)
+  list(APPEND CMAKE_PREFIX_PATH ${CMAKE_HIP_COMPILER_ROCM_ROOT})
+  find_package(hip REQUIRED)
+  find_package(hipcub REQUIRED)
   add_definitions("-DTENSORFLOW_USE_ROCM")
-  add_compile_definitions(__HIP_PLATFORM_HCC__)
-  message(STATUS "Found ROCM in ${ROCM_ROOT}, build AMD GPU support")
+  message(
+    STATUS
+      "Found ROCM in ${CMAKE_HIP_COMPILER_ROCM_ROOT}, build AMD GPU support")
   set(DP_VARIANT "rocm")
 else()
   message(STATUS "Will not build AMD GPU support")
@@ -127,7 +129,11 @@ endif(USE_ROCM_TOOLKIT)
 set(DEEPMD_SOURCE_DIR ${PROJECT_SOURCE_DIR}/..)
 
 # setup tensorflow libraries by python
+if(INSTALL_TENSORFLOW)
+  set(USE_TF_PYTHON_LIBS TRUE)
+endif(INSTALL_TENSORFLOW)
 if(USE_TF_PYTHON_LIBS)
+  set(ENABLE_TENSORFLOW TRUE)
   if(NOT "$ENV{CIBUILDWHEEL}" STREQUAL "1")
     find_package(
       Python
@@ -138,10 +144,80 @@ if(USE_TF_PYTHON_LIBS)
     set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIR})
   endif()
 endif(USE_TF_PYTHON_LIBS)
+if(TENSORFLOW_ROOT)
+  set(ENABLE_TENSORFLOW TRUE)
+endif()
 
 # find tensorflow, I need tf abi info
-if(NOT DEEPMD_C_ROOT)
+if(ENABLE_TENSORFLOW AND NOT DEEPMD_C_ROOT)
   find_package(tensorflow REQUIRED)
+  list(APPEND BACKEND_LIBRARY_PATH ${TensorFlow_LIBRARY_PATH})
+  list(APPEND BACKEND_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS})
+endif()
+if(BUILD_CPP_IF
+   AND USE_PT_PYTHON_LIBS
+   AND NOT CMAKE_CROSSCOMPILING
+   AND NOT SKBUILD)
+  find_package(
+    Python
+    COMPONENTS Interpreter
+    REQUIRED)
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c
+            "import torch;print(torch.utils.cmake_prefix_path)"
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    OUTPUT_VARIABLE PYTORCH_CMAKE_PREFIX_PATH
+    RESULT_VARIABLE PYTORCH_CMAKE_PREFIX_PATH_RESULT_VAR
+    ERROR_VARIABLE PYTORCH_CMAKE_PREFIX_PATH_ERROR_VAR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT ${PYTORCH_CMAKE_PREFIX_PATH_RESULT_VAR} EQUAL 0)
+    message(
+      FATAL_ERROR
+        "Cannot determine PyTorch CMake prefix path, error code: $PYTORCH_CMAKE_PREFIX_PATH_RESULT_VAR}, error message: ${PYTORCH_CMAKE_PREFIX_PATH_ERROR_VAR}"
+    )
+  endif()
+  list(APPEND BACKEND_LIBRARY_PATH ${TensorFlow_LIBRARY_PATH})
+  if(Protobuf_LIBRARY_DIRECTORY)
+    list(APPEND BACKEND_LIBRARY_PATH ${Protobuf_LIBRARY_DIRECTORY})
+  endif()
+endif()
+if(ENABLE_PYTORCH AND NOT DEEPMD_C_ROOT)
+  find_package(Torch REQUIRED)
+  string(REGEX MATCH "_GLIBCXX_USE_CXX11_ABI=([0-9]+)" CXXABI_PT_MATCH
+               "${TORCH_CXX_FLAGS}")
+  if(CXXABI_PT_MATCH)
+    message(STATUS "PyTorch CXX11 ABI: ${CMAKE_MATCH_1}")
+    if(DEFINED OP_CXX_ABI)
+      if(NOT ${CMAKE_MATCH_1} EQUAL ${OP_CXX_ABI})
+        message(
+          FATAL_ERROR
+            "PyTorch CXX11 ABI mismatch TensorFlow: ${CMAKE_MATCH_1} != ${OP_CXX_ABI}"
+        )
+      endif()
+    else()
+      set(OP_CXX_ABI ${CMAKE_MATCH_1})
+      add_definitions(-D_GLIBCXX_USE_CXX11_ABI=${OP_CXX_ABI})
+    endif()
+  endif()
+  # get torch directory
+  set(PyTorch_LIBRARY_PATH ${TORCH_INCLUDE_DIRS}/../lib)
+  list(APPEND BACKEND_LIBRARY_PATH ${PyTorch_LIBRARY_PATH})
+  list(APPEND BACKEND_INCLUDE_DIRS ${TORCH_INCLUDE_DIRS})
+endif()
+# log enabled backends
+if(NOT DEEPMD_C_ROOT)
+  message(STATUS "Enabled backends:")
+  if(ENABLE_TENSORFLOW)
+    message(STATUS "- TensorFlow")
+  endif()
+  if(ENABLE_PYTORCH)
+    message(STATUS "- PyTorch")
+  endif()
+  if(NOT ENABLE_TENSORFLOW
+     AND NOT ENABLE_PYTORCH
+     AND NOT BUILD_PY_IF)
+    message(FATAL_ERROR "No backend is enabled.")
+  endif()
 endif()
 
 # find threads
@@ -228,12 +304,21 @@ if(DEEPMD_C_ROOT)
                IMPORTED_LOCATION "${deepmd_c}"
                INTERFACE_INCLUDE_DIRECTORIES "${DEEPMD_INCLUDE_C_DIR}/deepmd")
   # use variable for TF path to set deepmd_c path
+  set(TENSORFLOW_ROOT "${DEEPMD_C_ROOT}")
   set(TensorFlow_LIBRARY_PATH "${DEEPMD_C_ROOT}/lib")
+  set(BACKEND_LIBRARY_PATH "${DEEPMD_C_ROOT}/lib")
   set(TENSORFLOW_INCLUDE_DIRS "${DEEPMD_C_ROOT}/include")
+  set(BACKEND_INCLUDE_DIRS "${DEEPMD_C_ROOT}/include")
+  set(TORCH_LIBRARIES "${DEEPMD_C_ROOT}/lib/libtorch.so")
 endif()
 
 if(NOT DEEPMD_C_ROOT)
-  add_subdirectory(op/)
+  if(ENABLE_TENSORFLOW)
+    add_subdirectory(op/tf/)
+  endif()
+  if(ENABLE_PYTORCH)
+    add_subdirectory(op/pt/)
+  endif()
   add_subdirectory(lib/)
 endif()
 if(BUILD_PY_IF)
@@ -250,10 +335,7 @@ if(BUILD_CPP_IF)
   endif()
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8)
     # add_subdirectory (md/)
-    if(ENABLE_IPI
-       OR NOT BUILD_PY_IF
-       AND NOT DEEPMD_C_ROOT)
-      # ipi has a dependency on libdeepmd
+    if(ENABLE_IPI OR NOT BUILD_PY_IF)
       add_subdirectory(ipi/)
     endif()
     if(NOT BUILD_PY_IF)

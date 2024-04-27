@@ -140,7 +140,7 @@ TYPED_TEST(TestInferDeepPotAHPP, cpu_build_nlist_numfv) {
 
    public:
     MyModel(deepmd::hpp::DeepPot& dp_, const std::vector<int>& atype_)
-        : mydp(dp_), atype(atype_){};
+        : mydp(dp_), atype(atype_) {};
     virtual void compute(double& ener,
                          std::vector<VALUETYPE>& force,
                          std::vector<VALUETYPE>& virial,
@@ -476,6 +476,23 @@ TYPED_TEST(TestInferDeepPotAHPP, cpu_lmp_nlist_type_sel) {
   for (int ii = 0; ii < 3 * 3; ++ii) {
     EXPECT_LT(fabs(virial[ii] - expected_tot_v[ii]), EPSILON);
   }
+}
+
+TYPED_TEST(TestInferDeepPotAHPP, cpu_build_nlist_empty_input) {
+  using VALUETYPE = TypeParam;
+  std::vector<VALUETYPE> coord;
+  std::vector<int> atype;
+  std::vector<VALUETYPE>& box = this->box;
+  unsigned int natoms = 0;
+  deepmd::hpp::DeepPot& dp = this->dp;
+  double ener;
+  std::vector<VALUETYPE> force, virial;
+
+  dp.compute(ener, force, virial, coord, atype, box);
+  // no errors will be fine
+  EXPECT_EQ(force.size(), natoms * 3);
+  EXPECT_EQ(virial.size(), 9);
+  EXPECT_LT(fabs(ener), EPSILON);
 }
 
 TYPED_TEST(TestInferDeepPotAHPP, print_summary) {

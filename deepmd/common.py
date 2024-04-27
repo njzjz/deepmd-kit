@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Collection of functions and classes used throughout the whole package."""
-
+import glob
 import json
+import os
+import platform
+import shutil
 import warnings
-from functools import (
-    wraps,
+from hashlib import (
+    sha1,
 )
 from pathlib import (
     Path,
@@ -12,124 +14,74 @@ from pathlib import (
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     List,
     Optional,
+    Set,
     TypeVar,
     Union,
+    get_args,
 )
 
+try:
+    from typing import Literal  # python >=3.8
+except ImportError:
+    from typing_extensions import Literal  # type: ignore
+
 import numpy as np
-import tensorflow
 import yaml
-from tensorflow.python.framework import (
-    tensor_util,
-)
 
 from deepmd.env import (
     GLOBAL_NP_FLOAT_PRECISION,
-    GLOBAL_TF_FLOAT_PRECISION,
-    op_module,
-    tf,
 )
 from deepmd.utils.path import (
     DPPath,
 )
 
+__all__ = [
+    "data_requirement",
+    "add_data_requirement",
+    "select_idx_map",
+    "make_default_mesh",
+    "j_must_have",
+    "j_loader",
+    "expand_sys_str",
+    "get_np_precision",
+    "VALID_PRECISION",
+    "VALID_ACTIVATION",
+]
+
+_PRECISION = Literal["default", "float16", "float32", "float64"]
+_ACTIVATION = Literal[
+    "relu",
+    "relu6",
+    "softplus",
+    "sigmoid",
+    "tanh",
+    "gelu",
+    "gelu_tf",
+    "none",
+    "linear",
+]
+# get_args is new in py38
+VALID_PRECISION: Set[_PRECISION] = set(get_args(_PRECISION))
+VALID_ACTIVATION: Set[_ACTIVATION] = set(get_args(_ACTIVATION))
+
 if TYPE_CHECKING:
     _DICT_VAL = TypeVar("_DICT_VAL")
-    _OBJ = TypeVar("_OBJ")
-    try:
-        from typing import Literal  # python >3.6
-    except ImportError:
-        from typing_extensions import Literal  # type: ignore
-    _ACTIVATION = Literal[
-        "relu", "relu6", "softplus", "sigmoid", "tanh", "gelu", "gelu_tf"
-    ]
-    _PRECISION = Literal["default", "float16", "float32", "float64"]
-
-# define constants
-PRECISION_DICT = {
-    "default": GLOBAL_TF_FLOAT_PRECISION,
-    "float16": tf.float16,
-    "float32": tf.float32,
-    "float64": tf.float64,
-    "bfloat16": tf.bfloat16,
-}
+    __all__.extend(
+        [
+            "_DICT_VAL",
+            "_PRECISION",
+            "_ACTIVATION",
+        ]
+    )
 
 
-def gelu(x: tf.Tensor) -> tf.Tensor:
-    """Gaussian Error Linear Unit.
-
-    This is a smoother version of the RELU, implemented by custom operator.
-
-    Parameters
-    ----------
-    x : tf.Tensor
-        float Tensor to perform activation
-
-    Returns
-    -------
-    tf.Tensor
-        `x` with the GELU activation applied
-
-    References
-    ----------
-    Original paper
-    https://arxiv.org/abs/1606.08415
-    """
-    return op_module.gelu_custom(x)
-
-
-def gelu_tf(x: tf.Tensor) -> tf.Tensor:
-    """Gaussian Error Linear Unit.
-
-    This is a smoother version of the RELU, implemented by TF.
-
-    Parameters
-    ----------
-    x : tf.Tensor
-        float Tensor to perform activation
-
-    Returns
-    -------
-    tf.Tensor
-        `x` with the GELU activation applied
-
-    References
-    ----------
-    Original paper
-    https://arxiv.org/abs/1606.08415
-    """
-
-    def gelu_wrapper(x):
-        try:
-            return tensorflow.nn.gelu(x, approximate=True)
-        except AttributeError:
-            warnings.warn(
-                "TensorFlow does not provide an implementation of gelu, please upgrade your TensorFlow version. Fallback to the custom gelu operator."
-            )
-            return op_module.gelu_custom(x)
-
-    return (lambda x: gelu_wrapper(x))(x)
-
-
-# TODO this is not a good way to do things. This is some global variable to which
-# TODO anyone can write and there is no good way to keep track of the changes
+# TODO: refactor data_requirement to make it not a global variable
+# this is not a good way to do things. This is some global variable to which
+# anyone can write and there is no good way to keep track of the changes
 data_requirement = {}
-
-ACTIVATION_FN_DICT = {
-    "relu": tf.nn.relu,
-    "relu6": tf.nn.relu6,
-    "softplus": tf.nn.softplus,
-    "sigmoid": tf.sigmoid,
-    "tanh": tf.nn.tanh,
-    "gelu": gelu,
-    "gelu_tf": gelu_tf,
-    "None": None,
-    "none": None,
-}
 
 
 def add_data_requirement(
@@ -142,6 +94,7 @@ def add_data_requirement(
     repeat: int = 1,
     default: float = 0.0,
     dtype: Optional[np.dtype] = None,
+    output_natoms_for_type_sel: bool = False,
 ):
     """Specify data requirements for training.
 
@@ -167,6 +120,8 @@ def add_data_requirement(
         default value of data
     dtype : np.dtype, optional
         the dtype of data, overwrites `high_prec` if provided
+    output_natoms_for_type_sel : bool, optional
+        if True and type_sel is True, the atomic dimension will be natoms instead of nsel
     """
     data_requirement[key] = {
         "ndof": ndof,
@@ -177,6 +132,7 @@ def add_data_requirement(
         "repeat": repeat,
         "default": default,
         "dtype": dtype,
+        "output_natoms_for_type_sel": output_natoms_for_type_sel,
     }
 
 
@@ -232,9 +188,10 @@ def make_default_mesh(pbc: bool, mixed_type: bool) -> np.ndarray:
     return default_mesh
 
 
-# TODO maybe rename this to j_deprecated and only warn about deprecated keys,
-# TODO if the deprecated_key argument is left empty function puppose is only custom
-# TODO error since dict[key] already raises KeyError when the key is missing
+# TODO: rename j_must_have to j_deprecated and only warn about deprecated keys
+# maybe rename this to j_deprecated and only warn about deprecated keys,
+# if the deprecated_key argument is left empty function puppose is only custom
+# error since dict[key] already raises KeyError when the key is missing
 def j_must_have(
     jdata: Dict[str, "_DICT_VAL"], key: str, deprecated_key: List[str] = []
 ) -> "_DICT_VAL":
@@ -290,57 +247,7 @@ def j_loader(filename: Union[str, Path]) -> Dict[str, Any]:
         raise TypeError("config file must be json, or yaml/yml")
 
 
-def get_activation_func(
-    activation_fn: Union["_ACTIVATION", None],
-) -> Union[Callable[[tf.Tensor], tf.Tensor], None]:
-    """Get activation function callable based on string name.
-
-    Parameters
-    ----------
-    activation_fn : _ACTIVATION
-        one of the defined activation functions
-
-    Returns
-    -------
-    Callable[[tf.Tensor], tf.Tensor]
-        correspondingg TF callable
-
-    Raises
-    ------
-    RuntimeError
-        if unknown activation function is specified
-    """
-    if activation_fn is None:
-        return None
-    if activation_fn not in ACTIVATION_FN_DICT:
-        raise RuntimeError(f"{activation_fn} is not a valid activation function")
-    return ACTIVATION_FN_DICT[activation_fn]
-
-
-def get_precision(precision: "_PRECISION") -> Any:
-    """Convert str to TF DType constant.
-
-    Parameters
-    ----------
-    precision : _PRECISION
-        one of the allowed precisions
-
-    Returns
-    -------
-    tf.python.framework.dtypes.DType
-        appropriate TF constant
-
-    Raises
-    ------
-    RuntimeError
-        if supplied precision string does not have acorresponding TF constant
-    """
-    if precision not in PRECISION_DICT:
-        raise RuntimeError(f"{precision} is not a valid precision")
-    return PRECISION_DICT[precision]
-
-
-# TODO port completely to pathlib when all callers are ported
+# TODO port expand_sys_str completely to pathlib when all callers are ported
 def expand_sys_str(root_dir: Union[str, Path]) -> List[str]:
     """Recursively iterate over directories taking those that contain `type.raw` file.
 
@@ -391,97 +298,60 @@ def get_np_precision(precision: "_PRECISION") -> np.dtype:
         raise RuntimeError(f"{precision} is not a valid precision")
 
 
-def safe_cast_tensor(
-    input: tf.Tensor, from_precision: tf.DType, to_precision: tf.DType
-) -> tf.Tensor:
-    """Convert a Tensor from a precision to another precision.
+def symlink_prefix_files(old_prefix: str, new_prefix: str):
+    """Create symlinks from old checkpoint prefix to new one.
 
-    If input is not a Tensor or without the specific precision, the method will not
-    cast it.
+    On Windows this function will copy files instead of creating symlinks.
 
     Parameters
     ----------
-    input : tf.Tensor
-        input tensor
-    from_precision : tf.DType
-        Tensor data type that is casted from
-    to_precision : tf.DType
-        Tensor data type that casts to
-
-    Returns
-    -------
-    tf.Tensor
-        casted Tensor
+    old_prefix : str
+        old checkpoint prefix, all files with this prefix will be symlinked
+    new_prefix : str
+        new checkpoint prefix
     """
-    if tensor_util.is_tensor(input) and input.dtype == from_precision:
-        return tf.cast(input, to_precision)
-    return input
-
-
-def cast_precision(func: Callable) -> Callable:
-    """A decorator that casts and casts back the input
-    and output tensor of a method.
-
-    The decorator should be used in a classmethod.
-
-    The decorator will do the following thing:
-    (1) It casts input Tensors from `GLOBAL_TF_FLOAT_PRECISION`
-    to precision defined by property `precision`.
-    (2) It casts output Tensors from `precision` to
-    `GLOBAL_TF_FLOAT_PRECISION`.
-    (3) It checks inputs and outputs and only casts when
-    input or output is a Tensor and its dtype matches
-    `GLOBAL_TF_FLOAT_PRECISION` and `precision`, respectively.
-    If it does not match (e.g. it is an integer), the decorator
-    will do nothing on it.
-
-    Returns
-    -------
-    Callable
-        a decorator that casts and casts back the input and
-        output tensor of a method
-
-    Examples
-    --------
-    >>> class A:
-    ...   @property
-    ...   def precision(self):
-    ...     return tf.float32
-    ...
-    ...   @cast_precision
-    ...   def f(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
-    ...     return x ** 2 + y
-    """
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        # only convert tensors
-        returned_tensor = func(
-            self,
-            *[
-                safe_cast_tensor(vv, GLOBAL_TF_FLOAT_PRECISION, self.precision)
-                for vv in args
-            ],
-            **{
-                kk: safe_cast_tensor(vv, GLOBAL_TF_FLOAT_PRECISION, self.precision)
-                for kk, vv in kwargs.items()
-            },
-        )
-        if isinstance(returned_tensor, tuple):
-            return tuple(
-                safe_cast_tensor(vv, self.precision, GLOBAL_TF_FLOAT_PRECISION)
-                for vv in returned_tensor
-            )
+    original_files = glob.glob(old_prefix + ".*")
+    for ori_ff in original_files:
+        new_ff = new_prefix + ori_ff[len(old_prefix) :]
+        try:
+            # remove old one
+            os.remove(new_ff)
+        except OSError:
+            pass
+        if platform.system() != "Windows":
+            # by default one does not have access to create symlink on Windows
+            os.symlink(os.path.relpath(ori_ff, os.path.dirname(new_ff)), new_ff)
         else:
-            return safe_cast_tensor(
-                returned_tensor, self.precision, GLOBAL_TF_FLOAT_PRECISION
-            )
-
-    return wrapper
+            shutil.copyfile(ori_ff, new_ff)
 
 
-def clear_session():
-    """Reset all state generated by DeePMD-kit."""
-    tf.reset_default_graph()
-    # TODO: remove this line when data_requirement is not a global variable
-    data_requirement.clear()
+def get_hash(obj) -> str:
+    """Get hash of object.
+
+    Parameters
+    ----------
+    obj
+        object to hash
+    """
+    return sha1(json.dumps(obj).encode("utf-8")).hexdigest()
+
+
+def j_get_type(data: dict, class_name: str = "object") -> str:
+    """Get the type from the data.
+
+    Parameters
+    ----------
+    data : dict
+        the data
+    class_name : str, optional
+        the name of the class for error message, by default "object"
+
+    Returns
+    -------
+    str
+        the type
+    """
+    try:
+        return data["type"]
+    except KeyError as e:
+        raise KeyError(f"the type of the {class_name} should be set by `type`") from e

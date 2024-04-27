@@ -1,7 +1,9 @@
+.. _cli:
+
 Command line interface
 ======================
 
 .. argparse::
-   :module: deepmd.entrypoints.main
+   :module: deepmd.tf.entrypoints.main
    :func: main_parser
    :prog: dp
