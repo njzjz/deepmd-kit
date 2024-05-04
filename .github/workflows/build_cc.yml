@@ -58,6 +58,8 @@ jobs:
          && sudo apt-get update \
          && sudo apt-get install -y rocm-dev hipcub-dev
       if: matrix.variant == 'rocm'
+    - name: Install include-what-you-use
+      run: sudo apt-get update && sudo apt-get -y install iwyu
     - run: |
         export CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/libtorch
         source/install/build_cc.sh
@@ -65,6 +67,7 @@ jobs:
         DP_VARIANT: ${{ matrix.dp_variant }}
         DOWNLOAD_TENSORFLOW: "FALSE"
         CMAKE_GENERATOR: Ninja
+        CMAKE_CXX_INCLUDE_WHAT_YOU_USE: include-what-you-use
       if: matrix.variant != 'clang'
     - run: |
         export CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/libtorch
@@ -75,6 +78,7 @@ jobs:
         CC: clang
         CXX: clang++
         CMAKE_GENERATOR: Ninja
+        CMAKE_CXX_INCLUDE_WHAT_YOU_USE: include-what-you-use
       if: matrix.variant == 'clang'
     - name: Test files exist
       run: |
