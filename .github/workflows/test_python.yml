@@ -42,7 +42,8 @@ jobs:
         HOROVOD_WITHOUT_GLOO: 1
     - run: dp --version
     - name: Get durations from cache
-      uses: actions/cache@v4
+      # https://github.com/actions/cache/issues/1361
+      uses: actions/cache@v2
       with:
         path: test_durations
         # the key must never match, even when restarting workflows, as that
