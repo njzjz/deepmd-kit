@@ -35,7 +35,7 @@ jobs:
         UV_EXTRA_INDEX_URL: "https://pypi.anaconda.org/njzjz/simple https://pypi.anaconda.org/mpi4py/simple"
     - run: dp --version
     - name: Get durations from cache
-      uses: actions/cache@v4
+      uses: actions/cache@v2
       with:
         path: test_durations
         # the key must never match, even when restarting workflows, as that
@@ -66,7 +66,7 @@ jobs:
     needs: testpython
     steps:
     - name: Get durations from cache
-      uses: actions/cache@v4
+      uses: actions/cache@v2
       with:
         path: .test_durations
         # key won't match during the first run for the given commit, but
