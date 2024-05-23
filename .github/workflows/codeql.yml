@@ -45,6 +45,15 @@ jobs:
         unzip libtorch.zip
       env:
         DEBIAN_FRONTEND: noninteractive
+    - name: "Run cmake"
+      run: |
+        export CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/libtorch
+        source/install/build_cc.sh
+      env:
+        DP_VARIANT: cuda
+        DOWNLOAD_TENSORFLOW: "FALSE"
+        DP_NO_BUILD: 1
+      if: matrix.language == 'c-cpp'
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
@@ -58,6 +67,7 @@ jobs:
       env:
         DP_VARIANT: cuda
         DOWNLOAD_TENSORFLOW: "FALSE"
+        DP_NO_CMAKE: 1
       if: matrix.language == 'c-cpp'
 
     - name: Perform CodeQL Analysis
