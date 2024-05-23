@@ -20,7 +20,7 @@ NPROC=$(nproc --all)
 BUILD_TMP_DIR=${SCRIPT_PATH}/../build
 mkdir -p ${BUILD_TMP_DIR}
 cd ${BUILD_TMP_DIR}
-if [ "$DP_NO_CMAKE" = "" ] then
+if [ "$DP_NO_CMAKE" = "" ]; then
 	cmake -D ENABLE_TENSORFLOW=ON \
 		-D ENABLE_PYTORCH=ON \
 		-D CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
