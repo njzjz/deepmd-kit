@@ -84,8 +84,10 @@ jobs:
       with:
         pattern: split-${{ matrix.python }}-*
         merge-multiple: true
+    - run: cat .test_durations_*
     - name: Combine test durations
       run: jq '. + input' .test_durations_* > .test_durations
+    - run: cat .test_durations
   pass:
     name: Pass testing Python
     needs: [testpython, update_durations]
