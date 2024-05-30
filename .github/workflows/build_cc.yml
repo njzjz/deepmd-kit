@@ -11,7 +11,7 @@ name: Build C++
 jobs:
   buildcc:
     name: Build C++
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         include:
@@ -88,7 +88,7 @@ jobs:
   pass:
     name: Pass building C++
     needs: [buildcc]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: always()
     steps:
     - name: Decide whether the needed jobs succeeded or failed

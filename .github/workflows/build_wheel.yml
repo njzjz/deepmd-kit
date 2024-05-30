@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   determine-arm64-runner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions: read-all
     outputs:
       runner: ${{ steps.set-runner.outputs.runner }}
@@ -26,7 +26,7 @@ jobs:
           if [ "${{ github.repository_owner }}" == "deepmodeling" ]; then
             echo "runner=[\"Linux\",\"ARM64\"]" >> $GITHUB_OUTPUT
           else
-            echo "runner=\"ubuntu-latest\"" >> $GITHUB_OUTPUT
+            echo "runner=\"ubuntu-22.04\"" >> $GITHUB_OUTPUT
           fi
 
   build_wheels:
@@ -38,12 +38,12 @@ jobs:
       matrix:
         include:
           # linux-64
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             python: 311
             platform_id: manylinux_x86_64
             dp_variant: cuda
             cuda_version: 12.2
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             python: 311
             platform_id: manylinux_x86_64
             dp_variant: cuda
@@ -76,7 +76,7 @@ jobs:
           fetch-depth: 0
       - uses: docker/setup-qemu-action@v3
         name: Setup QEMU
-        if: matrix.platform_id == 'manylinux_aarch64' && matrix.os == 'ubuntu-latest'
+        if: matrix.platform_id == 'manylinux_aarch64' && matrix.os == 'ubuntu-22.04'
       # detect version in advance. See #3168
       - uses: actions/setup-python@v5
         name: Install Python
@@ -104,7 +104,7 @@ jobs:
           path: ./wheelhouse/*.whl
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -125,7 +125,7 @@ jobs:
 
   upload_pypi:
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
@@ -141,7 +141,7 @@ jobs:
   build_docker:
     # use the already built wheels to build docker
     needs: [build_wheels]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -182,7 +182,7 @@ jobs:
 
   build_pypi_index:
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -208,7 +208,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/devel' && github.repository_owner == 'deepmodeling'
     steps:
       - name: Deploy to GitHub Pages
@@ -218,7 +218,7 @@ jobs:
   pass:
     name: Pass testing build wheels
     needs: [build_wheels, build_sdist, build_docker, build_pypi_index]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: always()
     steps:
     - name: Decide whether the needed jobs succeeded or failed

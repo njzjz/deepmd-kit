@@ -90,7 +90,7 @@ jobs:
   pass:
     name: Pass testing Python
     needs: [testpython, update_durations]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: always()
     steps:
     - name: Decide whether the needed jobs succeeded or failed
