@@ -154,6 +154,8 @@ class DescrptSeA(DescrptSe):
             Only for the purpose of backward compatibility, retrieves the old behavior of using the random seed
     env_protection: float
             Protection parameter to prevent division by zero errors during environment matrix calculations.
+    mixed_types : bool
+            Whether type embedding is input.
 
     References
     ----------
@@ -182,6 +184,7 @@ class DescrptSeA(DescrptSe):
         spin: Optional[Spin] = None,
         tebd_input_mode: str = "concat",
         env_protection: float = 0.0,  # not implement!!
+        mixed_types: bool = False,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -221,6 +224,7 @@ class DescrptSeA(DescrptSe):
         self.stripped_type_embedding = stripped_type_embedding
         self.extra_embedding_net_variables = None
         self.layer_size = len(neuron)
+        self.mixed_types = mixed_types
 
         # extend sel_a for spin system
         if self.spin is not None:
@@ -748,6 +752,11 @@ class DescrptSeA(DescrptSe):
             type_embedding = input_dict.get("type_embedding", None)
         else:
             type_embedding = None
+        if type_embedding is not None:
+            # compatibility with old behaviors
+            self.mixed_types = True
+        elif self.mixed_types:
+            raise RuntimeError("type_embedding is required for mixed_types model.")
         if self.stripped_type_embedding and type_embedding is None:
             raise RuntimeError("type_embedding is required for se_a_tebd_v2 model.")
         start_index = 0
@@ -1367,7 +1376,7 @@ class DescrptSeA(DescrptSe):
         if cls is not DescrptSeA:
             raise NotImplementedError(f"Not implemented in class {cls.__name__}")
         data = data.copy()
-        check_version_compatibility(data.pop("@version", 1), 1, 1)
+        check_version_compatibility(data.pop("@version", 1), 1, 2)
         data.pop("@class", None)
         data.pop("type", None)
         embedding_net_variables = cls.deserialize_network(
@@ -1416,14 +1425,11 @@ class DescrptSeA(DescrptSe):
             raise NotImplementedError("spin is unsupported")
         assert self.davg is not None
         assert self.dstd is not None
-        # TODO: tf: handle type embedding in DescrptSeA.serialize
-        # not sure how to handle type embedding - type embedding is not a model parameter,
-        # but instead a part of the input data. Maybe the interface should be refactored...
 
         return {
             "@class": "Descriptor",
             "type": "se_e2_a",
-            "@version": 1,
+            "@version": 2,
             "rcut": self.rcut_r,
             "rcut_smth": self.rcut_r_smth,
             "sel": self.sel_a,
@@ -1439,7 +1445,7 @@ class DescrptSeA(DescrptSe):
             "precision": self.filter_precision.name,
             "embeddings": self.serialize_network(
                 ntypes=self.ntypes,
-                ndim=(1 if self.type_one_side else 2),
+                ndim=(0 if self.mixed_types else (1 if self.type_one_side else 2)),
                 in_dim=1,
                 neuron=self.filter_neuron,
                 activation_function=self.activation_function_name,
@@ -1454,4 +1460,5 @@ class DescrptSeA(DescrptSe):
                 "dstd": self.dstd.reshape(self.ntypes, self.nnei_a, 4),
             },
             "spin": self.spin,
+            "mixed_types": self.mixed_types,
         }

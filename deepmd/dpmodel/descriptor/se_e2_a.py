@@ -373,10 +373,11 @@ class DescrptSeA(NativeOP, BaseDescriptor):
                 if embedding_idx in self.emask:
                     self.embeddings[embedding_idx].clear()
 
+        # version 2: add mixed_types
         return {
             "@class": "Descriptor",
             "type": "se_e2_a",
-            "@version": 1,
+            "@version": 2,
             "rcut": self.rcut,
             "rcut_smth": self.rcut_smth,
             "sel": self.sel,
@@ -392,6 +393,7 @@ class DescrptSeA(NativeOP, BaseDescriptor):
             # make deterministic
             "precision": np.dtype(PRECISION_DICT[self.precision]).name,
             "spin": self.spin,
+            "mixed_types": self.mixed_types(),
             "env_mat": self.env_mat.serialize(),
             "embeddings": self.embeddings.serialize(),
             "@variables": {
@@ -404,12 +406,16 @@ class DescrptSeA(NativeOP, BaseDescriptor):
     def deserialize(cls, data: dict) -> "DescrptSeA":
         """Deserialize from dict."""
         data = copy.deepcopy(data)
-        check_version_compatibility(data.pop("@version", 1), 1, 1)
+        check_version_compatibility(data.pop("@version", 1), 1, 2)
         data.pop("@class", None)
         data.pop("type", None)
         variables = data.pop("@variables")
         embeddings = data.pop("embeddings")
         env_mat = data.pop("env_mat")
+        if data.pop("mixed_types", False):
+            raise RuntimeError(
+                "There is no plan to support mixed_types in the DP backend."
+            )
         obj = cls(**data)
 
         obj["davg"] = variables["davg"]

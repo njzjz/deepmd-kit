@@ -657,7 +657,12 @@ class StandardModel(Model):
             self.descrpt = descriptor
         else:
             self.descrpt = Descriptor(
-                **descriptor, ntypes=len(self.get_type_map()), spin=self.spin
+                **descriptor,
+                ntypes=len(self.get_type_map()),
+                spin=self.spin,
+                # this only controls user-requested mixed_types behavior;
+                # se_atten is always mixed_types
+                mixed_types=type_embedding is not None,
             )
 
         if isinstance(fitting_net, Fitting):

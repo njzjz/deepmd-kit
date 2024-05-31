@@ -259,7 +259,7 @@ class DescrptSeA(BaseDescriptor, torch.nn.Module):
         return {
             "@class": "Descriptor",
             "type": "se_e2_a",
-            "@version": 1,
+            "@version": 2,
             "rcut": obj.rcut,
             "rcut_smth": obj.rcut_smth,
             "sel": obj.sel,
@@ -282,17 +282,22 @@ class DescrptSeA(BaseDescriptor, torch.nn.Module):
             "trainable": True,
             "type_one_side": obj.type_one_side,
             "spin": None,
+            "mixed_types": self.mixed_types(),
         }
 
     @classmethod
     def deserialize(cls, data: dict) -> "DescrptSeA":
         data = data.copy()
-        check_version_compatibility(data.pop("@version", 1), 1, 1)
+        check_version_compatibility(data.pop("@version", 1), 1, 2)
         data.pop("@class", None)
         data.pop("type", None)
         variables = data.pop("@variables")
         embeddings = data.pop("embeddings")
         env_mat = data.pop("env_mat")
+        if data.pop("mixed_types", False):
+            raise RuntimeError(
+                "There is no plan to support mixed_types in the PyTorch backend."
+            )
         obj = cls(**data)
 
         def t_cvt(xx):
