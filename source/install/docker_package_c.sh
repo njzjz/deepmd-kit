@@ -4,6 +4,7 @@ SCRIPT_PATH=$(dirname $(realpath -s $0))
 
 wget https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip -O libtorch.zip
 unzip libtorch.zip
+rm -f libtorch.zip
 
 docker run --rm -v ${SCRIPT_PATH}/../..:/root/deepmd-kit -w /root/deepmd-kit \
    -v libtorch:/root/libtorch \
