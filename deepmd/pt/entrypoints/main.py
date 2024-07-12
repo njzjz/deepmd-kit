@@ -330,7 +330,11 @@ def train(FLAGS):
 
 
 def freeze(FLAGS):
-    model = torch.jit.script(inference.Tester(FLAGS.model, head=FLAGS.head).model)
+    from e3nn.util.jit import (
+        script,
+    )
+
+    model = script(inference.Tester(FLAGS.model, head=FLAGS.head).model)
     extra_files = {}
     torch.jit.save(
         model,

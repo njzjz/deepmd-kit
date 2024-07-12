@@ -48,6 +48,9 @@ from .ener_model import (
 from .frozen import (
     FrozenModel,
 )
+from .mace import (
+    MaceModel,
+)
 from .make_hessian_model import (
     make_hessian_model,
 )
@@ -197,6 +200,8 @@ def get_standard_model(model_params):
 
 
 def get_model(model_params):
+    if model_params.get("type", "standard") == "mace":
+        return MaceModel(**model_params)
     if "spin" in model_params:
         return get_spin_model(model_params)
     elif "use_srtab" in model_params:
@@ -217,6 +222,7 @@ __all__ = [
     "SpinModel",
     "SpinEnergyModel",
     "DPZBLModel",
+    "MaceModel",
     "make_model",
     "make_hessian_model",
 ]

@@ -49,6 +49,7 @@ dependencies = [
     'ml_dtypes',
     'mendeleev',
     'array-api-compat',
+    'mace',
 ]
 requires-python = ">=3.8"
 keywords = ["deepmd"]
