@@ -373,9 +373,11 @@ class MaceModel(BaseModel):
             extended_coord,
             extended_atype,
             nlist,
+            mapping=None,
             fparam=fparam,
             aparam=aparam,
             do_atomic_virial=do_atomic_virial,
+            comm_dict=None,
         )
 
     @torch.jit.export
