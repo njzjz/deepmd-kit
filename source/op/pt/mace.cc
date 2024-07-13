@@ -44,7 +44,7 @@ torch::Tensor mace_edge_index(const torch::Tensor& nlist_tensor,
     }
   }
   // convert to tensor
-  int64_t edge_size = edge_index.size();
+  int64_t edge_size = edge_index.size() / 2;
   torch::Tensor edge_index_tensor =
       torch::from_blob(edge_index.data(), {edge_size, 2}, torch::kInt64);
   // to nlist_tensor.device
