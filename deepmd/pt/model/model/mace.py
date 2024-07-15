@@ -15,10 +15,14 @@ from e3nn import (
 
 from deepmd.dpmodel.output_def import (
     FittingOutputDef,
+    ModelOutputDef,
     OutputVariableDef,
 )
 from deepmd.pt.model.model.model import (
     BaseModel,
+)
+from deepmd.pt.model.model.transform_output import (
+    communicate_extended_output,
 )
 from deepmd.pt.utils.nlist import (
     extend_input_and_build_neighbor_list,
@@ -369,7 +373,7 @@ class MaceModel(BaseModel):
                 coord, atype, self.rcut, self.get_sel(), True, box
             )
         )
-        return self.forward_lower(
+        model_ret_lower = self.forward_lower_common(
             extended_coord,
             extended_atype,
             nlist,
@@ -379,9 +383,53 @@ class MaceModel(BaseModel):
             do_atomic_virial=do_atomic_virial,
             comm_dict=None,
         )
+        model_ret = communicate_extended_output(
+            model_ret_lower,
+            ModelOutputDef(self.fitting_output_def()),
+            mapping,
+            do_atomic_virial,
+        )
+        model_predict = {}
+        model_predict["atom_energy"] = model_ret["energy"]
+        model_predict["energy"] = model_ret["energy_redu"]
+        model_predict["force"] = model_ret["energy_derv_r"].squeeze(-2)
+        model_predict["virial"] = model_ret["energy_derv_c_redu"].squeeze(-2)
+        if do_atomic_virial:
+            model_predict["atom_virial"] = model_ret["energy_derv_c"].squeeze(-3)
+        return model_predict
 
     @torch.jit.export
     def forward_lower(
+        self,
+        extended_coord,
+        extended_atype,
+        nlist,
+        mapping: Optional[torch.Tensor] = None,
+        fparam: Optional[torch.Tensor] = None,
+        aparam: Optional[torch.Tensor] = None,
+        do_atomic_virial: bool = False,
+        comm_dict: Optional[Dict[str, torch.Tensor]] = None,
+    ):
+        model_ret = self.forward_lower_common(
+            extended_coord,
+            extended_atype,
+            nlist,
+            mapping,
+            fparam,
+            aparam,
+            do_atomic_virial,
+            comm_dict,
+        )
+        model_predict = {}
+        model_predict["atom_energy"] = model_ret["energy"]
+        model_predict["energy"] = model_ret["energy_redu"]
+        model_predict["extended_force"] = model_ret["energy_derv_r"].squeeze(-2)
+        model_predict["virial"] = model_ret["energy_derv_c_redu"].squeeze(-2)
+        if do_atomic_virial:
+            model_predict["extended_virial"] = model_ret["energy_derv_c"].squeeze(-3)
+        return model_ret
+
+    def forward_lower_common(
         self,
         extended_coord,
         extended_atype,
@@ -469,7 +517,7 @@ class MaceModel(BaseModel):
             force = force.view(1, nall, 3).to(extended_coord_.dtype)
             virial = ret["virials"]
             assert virial is not None
-            virial = virial.view(1, 3, 3)
+            virial = virial.view(1, 9)
             atom_energy = ret["node_energy"]
             assert atom_energy is not None
             atom_energy = atom_energy.view(1, nall).to(extended_coord_.dtype)[:, :nall]
@@ -483,13 +531,13 @@ class MaceModel(BaseModel):
         atom_energies = torch.cat(atom_energies, dim=0)
 
         return {
-            "energy": energies,
-            "force": forces,
-            "virial": virials,
-            "atom_energy": atom_energies,
+            "energy_redu": energies.view(nf, 1),
+            "energy_derv_r": forces.view(nf, nall, 1, 3),
+            "energy_derv_c_redu": virials.view(nf, 1, 9),
+            "energy": atom_energies.view(nf, nall, 1),
             # fake atom_virial
-            "atom_virial": torch.zeros(
-                (nf, nall, 3, 3),
+            "energy_derv_c": torch.zeros(
+                (nf, nall, 1, 9),
                 dtype=extended_coord_.dtype,
                 device=extended_coord_.device,
             ),
