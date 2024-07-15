@@ -407,13 +407,12 @@ class MaceModel(BaseModel):
         virials = []
         atom_energies = []
         for ff in range(nf):
-            extended_coord = extended_coord[ff]
-            extended_atype = extended_atype[ff]
-            nlist = nlist[ff]
-
+            extended_coord_ff = extended_coord[ff]
+            extended_atype_ff = extended_atype[ff]
+            nlist_ff = nlist[ff]
             edge_index = torch.ops.deepmd.mace_edge_index(
-                nlist,
-                extended_atype,
+                nlist_ff,
+                extended_atype_ff,
                 torch.tensor(self.mm_types, dtype=torch.int64, device="cpu"),
             )
             edge_index = edge_index.T
@@ -422,37 +421,41 @@ class MaceModel(BaseModel):
                 (nedge, 3), dtype=torch.float64, device=extended_coord_.device
             )
             # to one hot
-            indices = extended_atype.unsqueeze(-1)
+            indices = extended_atype_ff.unsqueeze(-1)
             oh = torch.zeros((nall, self.ntypes), device=extended_atype.device)
             # scatter_ is the in-place version of scatter
             oh.scatter_(dim=-1, index=indices, value=1)
             one_hot = oh.view((nall, self.ntypes))
 
             # cast to float32
-            extended_coord = extended_coord.to(torch.float32)
+            extended_coord_ff = extended_coord_ff.to(torch.float32)
             unit_shifts = unit_shifts.to(torch.float32)
             one_hot = one_hot.to(torch.float32)
             # it seems None is not allowed for data
             box = (
-                torch.eye(3, dtype=extended_coord.dtype, device=extended_coord.device)
+                torch.eye(
+                    3, dtype=extended_coord_ff.dtype, device=extended_coord_ff.device
+                )
                 * 1000.0
             )
 
             ret = self.model.forward(
                 {
-                    "positions": extended_coord,
+                    "positions": extended_coord_ff,
                     "unit_shifts": unit_shifts,
                     "cell": box,
                     "edge_index": edge_index,
                     "batch": torch.zeros(
-                        [nall], dtype=torch.int64, device=extended_coord.device
+                        [nall], dtype=torch.int64, device=extended_coord_ff.device
                     ),
                     "node_attrs": one_hot,
                     "ptr": torch.tensor(
-                        [0, nall], dtype=torch.int64, device=extended_coord.device
+                        [0, nall], dtype=torch.int64, device=extended_coord_ff.device
                     ),
                     "weight": torch.tensor(
-                        [1.0], dtype=extended_coord.dtype, device=extended_coord.device
+                        [1.0],
+                        dtype=extended_coord_ff.dtype,
+                        device=extended_coord_ff.device,
                     ),
                 },
                 compute_virials=True,
