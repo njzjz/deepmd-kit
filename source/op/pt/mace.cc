@@ -28,14 +28,21 @@ torch::Tensor mace_edge_index(const torch::Tensor& nlist_tensor,
         continue;
       }
       // check if both atype[ii] and atype[kk] are in mm
-      bool in_mm = false;
+      bool in_mm1 = false;
       for (int64_t mm_idx = 0; mm_idx < nmm; mm_idx++) {
-        if (atype[ii] == mm[mm_idx] && atype[kk] == mm[mm_idx]) {
-          in_mm = true;
+        if (atype[ii] == mm[mm_idx]) {
+          in_mm1 = true;
           break;
         }
       }
-      if (in_mm) {
+      bool in_mm2 = false;
+      for (int64_t mm_idx = 0; mm_idx < nmm; mm_idx++) {
+        if (atype[kk] == mm[mm_idx]) {
+          in_mm2 = true;
+          break;
+        }
+      }
+      if (in_mm1 && in_mm2) {
         continue;
       }
       // add edge
