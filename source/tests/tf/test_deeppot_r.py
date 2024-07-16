@@ -27,13 +27,13 @@ else:
 
 class TestDeepPotRPBC(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deeppot-r.pbtxt")), "deeppot.pb"
         )
         cls.dp = DeepPot("deeppot.pb")
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.coords = np.array(
             [
                 12.83,
@@ -150,11 +150,11 @@ class TestDeepPotRPBC(unittest.TestCase):
         )
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         os.remove("deeppot.pb")
         cls.dp = None
 
-    def test_attrs(self):
+    def test_attrs(self) -> None:
         self.assertEqual(self.dp.get_ntypes(), 2)
         self.assertAlmostEqual(self.dp.get_rcut(), 6.0, places=default_places)
         self.assertEqual(self.dp.get_type_map(), ["O", "H"])
@@ -167,7 +167,7 @@ class TestDeepPotRPBC(unittest.TestCase):
     #     np.savetxt('ff.out', ff.reshape([1, -1]), delimiter=',')
     #     np.savetxt('vv.out', av.reshape([1, -1]), delimiter=',')
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         ee, ff, vv = self.dp.eval(self.coords, self.box, self.atype, atomic=False)
         # check shape of the returns
         nframes = 1
@@ -184,7 +184,7 @@ class TestDeepPotRPBC(unittest.TestCase):
         expected_sv = np.sum(self.expected_v.reshape([nframes, -1, 9]), axis=1)
         np.testing.assert_almost_equal(vv.ravel(), expected_sv.ravel(), default_places)
 
-    def test_1frame_atm(self):
+    def test_1frame_atm(self) -> None:
         ee, ff, vv, ae, av = self.dp.eval(
             self.coords, self.box, self.atype, atomic=True
         )
@@ -211,7 +211,7 @@ class TestDeepPotRPBC(unittest.TestCase):
         expected_sv = np.sum(self.expected_v.reshape([nframes, -1, 9]), axis=1)
         np.testing.assert_almost_equal(vv.ravel(), expected_sv.ravel(), default_places)
 
-    def test_2frame_atm(self):
+    def test_2frame_atm(self) -> None:
         coords2 = np.concatenate((self.coords, self.coords))
         box2 = np.concatenate((self.box, self.box))
         ee, ff, vv, ae, av = self.dp.eval(coords2, box2, self.atype, atomic=True)
@@ -238,13 +238,13 @@ class TestDeepPotRPBC(unittest.TestCase):
 
 class TestDeepPotRNoPBC(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deeppot-r.pbtxt")), "deeppot.pb"
         )
         cls.dp = DeepPot("deeppot.pb")
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.coords = np.array(
             [
                 12.83,
@@ -361,11 +361,11 @@ class TestDeepPotRNoPBC(unittest.TestCase):
         )
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         os.remove("deeppot.pb")
         cls.dp = None
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         ee, ff, vv = self.dp.eval(self.coords, self.box, self.atype, atomic=False)
         # check shape of the returns
         nframes = 1
@@ -382,7 +382,7 @@ class TestDeepPotRNoPBC(unittest.TestCase):
         expected_sv = np.sum(self.expected_v.reshape([nframes, -1, 9]), axis=1)
         np.testing.assert_almost_equal(vv.ravel(), expected_sv.ravel(), default_places)
 
-    def test_1frame_atm(self):
+    def test_1frame_atm(self) -> None:
         ee, ff, vv, ae, av = self.dp.eval(
             self.coords, self.box, self.atype, atomic=True
         )
@@ -409,7 +409,7 @@ class TestDeepPotRNoPBC(unittest.TestCase):
         expected_sv = np.sum(self.expected_v.reshape([nframes, -1, 9]), axis=1)
         np.testing.assert_almost_equal(vv.ravel(), expected_sv.ravel(), default_places)
 
-    def test_2frame_atm(self):
+    def test_2frame_atm(self) -> None:
         coords2 = np.concatenate((self.coords, self.coords))
         ee, ff, vv, ae, av = self.dp.eval(coords2, self.box, self.atype, atomic=True)
         # check shape of the returns
@@ -434,7 +434,7 @@ class TestDeepPotRNoPBC(unittest.TestCase):
 
     # TODO: needs to fix
     @unittest.skipIf(tf.test.is_gpu_available(), reason="Segfault in GPUs")
-    def test_zero_input(self):
+    def test_zero_input(self) -> None:
         nframes = 1
         ee, ff, vv = self.dp.eval(
             np.zeros([nframes, 0, 3]), self.box, np.zeros([0]), atomic=False
@@ -452,13 +452,13 @@ class TestDeepPotRNoPBC(unittest.TestCase):
 
 class TestDeepPotRLargeBoxNoPBC(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deeppot-r.pbtxt")), "deeppot.pb"
         )
         cls.dp = DeepPot("deeppot.pb")
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.coords = np.array(
             [
                 12.83,
@@ -575,11 +575,11 @@ class TestDeepPotRLargeBoxNoPBC(unittest.TestCase):
         )
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         os.remove("deeppot.pb")
         cls.dp = None
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         ee, ff, vv = self.dp.eval(self.coords, self.box, self.atype, atomic=False)
         # check shape of the returns
         nframes = 1
@@ -596,7 +596,7 @@ class TestDeepPotRLargeBoxNoPBC(unittest.TestCase):
         expected_sv = np.sum(self.expected_v.reshape([nframes, -1, 9]), axis=1)
         np.testing.assert_almost_equal(vv.ravel(), expected_sv.ravel(), default_places)
 
-    def test_1frame_atm(self):
+    def test_1frame_atm(self) -> None:
         ee, ff, vv, ae, av = self.dp.eval(
             self.coords, self.box, self.atype, atomic=True
         )

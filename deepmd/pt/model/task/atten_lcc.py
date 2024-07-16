@@ -17,7 +17,7 @@ from deepmd.pt.utils import (
 class FittingNetAttenLcc(Fitting):
     def __init__(
         self, embedding_width, bias_atom_e, pair_embed_dim, attention_heads, **kwargs
-    ):
+    ) -> None:
         super().__init__()
         self.embedding_width = embedding_width
         self.engergy_proj = EnergyHead(self.embedding_width, 1)

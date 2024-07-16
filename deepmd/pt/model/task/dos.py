@@ -58,7 +58,7 @@ class DOSFittingNet(InvarFitting):
         exclude_types: List[int] = [],
         mixed_types: bool = True,
         type_map: Optional[List[str]] = None,
-    ):
+    ) -> None:
         if bias_dos is not None:
             self.bias_dos = bias_dos
         else:

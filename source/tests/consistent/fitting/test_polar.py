@@ -72,7 +72,7 @@ class TestPolar(CommonTest, DipoleFittingTest, unittest.TestCase):
     pt_class = PolarFittingPT
     args = fitting_polar()
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

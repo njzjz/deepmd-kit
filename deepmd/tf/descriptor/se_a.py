@@ -395,7 +395,7 @@ class DescrptSeA(DescrptSe):
             }
             self.merge_input_stats(stat_dict)
 
-    def merge_input_stats(self, stat_dict):
+    def merge_input_stats(self, stat_dict) -> None:
         """Merge the statisitcs computed from compute_input_stats to obtain the self.davg and self.dstd.
 
         Parameters

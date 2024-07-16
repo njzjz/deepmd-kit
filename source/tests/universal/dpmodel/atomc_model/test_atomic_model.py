@@ -95,7 +95,7 @@ from ..fitting.test_fitting import (
 @unittest.skipIf(TEST_DEVICE != "cpu", "Only test on CPU.")
 class TestEnergyAtomicModelDP(unittest.TestCase, EnerAtomicModelTest, DPTestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         EnerAtomicModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -161,7 +161,7 @@ class TestEnergyAtomicModelDP(unittest.TestCase, EnerAtomicModelTest, DPTestCase
 @unittest.skipIf(TEST_DEVICE != "cpu", "Only test on CPU.")
 class TestDosAtomicModelDP(unittest.TestCase, DosAtomicModelTest, DPTestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         DosAtomicModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -223,7 +223,7 @@ class TestDosAtomicModelDP(unittest.TestCase, DosAtomicModelTest, DPTestCase):
 @unittest.skipIf(TEST_DEVICE != "cpu", "Only test on CPU.")
 class TestDipoleAtomicModelDP(unittest.TestCase, DipoleAtomicModelTest, DPTestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         DipoleAtomicModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -286,7 +286,7 @@ class TestDipoleAtomicModelDP(unittest.TestCase, DipoleAtomicModelTest, DPTestCa
 @unittest.skipIf(TEST_DEVICE != "cpu", "Only test on CPU.")
 class TestPolarAtomicModelDP(unittest.TestCase, PolarAtomicModelTest, DPTestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         PolarAtomicModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -346,7 +346,7 @@ class TestPolarAtomicModelDP(unittest.TestCase, PolarAtomicModelTest, DPTestCase
 @unittest.skipIf(TEST_DEVICE != "cpu", "Only test on CPU.")
 class TestZBLAtomicModelDP(unittest.TestCase, ZBLAtomicModelTest, DPTestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         ZBLAtomicModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]

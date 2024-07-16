@@ -113,7 +113,7 @@ class GeneralFitting(NativeOP, BaseFitting):
         remove_vaccum_contribution: Optional[List[bool]] = None,
         type_map: Optional[List[str]] = None,
         seed: Optional[Union[int, List[int]]] = None,
-    ):
+    ) -> None:
         self.var_name = var_name
         self.ntypes = ntypes
         self.dim_descrpt = dim_descrpt
@@ -227,7 +227,7 @@ class GeneralFitting(NativeOP, BaseFitting):
             )
         self.bias_atom_e = self.bias_atom_e[remap_index]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ["bias_atom_e"]:
             self.bias_atom_e = value
         elif key in ["fparam_avg"]:
@@ -262,7 +262,7 @@ class GeneralFitting(NativeOP, BaseFitting):
     def reinit_exclude(
         self,
         exclude_types: List[int] = [],
-    ):
+    ) -> None:
         self.exclude_types = exclude_types
         self.emask = AtomExcludeMask(self.ntypes, self.exclude_types)
 

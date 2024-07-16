@@ -240,7 +240,7 @@ def get_np_precision(precision: "_PRECISION") -> np.dtype:
         raise RuntimeError(f"{precision} is not a valid precision")
 
 
-def symlink_prefix_files(old_prefix: str, new_prefix: str):
+def symlink_prefix_files(old_prefix: str, new_prefix: str) -> None:
     """Create symlinks from old checkpoint prefix to new one.
 
     On Windows this function will copy files instead of creating symlinks.

@@ -74,7 +74,7 @@ class Atten2Map(torch.nn.Module):
         has_gate: bool = False,  # apply gate to attn map
         smooth: bool = True,
         attnw_shift: float = 20.0,
-    ):
+    ) -> None:
         super().__init__()
         self.ni = ni
         self.nd = nd
@@ -151,7 +151,7 @@ class Atten2MultiHeadApply(torch.nn.Module):
         self,
         ni: int,
         nh: int,
-    ):
+    ) -> None:
         super().__init__()
         self.ni = ni
         self.nh = nh
@@ -185,7 +185,7 @@ class Atten2EquiVarApply(torch.nn.Module):
         self,
         ni: int,
         nh: int,
-    ):
+    ) -> None:
         super().__init__()
         self.ni = ni
         self.nh = nh
@@ -219,7 +219,7 @@ class LocalAtten(torch.nn.Module):
         nh: int,
         smooth: bool = True,
         attnw_shift: float = 20.0,
-    ):
+    ) -> None:
         super().__init__()
         self.ni = ni
         self.nd = nd
@@ -311,7 +311,7 @@ class RepformerLayer(torch.nn.Module):
         update_style: str = "res_avg",
         set_davg_zero: bool = True,  # TODO
         smooth: bool = True,
-    ):
+    ) -> None:
         super().__init__()
         self.epsilon = 1e-4  # protection of 1./nnei
         self.rcut = rcut

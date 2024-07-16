@@ -67,7 +67,7 @@ def test(
     atomic: bool,
     head: Optional[str] = None,
     **kwargs,
-):
+) -> None:
     """Test model predictions.
 
     Parameters
@@ -224,7 +224,7 @@ def rmse(diff: np.ndarray) -> float:
 
 def save_txt_file(
     fname: Path, data: np.ndarray, header: str = "", append: bool = False
-):
+) -> None:
     """Save numpy array to test file.
 
     Parameters
@@ -549,7 +549,7 @@ def test_ener(
         }
 
 
-def print_ener_sys_avg(avg: Dict[str, float]):
+def print_ener_sys_avg(avg: Dict[str, float]) -> None:
     """Print errors summary for energy type potential.
 
     Parameters
@@ -721,7 +721,7 @@ def test_dos(
     }
 
 
-def print_dos_sys_avg(avg: Dict[str, float]):
+def print_dos_sys_avg(avg: Dict[str, float]) -> None:
     """Print errors summary for DOS type potential.
 
     Parameters
@@ -819,7 +819,7 @@ def test_wfc(
     return {"rmse": (rmse_f, wfc.size)}
 
 
-def print_wfc_sys_avg(avg):
+def print_wfc_sys_avg(avg) -> None:
     """Print errors summary for wfc type potential.
 
     Parameters
@@ -961,7 +961,7 @@ def test_polar(
     return {"rmse": (rmse_f, polar.size)}
 
 
-def print_polar_sys_avg(avg):
+def print_polar_sys_avg(avg) -> None:
     """Print errors summary for polar type potential.
 
     Parameters
@@ -1075,7 +1075,7 @@ def test_dipole(
     return {"rmse": (rmse_f, dipole.size)}
 
 
-def print_dipole_sys_avg(avg):
+def print_dipole_sys_avg(avg) -> None:
     """Print errors summary for dipole type potential.
 
     Parameters

@@ -79,7 +79,7 @@ class EnvMat(NativeOP):
         rcut,
         rcut_smth,
         protection: float = 0.0,
-    ):
+    ) -> None:
         self.rcut = rcut
         self.rcut_smth = rcut_smth
         self.protection = protection

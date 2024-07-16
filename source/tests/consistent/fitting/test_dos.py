@@ -80,7 +80,7 @@ class TestDOS(CommonTest, FittingTest, unittest.TestCase):
     pt_class = DOSFittingPT
     args = fitting_dos()
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

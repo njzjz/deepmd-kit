@@ -101,7 +101,7 @@ class InvarFitting(GeneralFitting):
         atom_ener: Optional[List[Optional[torch.Tensor]]] = None,
         type_map: Optional[List[str]] = None,
         **kwargs,
-    ):
+    ) -> None:
         self.dim_out = dim_out
         self.atom_ener = atom_ener
         super().__init__(

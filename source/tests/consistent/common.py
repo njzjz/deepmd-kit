@@ -84,10 +84,10 @@ class CommonTest(ABC):
     atol = 1e-10
     """Absolute tolerance for comparing the return value. Override for float32."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.unique_id = uuid4().hex
 
-    def reset_unique_id(self):
+    def reset_unique_id(self) -> None:
         self.unique_id = uuid4().hex
 
     def init_backend_cls(self, cls) -> Any:
@@ -241,7 +241,7 @@ class CommonTest(ABC):
             return self.get_pt_ret_serialization_from_cls(obj)
         raise ValueError("No available reference")
 
-    def test_tf_consistent_with_ref(self):
+    def test_tf_consistent_with_ref(self) -> None:
         """Test whether TF and reference are consistent."""
         if self.skip_tf:
             self.skipTest("Unsupported backend")
@@ -271,7 +271,7 @@ class CommonTest(ABC):
             )
             assert rr1.dtype == rr2.dtype, f"{rr1.dtype} != {rr2.dtype}"
 
-    def test_tf_self_consistent(self):
+    def test_tf_self_consistent(self) -> None:
         """Test whether TF is self consistent."""
         if self.skip_tf:
             self.skipTest("Unsupported backend")
@@ -286,7 +286,7 @@ class CommonTest(ABC):
             np.testing.assert_allclose(rr1, rr2, rtol=self.rtol, atol=self.atol)
             assert rr1.dtype == rr2.dtype, f"{rr1.dtype} != {rr2.dtype}"
 
-    def test_dp_consistent_with_ref(self):
+    def test_dp_consistent_with_ref(self) -> None:
         """Test whether DP and reference are consistent."""
         if self.skip_dp:
             self.skipTest("Unsupported backend")
@@ -304,7 +304,7 @@ class CommonTest(ABC):
             np.testing.assert_allclose(rr1, rr2, rtol=self.rtol, atol=self.atol)
             assert rr1.dtype == rr2.dtype, f"{rr1.dtype} != {rr2.dtype}"
 
-    def test_dp_self_consistent(self):
+    def test_dp_self_consistent(self) -> None:
         """Test whether DP is self consistent."""
         if self.skip_dp:
             self.skipTest("Unsupported backend")
@@ -320,7 +320,7 @@ class CommonTest(ABC):
             else:
                 self.assertEqual(rr1, rr2)
 
-    def test_pt_consistent_with_ref(self):
+    def test_pt_consistent_with_ref(self) -> None:
         """Test whether PT and reference are consistent."""
         if self.skip_pt:
             self.skipTest("Unsupported backend")
@@ -343,7 +343,7 @@ class CommonTest(ABC):
             np.testing.assert_allclose(rr1, rr2, rtol=self.rtol, atol=self.atol)
             assert rr1.dtype == rr2.dtype, f"{rr1.dtype} != {rr2.dtype}"
 
-    def test_pt_self_consistent(self):
+    def test_pt_self_consistent(self) -> None:
         """Test whether PT is self consistent."""
         if self.skip_pt:
             self.skipTest("Unsupported backend")

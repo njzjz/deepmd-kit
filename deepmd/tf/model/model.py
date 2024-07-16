@@ -10,6 +10,7 @@ from enum import (
 from typing import (
     Dict,
     List,
+    NoReturn,
     Optional,
     Tuple,
     Union,
@@ -381,7 +382,7 @@ class Model(ABC, make_plugin_registry("model")):
             sub_graph_def, input_map=feed_dict, return_elements=return_elements, name=""
         )
 
-    def enable_mixed_precision(self, mixed_prec: dict):
+    def enable_mixed_precision(self, mixed_prec: dict) -> NoReturn:
         """Enable mixed precision for the model.
 
         Parameters
@@ -419,7 +420,7 @@ class Model(ABC, make_plugin_registry("model")):
         """
         raise RuntimeError("Not supported")
 
-    def enable_compression(self, suffix: str = ""):
+    def enable_compression(self, suffix: str = "") -> NoReturn:
         """Enable compression.
 
         Parameters
@@ -703,7 +704,7 @@ class StandardModel(Model):
         else:
             self.typeebd = None
 
-    def enable_mixed_precision(self, mixed_prec: dict):
+    def enable_mixed_precision(self, mixed_prec: dict) -> None:
         """Enable mixed precision for the model.
 
         Parameters
@@ -714,7 +715,7 @@ class StandardModel(Model):
         self.descrpt.enable_mixed_precision(mixed_prec)
         self.fitting.enable_mixed_precision(mixed_prec)
 
-    def enable_compression(self, suffix: str = ""):
+    def enable_compression(self, suffix: str = "") -> None:
         """Enable compression.
 
         Parameters

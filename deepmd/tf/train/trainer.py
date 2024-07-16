@@ -73,7 +73,7 @@ from deepmd.tf.nvnmd.utils.config import (
 )
 
 
-def _is_subdir(path, directory):
+def _is_subdir(path, directory) -> bool:
     path = os.path.realpath(path)
     directory = os.path.realpath(directory)
     if path == directory:
@@ -83,12 +83,12 @@ def _is_subdir(path, directory):
 
 
 class DPTrainer:
-    def __init__(self, jdata, run_opt, is_compress=False):
+    def __init__(self, jdata, run_opt, is_compress=False) -> None:
         self.run_opt = run_opt
         self._init_param(jdata)
         self.is_compress = is_compress
 
-    def _init_param(self, jdata):
+    def _init_param(self, jdata) -> None:
         # model config
         model_param = jdata["model"]
 
@@ -174,7 +174,7 @@ class DPTrainer:
         self.ckpt_meta = None
         self.model_type = None
 
-    def build(self, data=None, stop_batch=0, origin_type_map=None, suffix=""):
+    def build(self, data=None, stop_batch=0, origin_type_map=None, suffix="") -> None:
         self.ntypes = self.model.get_ntypes()
         self.stop_batch = stop_batch
 
@@ -244,7 +244,7 @@ class DPTrainer:
         self._build_network(data, suffix)
         self._build_training()
 
-    def _build_lr(self):
+    def _build_lr(self) -> None:
         self._extra_train_ops = []
         self.global_step = tf.train.get_or_create_global_step()
         self.learning_rate = self.lr.build(self.global_step, self.stop_batch)
@@ -267,7 +267,7 @@ class DPTrainer:
 
         return l2_l, l2_more
 
-    def _build_network(self, data, suffix=""):
+    def _build_network(self, data, suffix="") -> None:
         self.place_holders = {}
         if self.is_compress:
             for kk in ["coord", "box"]:
@@ -332,7 +332,7 @@ class DPTrainer:
                 )
         return optimizer
 
-    def _build_training(self):
+    def _build_training(self) -> None:
         if self.stop_batch == 0:
             # self.train_op is not used if stop_batch is zero
             self.train_op = None
@@ -351,7 +351,7 @@ class DPTrainer:
         self.train_op = tf.group(*train_ops)
         log.info("built training")
 
-    def _init_session(self):
+    def _init_session(self) -> None:
         config = get_tf_session_config()
         device, idx = self.run_opt.my_device.split(":", 1)
         if device == "gpu":
@@ -406,7 +406,7 @@ class DPTrainer:
                 log.info("receive global variables from task#0")
             run_sess(self.sess, bcast_op)
 
-    def train(self, train_data=None, valid_data=None):
+    def train(self, train_data=None, valid_data=None) -> None:
         # if valid_data is None:  # no validation set specified.
         #     valid_data = train_data  # using training set as validation set.
 
@@ -620,7 +620,7 @@ class DPTrainer:
         if self.enable_profiler and self.run_opt.is_chief:
             tfv2.profiler.experimental.stop()
 
-    def save_checkpoint(self, cur_batch: int):
+    def save_checkpoint(self, cur_batch: int) -> None:
         try:
             ckpt_prefix = self.saver.save(
                 self.sess,
@@ -668,7 +668,7 @@ class DPTrainer:
 
     def valid_on_the_fly(
         self, fp, train_batches, valid_batches, print_header=False, fitting_key=None
-    ):
+    ) -> None:
         train_results = self.get_evaluation_results(train_batches)
         valid_results = self.get_evaluation_results(valid_batches)
 
@@ -685,7 +685,7 @@ class DPTrainer:
         )
 
     @staticmethod
-    def print_header(fp, train_results, valid_results):
+    def print_header(fp, train_results, valid_results) -> None:
         print_str = ""
         print_str += "# %5s" % "step"
         if valid_results is not None:
@@ -708,7 +708,7 @@ class DPTrainer:
         valid_results,
         cur_batch,
         cur_lr,
-    ):
+    ) -> None:
         print_str = ""
         print_str += "%7d" % cur_batch
         if valid_results is not None:
@@ -772,13 +772,13 @@ class DPTrainer:
         )
         return avg_results
 
-    def save_compressed(self):
+    def save_compressed(self) -> None:
         """Save the compressed graph."""
         self._init_session()
         if self.is_compress:
             self.saver.save(self.sess, os.path.join(os.getcwd(), self.save_ckpt))
 
-    def _get_place_holders(self, data_dict):
+    def _get_place_holders(self, data_dict) -> None:
         for kk in data_dict.keys():
             if kk == "type":
                 continue
@@ -790,7 +790,7 @@ class DPTrainer:
                 tf.float32, name="t_find_" + kk
             )
 
-    def _init_from_frz_model(self):
+    def _init_from_frz_model(self) -> None:
         try:
             graph, graph_def = load_graph_def(self.run_opt.init_frz_model)
         except FileNotFoundError as e:
@@ -813,7 +813,7 @@ class DPTrainer:
             self.frz_model = self.run_opt.init_frz_model
         self.model.init_variables(graph, graph_def, model_type=self.model_type)
 
-    def _init_from_ckpt(self, ckpt_meta: str):
+    def _init_from_ckpt(self, ckpt_meta: str) -> None:
         with tf.Graph().as_default() as graph:
             tf.train.import_meta_graph(f"{ckpt_meta}.meta", clear_devices=True)
         # get the model type from the model
@@ -828,7 +828,7 @@ class DPTrainer:
 
     def _init_from_pretrained_model(
         self, data, origin_type_map=None, bias_adjust_mode="change-by-statistic"
-    ):
+    ) -> None:
         """Init the embedding net variables with the given frozen model.
 
         Parameters
@@ -880,7 +880,7 @@ class DPTrainer:
         frozen_model,
         origin_type_map,
         bias_adjust_mode="change-by-statistic",
-    ):
+    ) -> None:
         full_type_map = data.get_type_map()
         self.model.change_energy_bias(
             data,
@@ -915,7 +915,7 @@ class DatasetLoader:
     >>> data_dict = loader.get_data_dict(data_list)
     """
 
-    def __init__(self, train_data: DeepmdDataSystem):
+    def __init__(self, train_data: DeepmdDataSystem) -> None:
         self.train_data = train_data
         # get the keys of the data
         batch_data = self.train_data.get_batch()

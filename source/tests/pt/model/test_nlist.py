@@ -20,7 +20,7 @@ dtype = torch.float64
 
 
 class TestNeighList(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.nf = 3
         self.nloc = 3
         self.ns = 5 * 5 * 3
@@ -58,7 +58,7 @@ class TestNeighList(unittest.TestCase):
             device=env.DEVICE,
         )
 
-    def test_build_notype(self):
+    def test_build_notype(self) -> None:
         ecoord, eatype, mapping = extend_coord_with_ghosts(
             self.coord, self.atype, self.cell, self.rcut
         )
@@ -79,7 +79,7 @@ class TestNeighList(unittest.TestCase):
             torch.sort(self.ref_nlist, dim=-1)[0],
         )
 
-    def test_build_type(self):
+    def test_build_type(self) -> None:
         ecoord, eatype, mapping = extend_coord_with_ghosts(
             self.coord, self.atype, self.cell, self.rcut
         )
@@ -103,7 +103,7 @@ class TestNeighList(unittest.TestCase):
                 ],
             )
 
-    def test_build_multiple_nlist(self):
+    def test_build_multiple_nlist(self) -> None:
         rcuts = [1.01, 2.01]
         nsels = [20, 80]
         ecoord, eatype, mapping = extend_coord_with_ghosts(
@@ -144,7 +144,7 @@ class TestNeighList(unittest.TestCase):
             nlist2,
         )
 
-    def test_extend_coord(self):
+    def test_extend_coord(self) -> None:
         ecoord, eatype, mapping = extend_coord_with_ghosts(
             self.coord, self.atype, self.cell, self.rcut
         )

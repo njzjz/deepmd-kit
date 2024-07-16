@@ -181,7 +181,7 @@ class TestSeAttenV2(CommonTest, DescriptorTest, unittest.TestCase):
     pt_class = DescrptSeAttenV2PT
     args = descrpt_se_atten_args().append(Argument("ntypes", int, optional=False))
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

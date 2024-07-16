@@ -102,7 +102,7 @@ class DP(Calculator):
         atoms: Optional["Atoms"] = None,
         properties: List[str] = ["energy", "forces", "virial"],
         system_changes: List[str] = all_changes,
-    ):
+    ) -> None:
         """Run calculation with deepmd model.
 
         Parameters

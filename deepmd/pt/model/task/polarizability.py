@@ -98,7 +98,7 @@ class PolarFittingNet(GeneralFitting):
         shift_diag: bool = True,
         type_map: Optional[List[str]] = None,
         **kwargs,
-    ):
+    ) -> None:
         self.embedding_width = embedding_width
         self.fit_diag = fit_diag
         self.scale = scale
@@ -149,7 +149,7 @@ class PolarFittingNet(GeneralFitting):
             else self.embedding_width * self.embedding_width
         )
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ["constant_matrix"]:
             self.constant_matrix = value
         else:

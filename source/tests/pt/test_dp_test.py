@@ -29,7 +29,7 @@ from .model.test_permutation import (
 
 
 class DPTest:
-    def test_dp_test_1_frame(self):
+    def test_dp_test_1_frame(self) -> None:
         trainer = get_trainer(deepcopy(self.config))
         with torch.device("cpu"):
             input_dict, label_dict, _ = trainer.get_data(is_train=False)
@@ -92,7 +92,7 @@ class DPTest:
                 ).reshape(-1, 3),
             )
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         for f in os.listdir("."):
             if f.startswith("model") and f.endswith(".pt"):
                 os.remove(f)
@@ -105,7 +105,7 @@ class DPTest:
 
 
 class TestDPTestSeA(DPTest, unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.detail_file = "test_dp_test_ener_detail"
         input_json = str(Path(__file__).parent / "water/se_atten.json")
         with open(input_json) as f:
@@ -122,7 +122,7 @@ class TestDPTestSeA(DPTest, unittest.TestCase):
 
 
 class TestDPTestSeASpin(DPTest, unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.detail_file = "test_dp_test_ener_spin_detail"
         input_json = str(Path(__file__).parent / "water/se_atten.json")
         with open(input_json) as f:

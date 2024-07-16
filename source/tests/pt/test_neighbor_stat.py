@@ -33,16 +33,16 @@ def gen_sys(nframes):
 
 
 class TestNeighborStat(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         data0 = gen_sys(1)
         sys0 = dpdata.LabeledSystem()
         sys0.data = data0
         sys0.to_deepmd_npy("system_0", set_size=1)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         shutil.rmtree("system_0")
 
-    def test_neighbor_stat(self):
+    def test_neighbor_stat(self) -> None:
         for rcut in (0.0, 1.0, 2.0, 4.0):
             for mixed_type in (True, False):
                 with self.subTest(rcut=rcut, mixed_type=mixed_type):

@@ -72,7 +72,7 @@ class BackendOption(argparse.Action):
 
 class DeprecateAction(argparse.Action):
     # See https://stackoverflow.com/a/69052677/9567349 by Ibolit under CC BY-SA 4.0
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.call_count = 0
         if "help" in kwargs:
             kwargs["help"] = f'[DEPRECATED] {kwargs["help"]}'
@@ -875,7 +875,7 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     return parsed_args
 
 
-def main():
+def main() -> None:
     """DeePMD-kit new entry point.
 
     Raises

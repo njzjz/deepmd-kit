@@ -87,7 +87,7 @@ class TestSeA(CommonTest, DescriptorTest, unittest.TestCase):
     pt_class = DescrptSeRPT
     args = descrpt_se_r_args()
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

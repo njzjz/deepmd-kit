@@ -53,7 +53,7 @@ def convert_input_v0_v1(
     return output
 
 
-def _warning_input_v0_v1(fname: Optional[Union[str, Path]]):
+def _warning_input_v0_v1(fname: Optional[Union[str, Path]]) -> None:
     msg = (
         "It seems that you are using a deepmd-kit input of version 0.x.x, "
         "which is deprecated. we have converted the input to >2.0.0 compatible"
@@ -250,7 +250,7 @@ def _training(jdata: Dict[str, Any]) -> Dict[str, Any]:
     return training
 
 
-def _jcopy(src: Dict[str, Any], dst: Dict[str, Any], keys: Sequence[str]):
+def _jcopy(src: Dict[str, Any], dst: Dict[str, Any], keys: Sequence[str]) -> None:
     """Copy specified keys from one dict to another.
 
     Parameters
@@ -267,7 +267,7 @@ def _jcopy(src: Dict[str, Any], dst: Dict[str, Any], keys: Sequence[str]):
             dst[k] = src[k]
 
 
-def remove_decay_rate(jdata: Dict[str, Any]):
+def remove_decay_rate(jdata: Dict[str, Any]) -> None:
     """Convert decay_rate to stop_lr.
 
     Parameters
@@ -323,7 +323,7 @@ def convert_input_v1_v2(
     return jdata
 
 
-def _warning_input_v1_v2(fname: Optional[Union[str, Path]]):
+def _warning_input_v1_v2(fname: Optional[Union[str, Path]]) -> None:
     msg = (
         "It seems that you are using a deepmd-kit input of version 1.x.x, "
         "which is deprecated. we have converted the input to >2.0.0 compatible"

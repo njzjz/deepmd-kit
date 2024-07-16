@@ -28,14 +28,14 @@ class VariableDef:
         name: str,
         shape: List[int],
         atomic: bool = True,
-    ):
+    ) -> None:
         self.name = name
         self.shape = list(shape)
         self.atomic = atomic
 
 
 class TestDef(unittest.TestCase):
-    def test_model_output_def(self):
+    def test_model_output_def(self) -> None:
         defs = [
             OutputVariableDef(
                 "energy",
@@ -469,7 +469,7 @@ class TestDef(unittest.TestCase):
         with self.assertRaises(ValueError):
             apply_operation(hession_vardef, OVO.DERV_R)
 
-    def test_no_raise_no_redu_deriv(self):
+    def test_no_raise_no_redu_deriv(self) -> None:
         OutputVariableDef(
             "energy",
             [1],
@@ -478,7 +478,7 @@ class TestDef(unittest.TestCase):
             c_differentiable=False,
         )
 
-    def test_raise_requires_r_deriv(self):
+    def test_raise_requires_r_deriv(self) -> None:
         with self.assertRaises(ValueError) as context:
             OutputVariableDef(
                 "energy",
@@ -488,11 +488,11 @@ class TestDef(unittest.TestCase):
                 c_differentiable=True,
             )
 
-    def test_raise_redu_not_atomic(self):
+    def test_raise_redu_not_atomic(self) -> None:
         with self.assertRaises(ValueError) as context:
             (OutputVariableDef("energy", [1], reducible=True, atomic=False),)
 
-    def test_hessian_not_reducible(self):
+    def test_hessian_not_reducible(self) -> None:
         with self.assertRaises(ValueError) as context:
             (
                 OutputVariableDef(
@@ -505,7 +505,7 @@ class TestDef(unittest.TestCase):
                 ),
             )
 
-    def test_hessian_not_r_differentiable(self):
+    def test_hessian_not_r_differentiable(self) -> None:
         with self.assertRaises(ValueError) as context:
             (
                 OutputVariableDef(
@@ -518,7 +518,7 @@ class TestDef(unittest.TestCase):
                 ),
             )
 
-    def test_energy_magnetic(self):
+    def test_energy_magnetic(self) -> None:
         with self.assertRaises(ValueError) as context:
             (
                 OutputVariableDef(
@@ -532,7 +532,7 @@ class TestDef(unittest.TestCase):
                 ),
             )
 
-    def test_model_decorator(self):
+    def test_model_decorator(self) -> None:
         nf = 2
         nloc = 3
         nall = 4
@@ -562,14 +562,14 @@ class TestDef(unittest.TestCase):
         ff = Foo()
         ff()
 
-    def test_model_decorator_keyerror(self):
+    def test_model_decorator_keyerror(self) -> None:
         nf = 2
         nloc = 3
         nall = 4
 
         @model_check_output
         class Foo(NativeOP):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__()
 
             def output_def(self):
@@ -596,7 +596,7 @@ class TestDef(unittest.TestCase):
             ff()
             self.assertIn("energy_derv_r", context.exception)
 
-    def test_model_decorator_shapeerror(self):
+    def test_model_decorator_shapeerror(self) -> None:
         nf = 2
         nloc = 3
         nall = 4
@@ -607,7 +607,7 @@ class TestDef(unittest.TestCase):
                 self,
                 shape_rd=[nf, 1],
                 shape_dr=[nf, nall, 1, 3],
-            ):
+            ) -> None:
                 self.shape_rd, self.shape_dr = shape_rd, shape_dr
 
             def output_def(self):
@@ -655,7 +655,7 @@ class TestDef(unittest.TestCase):
             ff()
             self.assertIn("not matching", context.exception)
 
-    def test_fitting_decorator(self):
+    def test_fitting_decorator(self) -> None:
         nf = 2
         nloc = 3
         nall = 4
@@ -682,7 +682,7 @@ class TestDef(unittest.TestCase):
         ff = Foo()
         ff()
 
-    def test_fitting_decorator_shapeerror(self):
+    def test_fitting_decorator_shapeerror(self) -> None:
         nf = 2
         nloc = 3
 
@@ -691,7 +691,7 @@ class TestDef(unittest.TestCase):
             def __init__(
                 self,
                 shape=[nf, nloc, 1],
-            ):
+            ) -> None:
                 self.shape = shape
 
             def output_def(self):
@@ -723,7 +723,7 @@ class TestDef(unittest.TestCase):
             ff()
             self.assertIn("not matching", context.exception)
 
-    def test_check_var(self):
+    def test_check_var(self) -> None:
         var_def = VariableDef("foo", [2, 3], atomic=True)
         with self.assertRaises(ValueError) as context:
             check_var(np.zeros([2, 3, 4, 5, 6]), var_def)
@@ -760,7 +760,7 @@ class TestDef(unittest.TestCase):
             self.assertIn("shape not matching", context.exception)
         check_var(np.zeros([2, 2, 8]), var_def)
 
-    def test_squeeze(self):
+    def test_squeeze(self) -> None:
         out_var = OutputVariableDef("foo", [])
         out_var.squeeze(0)
         self.assertEqual(out_var.shape, [])

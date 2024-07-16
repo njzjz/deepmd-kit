@@ -71,7 +71,7 @@ class TestHybrid(CommonTest, DescriptorTest, unittest.TestCase):
     pt_class = DescrptHybridPT
     args = descrpt_hybrid_args()
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

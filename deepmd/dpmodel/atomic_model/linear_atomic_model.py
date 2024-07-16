@@ -51,7 +51,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         models: List[BaseAtomicModel],
         type_map: List[str],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(type_map, **kwargs)
         super().init_out_stat()
 
@@ -346,7 +346,7 @@ class DPZBLLinearEnergyAtomicModel(LinearEnergyAtomicModel):
         type_map: List[str],
         smin_alpha: Optional[float] = 0.1,
         **kwargs,
-    ):
+    ) -> None:
         models = [dp_model, zbl_model]
         kwargs["models"] = models
         kwargs["type_map"] = type_map

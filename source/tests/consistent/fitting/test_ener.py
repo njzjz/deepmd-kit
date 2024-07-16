@@ -80,7 +80,7 @@ class TestEner(CommonTest, FittingTest, unittest.TestCase):
     pt_class = EnerFittingPT
     args = fitting_ener()
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

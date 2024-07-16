@@ -115,7 +115,7 @@ class PolarFitting(GeneralFitting):
         shift_diag: bool = True,
         type_map: Optional[List[str]] = None,
         seed: Optional[Union[int, List[int]]] = None,
-    ):
+    ) -> None:
         if tot_ener_zero:
             raise NotImplementedError("tot_ener_zero is not implemented")
         if spin is not None:
@@ -177,7 +177,7 @@ class PolarFitting(GeneralFitting):
             else self.embedding_width * self.embedding_width
         )
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ["constant_matrix"]:
             self.constant_matrix = value
         else:

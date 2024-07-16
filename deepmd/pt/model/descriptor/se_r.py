@@ -76,7 +76,7 @@ class DescrptSeR(BaseDescriptor, torch.nn.Module):
         seed: Optional[Union[int, List[int]]] = None,
         type_map: Optional[List[str]] = None,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         self.rcut = rcut
         self.rcut_smth = rcut_smth
@@ -187,7 +187,7 @@ class DescrptSeR(BaseDescriptor, torch.nn.Module):
         """Returns the protection of building environment matrix."""
         return self.env_protection
 
-    def share_params(self, base_class, shared_level, resume=False):
+    def share_params(self, base_class, shared_level, resume=False) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -236,7 +236,7 @@ class DescrptSeR(BaseDescriptor, torch.nn.Module):
         self,
         merged: Union[Callable[[], List[dict]], List[dict]],
         path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute the input statistics (e.g. mean and stddev) for the descriptors from packed data.
 
@@ -279,7 +279,7 @@ class DescrptSeR(BaseDescriptor, torch.nn.Module):
             )
         return self.stats
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ("avg", "data_avg", "davg"):
             self.mean = value
         elif key in ("std", "data_std", "dstd"):
@@ -298,7 +298,7 @@ class DescrptSeR(BaseDescriptor, torch.nn.Module):
     def reinit_exclude(
         self,
         exclude_types: List[Tuple[int, int]] = [],
-    ):
+    ) -> None:
         self.exclude_types = exclude_types
         self.emask = PairExcludeMask(self.ntypes, exclude_types=exclude_types)
 

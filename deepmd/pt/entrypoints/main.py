@@ -231,7 +231,7 @@ class SummaryPrinter(BaseSummaryPrinter):
         }
 
 
-def train(FLAGS):
+def train(FLAGS) -> None:
     log.info("Configuration path: %s", FLAGS.INPUT)
     SummaryPrinter()()
     with open(FLAGS.INPUT) as fin:
@@ -329,7 +329,7 @@ def train(FLAGS):
     trainer.run()
 
 
-def freeze(FLAGS):
+def freeze(FLAGS) -> None:
     model = torch.jit.script(inference.Tester(FLAGS.model, head=FLAGS.head).model)
     extra_files = {}
     torch.jit.save(
@@ -339,7 +339,7 @@ def freeze(FLAGS):
     )
 
 
-def show(FLAGS):
+def show(FLAGS) -> None:
     if FLAGS.INPUT.split(".")[-1] == "pt":
         state_dict = torch.load(FLAGS.INPUT, map_location=env.DEVICE)
         if "model" in state_dict:
@@ -404,7 +404,7 @@ def show(FLAGS):
             log.info(f"The fitting_net parameter is {fitting_net}")
 
 
-def change_bias(FLAGS):
+def change_bias(FLAGS) -> None:
     if FLAGS.INPUT.endswith(".pt"):
         old_state_dict = torch.load(FLAGS.INPUT, map_location=env.DEVICE)
         model_state_dict = copy.deepcopy(old_state_dict.get("model", old_state_dict))
@@ -532,7 +532,7 @@ def change_bias(FLAGS):
 
 
 @record
-def main(args: Optional[Union[List[str], argparse.Namespace]] = None):
+def main(args: Optional[Union[List[str], argparse.Namespace]] = None) -> None:
     if not isinstance(args, argparse.Namespace):
         FLAGS = parse_args(args=args)
     else:

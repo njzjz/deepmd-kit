@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 class Region3D:
-    def __init__(self, boxt):
+    def __init__(self, boxt) -> None:
         """Construct a simulation box."""
         boxt = boxt.reshape([3, 3])
         self.boxt = boxt  # convert physical coordinates to internal ones

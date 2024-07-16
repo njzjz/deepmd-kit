@@ -248,7 +248,7 @@ class TestDPA2(CommonTest, DescriptorTest, unittest.TestCase):
     pt_class = DescrptDPA2PT
     args = descrpt_se_atten_args().append(Argument("ntypes", int, optional=False))
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

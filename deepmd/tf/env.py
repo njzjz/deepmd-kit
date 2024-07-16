@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     )
 
 
-def dlopen_library(module: str, filename: str):
+def dlopen_library(module: str, filename: str) -> None:
     """Dlopen a library from a module.
 
     Parameters
@@ -210,7 +210,7 @@ TRANSFER_PATTERN = (
 )
 
 
-def set_mkl():
+def set_mkl() -> None:
     """Tuning MKL for the best performance.
 
     References
@@ -282,7 +282,7 @@ def get_tf_session_config() -> Any:
 default_tf_session_config = get_tf_session_config()
 
 
-def reset_default_tf_session_config(cpu_only: bool):
+def reset_default_tf_session_config(cpu_only: bool) -> None:
     """Limit tensorflow session to CPU or not.
 
     Parameters

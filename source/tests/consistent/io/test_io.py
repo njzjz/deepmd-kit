@@ -57,13 +57,13 @@ class IOTest:
         out_hook = out_backend.deserialize_hook
         out_hook(model_file, data)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         prefix = "test_consistent_io_" + self.__class__.__name__.lower()
         for ii in Path(".").glob(prefix + ".*"):
             if Path(ii).exists():
                 Path(ii).unlink()
 
-    def test_data_equal(self):
+    def test_data_equal(self) -> None:
         prefix = "test_consistent_io_" + self.__class__.__name__.lower()
         for backend_name in ("tensorflow", "pytorch", "dpmodel"):
             with self.subTest(backend_name=backend_name):
@@ -90,7 +90,7 @@ class IOTest:
                     reference_data.pop(kk, None)
                 np.testing.assert_equal(data, reference_data)
 
-    def test_deep_eval(self):
+    def test_deep_eval(self) -> None:
         self.coords = np.array(
             [
                 12.83,
@@ -143,7 +143,7 @@ class IOTest:
 
 
 class TestDeepPot(unittest.TestCase, IOTest):
-    def setUp(self):
+    def setUp(self) -> None:
         model_def_script = {
             "type_map": ["O", "H"],
             "descriptor": {
@@ -180,5 +180,5 @@ class TestDeepPot(unittest.TestCase, IOTest):
             "model_def_script": model_def_script,
         }
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         IOTest.tearDown(self)

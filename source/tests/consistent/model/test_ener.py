@@ -102,7 +102,7 @@ class TestEner(CommonTest, ModelTest, unittest.TestCase):
             return get_model_pt(data)
         return cls(**data, **self.addtional_data)
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

@@ -46,7 +46,7 @@ class LayerNorm(nn.Module):
         precision: str = DEFAULT_PRECISION,
         trainable: bool = True,
         seed: Optional[Union[int, List[int]]] = None,
-    ):
+    ) -> None:
         super().__init__()
         self.eps = eps
         self.uni_init = uni_init

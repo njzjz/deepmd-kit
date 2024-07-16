@@ -3,6 +3,7 @@ import copy
 import itertools
 from typing import (
     List,
+    NoReturn,
     Optional,
     Tuple,
     Union,
@@ -152,7 +153,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
         )
         self.orig_sel = self.sel
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ("avg", "data_avg", "davg"):
             self.davg = value
         elif key in ("std", "data_std", "dstd"):
@@ -205,7 +206,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
         """Returns cutoff radius."""
         return self.sel
 
-    def mixed_types(self):
+    def mixed_types(self) -> bool:
         """Returns if the descriptor requires a neighbor list that distinguish different
         atomic types or not.
         """
@@ -219,7 +220,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
         """Returns the protection of building environment matrix."""
         return self.env_protection
 
-    def share_params(self, base_class, shared_level, resume=False):
+    def share_params(self, base_class, shared_level, resume=False) -> NoReturn:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -235,7 +236,9 @@ class DescrptSeT(NativeOP, BaseDescriptor):
         """Get the name to each type of atoms."""
         return self.type_map
 
-    def compute_input_stats(self, merged: List[dict], path: Optional[DPPath] = None):
+    def compute_input_stats(
+        self, merged: List[dict], path: Optional[DPPath] = None
+    ) -> NoReturn:
         """Update mean and stddev for descriptor elements."""
         raise NotImplementedError
 
@@ -255,7 +258,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
     def reinit_exclude(
         self,
         exclude_types: List[Tuple[int, int]] = [],
-    ):
+    ) -> None:
         self.exclude_types = exclude_types
         self.emask = PairExcludeMask(self.ntypes, exclude_types=exclude_types)
 

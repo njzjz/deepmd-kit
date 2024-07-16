@@ -93,7 +93,7 @@ class DipoleFittingNet(GeneralFitting):
         c_differentiable: bool = True,
         type_map: Optional[List[str]] = None,
         **kwargs,
-    ):
+    ) -> None:
         self.embedding_width = embedding_width
         self.r_differentiable = r_differentiable
         self.c_differentiable = c_differentiable
@@ -153,7 +153,7 @@ class DipoleFittingNet(GeneralFitting):
         self,
         merged: Union[Callable[[], List[dict]], List[dict]],
         stat_file_path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute the output statistics (e.g. energy bias) for the fitting net from packed data.
 

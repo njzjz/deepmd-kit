@@ -22,7 +22,7 @@ default_places = 6
 
 
 class TestDPTest:
-    def setUp(self):
+    def setUp(self) -> None:
         self.coords = np.array(
             [
                 12.83,
@@ -59,23 +59,23 @@ class TestDPTest:
             }
         ).to_deepmd_npy(self.test_data)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         shutil.rmtree(self.test_data, ignore_errors=True)
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         os.remove(cls.model_name)
 
 
 class TestDPTestEner(unittest.TestCase, TestDPTest):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.model_name = "deeppot.pb"
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deeppot.pbtxt")), cls.model_name
         )
 
-    def setUp(self):
+    def setUp(self) -> None:
         TestDPTest.setUp(self)
         self.expected_e = np.array(
             [
@@ -168,7 +168,7 @@ class TestDPTestEner(unittest.TestCase, TestDPTest):
             ]
         )
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         detail_file = "test_dp_test_ener_detail"
         dp_test(
             model=self.model_name,
@@ -205,13 +205,13 @@ class TestDPTestEner(unittest.TestCase, TestDPTest):
 
 class TestDPTestDipole(unittest.TestCase, TestDPTest):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.model_name = "deepdipole.pb"
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deepdipole.pbtxt")), cls.model_name
         )
 
-    def setUp(self):
+    def setUp(self) -> None:
         TestDPTest.setUp(self)
         self.expected_d = np.array(
             [
@@ -227,7 +227,7 @@ class TestDPTestDipole(unittest.TestCase, TestDPTest):
         np.save(Path(self.test_data) / "set.000" / "atomic_dipole.npy", self.expected_d)
         np.save(Path(self.test_data) / "set.000" / "dipole.npy", self.expected_global_d)
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         detail_file = "test_dp_test_dipole_detail"
         dp_test(
             model=self.model_name,
@@ -243,7 +243,7 @@ class TestDPTestDipole(unittest.TestCase, TestDPTest):
         dipole = np.loadtxt(detail_file + ".out", ndmin=2)[0, 6:12]
         np.testing.assert_almost_equal(dipole, self.expected_d, decimal=default_places)
 
-    def test_1frame_global(self):
+    def test_1frame_global(self) -> None:
         detail_file = "test_dp_test_global_dipole_detail"
         dp_test(
             model=self.model_name,
@@ -264,13 +264,13 @@ class TestDPTestDipole(unittest.TestCase, TestDPTest):
 
 class TestDPTestPolar(unittest.TestCase, TestDPTest):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.model_name = "deeppolar.pb"
         convert_pbtxt_to_pb(
             str(infer_path / os.path.join("deeppolar.pbtxt")), cls.model_name
         )
 
-    def setUp(self):
+    def setUp(self) -> None:
         TestDPTest.setUp(self)
         self.expected_d = np.array(
             [
@@ -304,7 +304,7 @@ class TestDPTestPolar(unittest.TestCase, TestDPTest):
             self.expected_global_d,
         )
 
-    def test_1frame(self):
+    def test_1frame(self) -> None:
         detail_file = "test_dp_test_polar_detail"
         dp_test(
             model=self.model_name,
@@ -320,7 +320,7 @@ class TestDPTestPolar(unittest.TestCase, TestDPTest):
         polar = np.loadtxt(detail_file + ".out", ndmin=2)[0, 18:36]
         np.testing.assert_almost_equal(polar, self.expected_d, decimal=default_places)
 
-    def test_1frame_global(self):
+    def test_1frame_global(self) -> None:
         detail_file = "test_dp_test_global_polar_detail"
         dp_test(
             model=self.model_name,

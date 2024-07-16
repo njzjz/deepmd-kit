@@ -48,7 +48,7 @@ tf_model = "deeppot_for_consistent_frozen.pb"
 dp_model = original_model
 
 
-def setUpModule():
+def setUpModule() -> None:
     convert_backend(
         INPUT=dp_model,
         OUTPUT=tf_model,
@@ -59,7 +59,7 @@ def setUpModule():
     )
 
 
-def tearDownModule():
+def tearDownModule() -> None:
     for model_file in (pt_model, tf_model):
         try:
             os.remove(model_file)
@@ -86,10 +86,10 @@ class TestFrozen(CommonTest, ModelTest, unittest.TestCase):
     pt_class = FrozenModelPT
     args = model_args()
 
-    def skip_dp(self):
+    def skip_dp(self) -> bool:
         return True
 
-    def setUp(self):
+    def setUp(self) -> None:
         CommonTest.setUp(self)
 
         self.ntypes = 2

@@ -39,7 +39,7 @@ class SpinModel(torch.nn.Module):
         self,
         backbone_model,
         spin: Spin,
-    ):
+    ) -> None:
         super().__init__()
         self.backbone_model = backbone_model
         self.spin = spin
@@ -359,7 +359,7 @@ class SpinModel(torch.nn.Module):
         self,
         sampled_func,
         stat_file_path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute or load the statistics parameters of the model,
         such as mean and standard deviation of descriptors or the energy bias of the fitting net.
@@ -536,7 +536,7 @@ class SpinEnergyModel(SpinModel):
         self,
         backbone_model,
         spin: Spin,
-    ):
+    ) -> None:
         super().__init__(backbone_model, spin)
 
     def translated_output_def(self):

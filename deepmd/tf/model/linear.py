@@ -50,7 +50,7 @@ class LinearModel(Model):
         If "sum", the weights are set to be 1.
     """
 
-    def __init__(self, models: List[dict], weights: List[float], **kwargs):
+    def __init__(self, models: List[dict], weights: List[float], **kwargs) -> None:
         super().__init__(**kwargs)
         self.models = [Model(**model) for model in models]
         if isinstance(weights, list):
@@ -92,7 +92,7 @@ class LinearModel(Model):
                 raise ValueError("Models have different ntypes")
         return self.models[0].get_ntypes()
 
-    def data_stat(self, data):
+    def data_stat(self, data) -> None:
         for model in self.models:
             model.data_stat(data)
 

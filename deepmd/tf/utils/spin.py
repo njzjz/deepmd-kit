@@ -39,7 +39,7 @@ class Spin:
         self,
         reuse=None,
         suffix="",
-    ):
+    ) -> None:
         """Build the computational graph for the spin.
 
         Parameters

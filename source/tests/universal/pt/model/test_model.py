@@ -133,7 +133,7 @@ class TestEnergyModelPT(unittest.TestCase, EnerModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         EnerModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -229,7 +229,7 @@ class TestDosModelPT(unittest.TestCase, DosModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         DosModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -322,7 +322,7 @@ class TestDipoleModelPT(unittest.TestCase, DipoleModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         DipoleModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -415,7 +415,7 @@ class TestPolarModelPT(unittest.TestCase, PolarModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         PolarModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -501,7 +501,7 @@ class TestZBLModelPT(unittest.TestCase, ZBLModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         ZBLModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]
@@ -607,7 +607,7 @@ class TestSpinEnergyModelDP(unittest.TestCase, SpinEnerModelTest, PTTestCase):
         return modules
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         SpinEnerModelTest.setUpClass()
         (DescriptorParam, Descrpt) = cls.param[0]
         (FittingParam, Fitting) = cls.param[1]

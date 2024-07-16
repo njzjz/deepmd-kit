@@ -48,7 +48,7 @@ class DPAtomicModel(BaseAtomicModel):
         fitting,
         type_map: List[str],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(type_map, **kwargs)
         self.type_map = type_map
         self.descriptor = descriptor

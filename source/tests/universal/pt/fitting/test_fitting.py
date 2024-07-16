@@ -35,7 +35,7 @@ from ..backend import (
     (True, False),  # mixed_types
 )
 class TestFittingPT(unittest.TestCase, FittingTest, PTTestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         ((FittingParam, Fitting), self.mixed_types) = self.param
         FittingTest.setUp(self)
         self.module_class = Fitting

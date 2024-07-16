@@ -54,7 +54,7 @@ class DPAtomicModel(BaseAtomicModel):
         fitting,
         type_map: List[str],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(type_map, **kwargs)
         ntypes = len(type_map)
         self.type_map = type_map
@@ -209,7 +209,7 @@ class DPAtomicModel(BaseAtomicModel):
         self,
         sampled_func,
         stat_file_path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute or load the statistics parameters of the model,
         such as mean and standard deviation of descriptors or the energy bias of the fitting net.

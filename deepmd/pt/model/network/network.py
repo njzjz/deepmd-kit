@@ -50,7 +50,7 @@ def Tensor(*shape):
 
 
 class Dropout(nn.Module):
-    def __init__(self, p):
+    def __init__(self, p) -> None:
         super().__init__()
         self.p = p
 
@@ -62,7 +62,7 @@ class Dropout(nn.Module):
 
 
 class Identity(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
@@ -72,7 +72,7 @@ class Identity(nn.Module):
 class DropPath(torch.nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks)."""
 
-    def __init__(self, prob=None):
+    def __init__(self, prob=None) -> None:
         super().__init__()
         self.drop_prob = prob
 
@@ -138,7 +138,7 @@ def checkpoint_sequential(
 class ResidualLinear(nn.Module):
     resnet: Final[int]
 
-    def __init__(self, num_in, num_out, bavg=0.0, stddev=1.0, resnet_dt=False):
+    def __init__(self, num_in, num_out, bavg=0.0, stddev=1.0, resnet_dt=False) -> None:
         """Construct a residual linear layer.
 
         Args:
@@ -186,7 +186,7 @@ class TypeFilter(nn.Module):
         tebd_dim=0,
         use_tebd=False,
         tebd_mode="concat",
-    ):
+    ) -> None:
         """Construct a filter on the given element as neighbor.
 
         Args:
@@ -302,7 +302,7 @@ class SimpleLinear(nn.Module):
         use_timestep=False,
         activate=None,
         bias: bool = True,
-    ):
+    ) -> None:
         """Construct a linear layer.
 
         Args:
@@ -345,7 +345,7 @@ class Linear(nn.Linear):
         d_out: int,
         bias: bool = True,
         init: str = "default",
-    ):
+    ) -> None:
         super().__init__(
             d_in,
             d_out,
@@ -375,7 +375,7 @@ class Linear(nn.Linear):
         else:
             raise ValueError("Invalid init method.")
 
-    def _trunc_normal_init(self, scale=1.0):
+    def _trunc_normal_init(self, scale=1.0) -> None:
         # Constant from scipy.stats.truncnorm.std(a=-2, b=2, loc=0., scale=1.)
         TRUNCATED_NORMAL_STDDEV_FACTOR = 0.87962566103423978
         _, fan_in = self.weight.shape
@@ -383,22 +383,22 @@ class Linear(nn.Linear):
         std = (scale**0.5) / TRUNCATED_NORMAL_STDDEV_FACTOR
         nn.init.trunc_normal_(self.weight, mean=0.0, std=std)
 
-    def _glorot_uniform_init(self):
+    def _glorot_uniform_init(self) -> None:
         nn.init.xavier_uniform_(self.weight, gain=1)
 
-    def _zero_init(self, use_bias=True):
+    def _zero_init(self, use_bias=True) -> None:
         with torch.no_grad():
             self.weight.fill_(0.0)
             if use_bias:
                 with torch.no_grad():
                     self.bias.fill_(1.0)
 
-    def _normal_init(self):
+    def _normal_init(self) -> None:
         nn.init.kaiming_normal_(self.weight, nonlinearity="linear")
 
 
 class Transition(nn.Module):
-    def __init__(self, d_in, n, dropout=0.0):
+    def __init__(self, d_in, n, dropout=0.0) -> None:
         super().__init__()
 
         self.d_in = d_in
@@ -431,7 +431,7 @@ class Embedding(nn.Embedding):
         embedding_dim: int,
         padding_idx: Optional[int] = None,
         dtype=torch.float64,
-    ):
+    ) -> None:
         super().__init__(
             num_embeddings, embedding_dim, padding_idx=padding_idx, dtype=dtype
         )
@@ -440,12 +440,12 @@ class Embedding(nn.Embedding):
         if padding_idx is not None:
             self.weight.data[self.padding_idx].zero_()
 
-    def _normal_init(self, std=0.02):
+    def _normal_init(self, std=0.02) -> None:
         nn.init.normal_(self.weight, mean=0.0, std=std)
 
 
 class NonLinearHead(nn.Module):
-    def __init__(self, input_dim, out_dim, activation_fn, hidden=None):
+    def __init__(self, input_dim, out_dim, activation_fn, hidden=None) -> None:
         super().__init__()
         hidden = input_dim if not hidden else hidden
         self.linear1 = SimpleLinear(input_dim, hidden, activate=activation_fn)
@@ -458,7 +458,7 @@ class NonLinearHead(nn.Module):
 
 
 class NonLinear(nn.Module):
-    def __init__(self, input, output_size, hidden=None):
+    def __init__(self, input, output_size, hidden=None) -> None:
         super().__init__()
 
         if hidden is None:
@@ -473,7 +473,7 @@ class NonLinear(nn.Module):
         x = self.layer2(x)
         return x
 
-    def zero_init(self):
+    def zero_init(self) -> None:
         nn.init.zeros_(self.layer2.weight)
         nn.init.zeros_(self.layer2.bias)
 
@@ -481,7 +481,7 @@ class NonLinear(nn.Module):
 class MaskLMHead(nn.Module):
     """Head for masked language modeling."""
 
-    def __init__(self, embed_dim, output_dim, activation_fn, weight=None):
+    def __init__(self, embed_dim, output_dim, activation_fn, weight=None) -> None:
         super().__init__()
         self.dense = SimpleLinear(embed_dim, embed_dim)
         self.activation_fn = ActivationFn(activation_fn)
@@ -513,7 +513,7 @@ class MaskLMHead(nn.Module):
 class ResidualDeep(nn.Module):
     def __init__(
         self, type_id, embedding_width, neuron, bias_atom_e, out_dim=1, resnet_dt=False
-    ):
+    ) -> None:
         """Construct a filter on the given element as neighbor.
 
         Args:
@@ -575,7 +575,7 @@ class TypeEmbedNet(nn.Module):
         use_econf_tebd=False,
         use_tebd_bias: bool = False,
         type_map=None,
-    ):
+    ) -> None:
         """Construct a type embedding net."""
         super().__init__()
         self.type_nums = type_nums
@@ -610,7 +610,7 @@ class TypeEmbedNet(nn.Module):
         """
         return self.embedding(atype.device)[atype]
 
-    def share_params(self, base_class, shared_level, resume=False):
+    def share_params(self, base_class, shared_level, resume=False) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -678,7 +678,7 @@ class TypeEmbedNetConsistent(nn.Module):
         use_econf_tebd: bool = False,
         use_tebd_bias: bool = False,
         type_map: Optional[List[str]] = None,
-    ):
+    ) -> None:
         """Construct a type embedding net."""
         super().__init__()
         self.ntypes = ntypes
@@ -855,7 +855,7 @@ def gaussian(x, mean, std: float):
 
 
 class GaussianKernel(nn.Module):
-    def __init__(self, K=128, num_pair=512, std_width=1.0, start=0.0, stop=9.0):
+    def __init__(self, K=128, num_pair=512, std_width=1.0, start=0.0, stop=9.0) -> None:
         super().__init__()
         self.K = K
         std_width = std_width
@@ -894,7 +894,7 @@ class GaussianEmbedding(nn.Module):
         sel,
         ntypes,
         atomic_sum_gbf,
-    ):
+    ) -> None:
         """Construct a gaussian kernel based embedding of pair representation.
 
         Args:
@@ -978,7 +978,7 @@ class NeighborWiseAttention(nn.Module):
         normalize=True,
         temperature=None,
         smooth=True,
-    ):
+    ) -> None:
         """Construct a neighbor-wise attention net."""
         super().__init__()
         self.layer_num = layer_num
@@ -1048,7 +1048,7 @@ class NeighborWiseAttentionLayer(nn.Module):
         normalize=True,
         temperature=None,
         smooth=True,
-    ):
+    ) -> None:
         """Construct a neighbor-wise attention layer."""
         super().__init__()
         self.nnei = nnei
@@ -1128,7 +1128,7 @@ class GatedSelfAttetion(nn.Module):
         temperature=None,
         bias=True,
         smooth=True,
-    ):
+    ) -> None:
         """Construct a neighbor-wise attention net."""
         super().__init__()
         self.nnei = nnei
@@ -1215,7 +1215,7 @@ class GatedSelfAttetion(nn.Module):
 
 
 class LocalSelfMultiheadAttention(nn.Module):
-    def __init__(self, feature_dim, attn_head, scaling_factor=1.0):
+    def __init__(self, feature_dim, attn_head, scaling_factor=1.0) -> None:
         super().__init__()
         self.feature_dim = feature_dim
         self.attn_head = attn_head
@@ -1314,7 +1314,7 @@ class NodeTaskHead(nn.Module):
         embed_dim: int,
         pair_dim: int,
         num_head: int,
-    ):
+    ) -> None:
         super().__init__()
         self.layer_norm = nn.LayerNorm(embed_dim, dtype=env.GLOBAL_PT_FLOAT_PRECISION)
         self.pair_norm = nn.LayerNorm(pair_dim, dtype=env.GLOBAL_PT_FLOAT_PRECISION)
@@ -1329,7 +1329,7 @@ class NodeTaskHead(nn.Module):
         self.linear_bias = Linear(pair_dim, num_head)
         self.dropout = 0.1
 
-    def zero_init(self):
+    def zero_init(self) -> None:
         nn.init.zeros_(self.force_proj.weight)
 
     def forward(
@@ -1397,7 +1397,7 @@ class EnergyHead(nn.Module):
         self,
         input_dim,
         output_dim,
-    ):
+    ) -> None:
         super().__init__()
         self.layer_norm = nn.LayerNorm(input_dim, dtype=env.GLOBAL_PT_FLOAT_PRECISION)
         self.linear_in = Linear(input_dim, input_dim, init="relu")
@@ -1412,7 +1412,7 @@ class EnergyHead(nn.Module):
 
 
 class OuterProduct(nn.Module):
-    def __init__(self, d_atom, d_pair, d_hid=32):
+    def __init__(self, d_atom, d_pair, d_hid=32) -> None:
         super().__init__()
 
         self.d_atom = d_atom
@@ -1464,7 +1464,7 @@ class Attention(nn.Module):
         num_heads: int,
         gating: bool = False,
         dropout: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
 
         self.num_heads = num_heads
@@ -1556,7 +1556,7 @@ class AtomAttention(nn.Module):
         num_heads: int,
         gating: bool = False,
         dropout: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
 
         self.mha = Attention(
@@ -1580,7 +1580,7 @@ class AtomAttention(nn.Module):
 
 
 class TriangleMultiplication(nn.Module):
-    def __init__(self, d_pair, d_hid):
+    def __init__(self, d_pair, d_hid) -> None:
         super().__init__()
 
         self.linear_ab_p = Linear(d_pair, d_hid * 2)
@@ -1642,7 +1642,7 @@ class EvoformerEncoderLayer(nn.Module):
         attn_head: int = 8,
         activation_fn: str = "gelu",
         post_ln: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.feature_dim = feature_dim
         self.ffn_dim = ffn_dim
@@ -1723,7 +1723,7 @@ class Evoformer2bEncoder(nn.Module):
         evo_residual: bool = False,
         residual_factor: float = 1.0,
         activation_function: str = "gelu",
-    ):
+    ) -> None:
         super().__init__()
         self.nnei = nnei
         self.layer_num = layer_num
@@ -1906,7 +1906,7 @@ class Evoformer3bEncoderLayer(nn.Module):
         activation_dropout: float = 0.1,
         pre_ln: bool = True,
         tri_update: bool = True,
-    ):
+    ) -> None:
         super().__init__()
         # Initialize parameters
         self.nnei = nnei
@@ -2104,7 +2104,7 @@ class Evoformer3bEncoder(nn.Module):
         pre_ln: bool = True,
         tri_update: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         self.nnei = nnei
         if droppath_prob > 0:

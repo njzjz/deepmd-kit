@@ -35,7 +35,7 @@ class PTTestCase(BackendTestCase):
         ]
         return modules
 
-    def test_jit(self):
+    def test_jit(self) -> None:
         if getattr(self, "skip_test_jit", False):
             self.skipTest("Skip test jit.")
         self.script_module

@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    NoReturn,
     Optional,
     Union,
 )
@@ -104,7 +105,7 @@ class DescriptorBlock(torch.nn.Module, ABC, make_plugin_registry("DescriptorBloc
         self,
         merged: Union[Callable[[], List[dict]], List[dict]],
         path: Optional[DPPath] = None,
-    ):
+    ) -> NoReturn:
         """
         Compute the input statistics (e.g. mean and stddev) for the descriptors from packed data.
 
@@ -127,7 +128,7 @@ class DescriptorBlock(torch.nn.Module, ABC, make_plugin_registry("DescriptorBloc
         """Get the statistics of the descriptor."""
         raise NotImplementedError
 
-    def share_params(self, base_class, shared_level, resume=False):
+    def share_params(self, base_class, shared_level, resume=False) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -184,7 +185,7 @@ def make_default_type_embedding(
     return TypeEmbedNet(ntypes, aux["tebd_dim"]), aux
 
 
-def extend_descrpt_stat(des, type_map, des_with_stat=None):
+def extend_descrpt_stat(des, type_map, des_with_stat=None) -> None:
     r"""
     Extend the statistics of a descriptor block with types from newly provided `type_map`.
 

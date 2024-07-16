@@ -106,7 +106,7 @@ class DescrptBlockRepformers(DescriptorBlock):
         ln_eps: Optional[float] = 1e-5,
         seed: Optional[Union[int, List[int]]] = None,
         old_impl: bool = False,
-    ):
+    ) -> None:
         r"""
         The repformer descriptor block.
 
@@ -344,7 +344,7 @@ class DescrptBlockRepformers(DescriptorBlock):
         """Returns the embedding dimension g2."""
         return self.g2_dim
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if key in ("avg", "data_avg", "davg"):
             self.mean = value
         elif key in ("std", "data_std", "dstd"):
@@ -394,7 +394,7 @@ class DescrptBlockRepformers(DescriptorBlock):
     def reinit_exclude(
         self,
         exclude_types: List[Tuple[int, int]] = [],
-    ):
+    ) -> None:
         self.exclude_types = exclude_types
         self.emask = PairExcludeMask(self.ntypes, exclude_types=exclude_types)
 
@@ -511,7 +511,7 @@ class DescrptBlockRepformers(DescriptorBlock):
         self,
         merged: Union[Callable[[], List[dict]], List[dict]],
         path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute the input statistics (e.g. mean and stddev) for the descriptors from packed data.
 

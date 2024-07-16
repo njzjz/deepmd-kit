@@ -6,6 +6,7 @@ from abc import (
 from typing import (
     Callable,
     List,
+    NoReturn,
     Optional,
     Tuple,
     Union,
@@ -141,7 +142,7 @@ def make_base_descriptor(
             self,
             merged: Union[Callable[[], List[dict]], List[dict]],
             path: Optional[DPPath] = None,
-        ):
+        ) -> NoReturn:
             """Update mean and stddev for descriptor elements."""
             raise NotImplementedError
 

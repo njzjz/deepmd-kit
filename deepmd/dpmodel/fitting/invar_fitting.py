@@ -4,6 +4,7 @@ from typing import (
     Any,
     Dict,
     List,
+    NoReturn,
     Optional,
     Union,
 )
@@ -136,7 +137,7 @@ class InvarFitting(GeneralFitting):
         exclude_types: List[int] = [],
         type_map: Optional[List[str]] = None,
         seed: Optional[Union[int, List[int]]] = None,
-    ):
+    ) -> None:
         if tot_ener_zero:
             raise NotImplementedError("tot_ener_zero is not implemented")
         if spin is not None:
@@ -193,7 +194,7 @@ class InvarFitting(GeneralFitting):
         """Set the FittingNet output dim."""
         return self.dim_out
 
-    def compute_output_stats(self, merged):
+    def compute_output_stats(self, merged) -> NoReturn:
         """Update the output bias for fitting net."""
         raise NotImplementedError
 

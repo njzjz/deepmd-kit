@@ -7,6 +7,7 @@ from enum import (
 )
 from typing import (
     List,
+    NoReturn,
     Optional,
     Tuple,
     Union,
@@ -58,7 +59,7 @@ class FrozenModel(Model):
         The path to the frozen model
     """
 
-    def __init__(self, model_file: str, **kwargs):
+    def __init__(self, model_file: str, **kwargs) -> None:
         super().__init__(**kwargs)
         self.model_file = model_file
         if not model_file.endswith(".pb"):
@@ -201,7 +202,7 @@ class FrozenModel(Model):
     def get_ntypes(self) -> int:
         return self.model.get_ntypes()
 
-    def data_stat(self, data):
+    def data_stat(self, data) -> None:
         pass
 
     def init_variables(
@@ -281,7 +282,7 @@ class FrozenModel(Model):
         return model.serialize()
 
     @classmethod
-    def deserialize(cls, data: dict, suffix: str = ""):
+    def deserialize(cls, data: dict, suffix: str = "") -> NoReturn:
         raise RuntimeError("Should not touch here.")
 
     @property

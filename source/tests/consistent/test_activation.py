@@ -34,7 +34,7 @@ if INSTALLED_TF:
     tuple([x.capitalize() for x in VALID_ACTIVATION]),
 )
 class TestActivationFunctionConsistent(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         (self.activation,) = self.param
         self.random_input = np.random.default_rng(GLOBAL_SEED).normal(
             scale=10, size=(10, 10)
@@ -42,7 +42,7 @@ class TestActivationFunctionConsistent(unittest.TestCase):
         self.ref = get_activation_fn_dp(self.activation)(self.random_input)
 
     @unittest.skipUnless(INSTALLED_TF, "TensorFlow is not installed")
-    def test_tf_consistent_with_ref(self):
+    def test_tf_consistent_with_ref(self) -> None:
         if INSTALLED_TF:
             place_holder = tf.placeholder(tf.float64, self.random_input.shape)
             t_test = get_activation_fn_tf(self.activation)(place_holder)
@@ -51,7 +51,7 @@ class TestActivationFunctionConsistent(unittest.TestCase):
             np.testing.assert_allclose(self.ref, test, atol=1e-10)
 
     @unittest.skipUnless(INSTALLED_PT, "PyTorch is not installed")
-    def test_pt_consistent_with_ref(self):
+    def test_pt_consistent_with_ref(self) -> None:
         if INSTALLED_PT:
             test = to_numpy_array(
                 ActivationFn_pt(self.activation)(to_torch_tensor(self.random_input))

@@ -51,7 +51,7 @@ class DescrptGaussianLcc(torch.nn.Module, BaseDescriptor):
         pre_add_seq: bool = True,
         tri_update: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Construct a descriptor of Gaussian Based Local Cluster.
 
         Args:
@@ -162,7 +162,9 @@ class DescrptGaussianLcc(torch.nn.Module, BaseDescriptor):
         """Returns the output dimension of pair representation."""
         return self.pair_embed_dim
 
-    def compute_input_stats(self, merged: List[dict], path: Optional[DPPath] = None):
+    def compute_input_stats(
+        self, merged: List[dict], path: Optional[DPPath] = None
+    ) -> None:
         """Update mean and stddev for descriptor elements."""
         pass
 

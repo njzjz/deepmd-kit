@@ -14,7 +14,7 @@ class AtomExcludeMask:
         self,
         ntypes: int,
         exclude_types: List[int] = [],
-    ):
+    ) -> None:
         self.ntypes = ntypes
         self.exclude_types = exclude_types
         self.type_mask = np.array(
@@ -60,7 +60,7 @@ class PairExcludeMask:
         self,
         ntypes: int,
         exclude_types: List[Tuple[int, int]] = [],
-    ):
+    ) -> None:
         self.ntypes = ntypes
         self.exclude_types = set()
         for tt in exclude_types:
@@ -125,5 +125,5 @@ class PairExcludeMask:
         mask = self.type_mask[type_ij].reshape(nf, nloc, nnei)
         return mask
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         return item in self.exclude_types

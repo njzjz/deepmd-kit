@@ -163,7 +163,7 @@ class DescrptHybrid(BaseDescriptor, torch.nn.Module):
             )
         return all_protection[0]
 
-    def share_params(self, base_class, shared_level, resume=False):
+    def share_params(self, base_class, shared_level, resume=False) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -194,7 +194,9 @@ class DescrptHybrid(BaseDescriptor, torch.nn.Module):
                 else None,
             )
 
-    def compute_input_stats(self, merged: List[dict], path: Optional[DPPath] = None):
+    def compute_input_stats(
+        self, merged: List[dict], path: Optional[DPPath] = None
+    ) -> None:
         """Update mean and stddev for descriptor elements."""
         for descrpt in self.descrpt_list:
             descrpt.compute_input_stats(merged, path)

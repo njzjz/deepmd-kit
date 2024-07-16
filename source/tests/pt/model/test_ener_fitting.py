@@ -31,12 +31,12 @@ dtype = env.GLOBAL_PT_FLOAT_PRECISION
 
 
 class TestInvarFitting(unittest.TestCase, TestCaseSingleFrameWithNlist):
-    def setUp(self):
+    def setUp(self) -> None:
         TestCaseSingleFrameWithNlist.setUp(self)
 
     def test_consistency(
         self,
-    ):
+    ) -> None:
         rng = np.random.default_rng(GLOBAL_SEED)
         nf, nloc, nnei = self.nlist.shape
         dd0 = DescrptSeA(self.rcut, self.rcut_smth, self.sel).to(env.DEVICE)
@@ -104,7 +104,7 @@ class TestInvarFitting(unittest.TestCase, TestCaseSingleFrameWithNlist):
 
     def test_new_old(
         self,
-    ):
+    ) -> None:
         nf, nloc, nnei = self.nlist.shape
         dd = DescrptSeA(self.rcut, self.rcut_smth, self.sel).to(env.DEVICE)
         rd0, _, _, _, _ = dd(
@@ -151,7 +151,7 @@ class TestInvarFitting(unittest.TestCase, TestCaseSingleFrameWithNlist):
 
     def test_jit(
         self,
-    ):
+    ) -> None:
         for od, mixed_types, nfp, nap, et in itertools.product(
             [1, 3],
             [True, False],
@@ -171,7 +171,7 @@ class TestInvarFitting(unittest.TestCase, TestCaseSingleFrameWithNlist):
             ).to(env.DEVICE)
             torch.jit.script(ft0)
 
-    def test_get_set(self):
+    def test_get_set(self) -> None:
         ifn0 = InvarFitting(
             "energy",
             self.nt,

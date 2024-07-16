@@ -35,7 +35,7 @@ from deepmd.loggers.loggers import (
 )
 
 
-def main(args: argparse.Namespace):
+def main(args: argparse.Namespace) -> None:
     """DeePMD-Kit entry point.
 
     Parameters

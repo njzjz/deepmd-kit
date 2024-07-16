@@ -214,7 +214,7 @@ def make_econf_embedding(types, flatten=True):
     return all_ret
 
 
-def print_econf_embedding(res):
+def print_econf_embedding(res) -> None:
     for kk, vv in res.items():
         vvstr = ",".join([str(ii) for ii in vv])
         space = " " * (2 - len(kk))

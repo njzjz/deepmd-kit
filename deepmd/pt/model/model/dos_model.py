@@ -34,7 +34,7 @@ class DOSModel(DPModelCommon, DPDOSModel_):
         self,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         DPModelCommon.__init__(self)
         DPDOSModel_.__init__(self, *args, **kwargs)
 

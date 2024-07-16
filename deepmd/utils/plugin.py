@@ -31,7 +31,7 @@ class Plugin:
     >>> print(plugin.plugins["xx"])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.plugins = {}
 
     def __add__(self, other) -> "Plugin":

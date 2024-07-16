@@ -324,7 +324,7 @@ class DPTabulate:
 
     def _build_lower(
         self, net, xx, idx, upper, lower, stride0, stride1, extrapolate, nspline
-    ):
+    ) -> None:
         vv, dd, d2 = self._make_data(xx, idx)
         self.data[net] = np.zeros(
             [nspline, 6 * self.last_layer_size], dtype=self.data_type
@@ -827,7 +827,7 @@ class DPTabulate:
                 return item.shape[1]
         return 0
 
-    def _convert_numpy_to_tensor(self):
+    def _convert_numpy_to_tensor(self) -> None:
         """Convert self.data from np.ndarray to tf.Tensor."""
         for ii in self.data:
             self.data[ii] = tf.constant(self.data[ii])

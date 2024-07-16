@@ -58,7 +58,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         models: List[BaseAtomicModel],
         type_map: List[str],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(type_map, **kwargs)
         super().init_out_stat()
 
@@ -381,7 +381,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         self,
         merged: Union[Callable[[], List[dict]], List[dict]],
         stat_file_path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute the output statistics (e.g. energy bias) for the fitting net from packed data.
 
@@ -405,7 +405,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         self,
         sampled_func,
         stat_file_path: Optional[DPPath] = None,
-    ):
+    ) -> None:
         """
         Compute or load the statistics parameters of the model,
         such as mean and standard deviation of descriptors or the energy bias of the fitting net.
@@ -455,7 +455,7 @@ class DPZBLLinearEnergyAtomicModel(LinearEnergyAtomicModel):
         type_map: List[str],
         smin_alpha: Optional[float] = 0.1,
         **kwargs,
-    ):
+    ) -> None:
         models = [dp_model, zbl_model]
         kwargs["models"] = models
         kwargs["type_map"] = type_map

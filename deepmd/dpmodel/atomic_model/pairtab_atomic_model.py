@@ -62,7 +62,7 @@ class PairTabAtomicModel(BaseAtomicModel):
         rcond: Optional[float] = None,
         atom_ener: Optional[List[float]] = None,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(type_map, **kwargs)
         super().init_out_stat()
         self.tab_file = tab_file

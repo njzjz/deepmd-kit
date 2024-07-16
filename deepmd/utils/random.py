@@ -57,7 +57,7 @@ def random(size=None):
     return _RANDOM_GENERATOR.random_sample(size)
 
 
-def seed(val: Optional[int] = None):
+def seed(val: Optional[int] = None) -> None:
     """Seed the generator.
 
     Parameters
@@ -68,7 +68,7 @@ def seed(val: Optional[int] = None):
     _RANDOM_GENERATOR.seed(val)
 
 
-def shuffle(x: np.ndarray):
+def shuffle(x: np.ndarray) -> None:
     """Modify a sequence in-place by shuffling its contents.
 
     Parameters

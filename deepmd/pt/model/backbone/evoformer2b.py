@@ -26,7 +26,7 @@ class Evoformer2bBackBone(BackBone):
         residual_factor=1.0,
         activation_function="gelu",
         **kwargs,
-    ):
+    ) -> None:
         """Construct an evoformer backBone."""
         super().__init__()
         self.nnei = nnei
