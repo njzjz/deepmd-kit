@@ -217,7 +217,7 @@ class MaceModel(BaseModel):
             if not tt.startswith("m") and tt not in {"HW", "OW"}:
                 self.preset_out_bias["energy"].append(None)
             else:
-                self.preset_out_bias["energy"].append(torch.zeros(1))
+                self.preset_out_bias["energy"].append([0])
                 self.mm_types.append(ii)
 
         self.model = mace.modules.ScaleShiftMACE(
