@@ -1658,7 +1658,6 @@ def model_args(exclude_hybrid=False):
                 [
                     *model_args_plugin.get_all_argument(),
                     *hybrid_models,
-                    mace_model_args(),
                 ],
                 optional=True,
                 default_tag="standard",
@@ -1776,6 +1775,7 @@ def linear_ener_model_args() -> Argument:
     return ca
 
 
+@model_args_plugin.register("mace")
 def mace_model_args() -> Argument:
     doc_r_max = "distance cutoff (in Ang)"
     doc_num_radial_basis = "number of radial basis functions"
