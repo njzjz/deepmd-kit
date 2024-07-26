@@ -94,10 +94,6 @@ class DeepEval(DeepEvalBackend):
         head: Optional[str] = None,
         **kwargs: Any,
     ):
-        from e3nn.util.jit import (
-            script,
-        )
-
         self.output_def = output_def
         self.model_path = model_file
         if str(self.model_path).endswith(".pt"):
@@ -123,7 +119,7 @@ class DeepEval(DeepEvalBackend):
                         ] = state_dict[item].clone()
                 state_dict = state_dict_head
             model = get_model(self.input_param).to(DEVICE)
-            model = script(model)
+            model = torch.jit.script(model)
             self.dp = ModelWrapper(model)
             self.dp.load_state_dict(state_dict)
         elif str(self.model_path).endswith(".pth"):

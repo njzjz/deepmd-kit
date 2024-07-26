@@ -12,6 +12,9 @@ import torch
 from e3nn import (
     o3,
 )
+from e3nn.util.jit import (
+    script,
+)
 
 from deepmd.dpmodel.output_def import (
     FittingOutputDef,
@@ -219,30 +222,32 @@ class MaceModel(BaseModel):
                 self.preset_out_bias["energy"].append([0])
                 self.mm_types.append(ii)
 
-        self.model = mace.modules.ScaleShiftMACE(
-            r_max=r_max,
-            num_bessel=num_radial_basis,
-            num_polynomial_cutoff=num_cutoff_basis,
-            max_ell=max_ell,
-            interaction_cls=mace.modules.interaction_classes[interaction],
-            num_interactions=num_interactions,
-            num_elements=self.ntypes,
-            hidden_irreps=o3.Irreps(hidden_irreps),
-            atomic_energies=torch.zeros(self.ntypes),
-            avg_num_neighbors=sel,
-            atomic_numbers=atomic_numbers,
-            pair_repulsion=pair_repulsion,
-            distance_transform=distance_transform,
-            correlation=correlation,
-            gate=mace.modules.gate_dict[gate],
-            interaction_cls_first=mace.modules.interaction_classes[
-                "RealAgnosticInteractionBlock"
-            ],
-            MLP_irreps=o3.Irreps(MLP_irreps),
-            atomic_inter_scale=std,
-            atomic_inter_shift=0.0,
-            radial_MLP=radial_MLP,
-            radial_type=radial_type,
+        self.model = script(
+            mace.modules.ScaleShiftMACE(
+                r_max=r_max,
+                num_bessel=num_radial_basis,
+                num_polynomial_cutoff=num_cutoff_basis,
+                max_ell=max_ell,
+                interaction_cls=mace.modules.interaction_classes[interaction],
+                num_interactions=num_interactions,
+                num_elements=self.ntypes,
+                hidden_irreps=o3.Irreps(hidden_irreps),
+                atomic_energies=torch.zeros(self.ntypes),  # pylint: disable=no-explicit-device,no-explicit-dtype
+                avg_num_neighbors=sel,
+                atomic_numbers=atomic_numbers,
+                pair_repulsion=pair_repulsion,
+                distance_transform=distance_transform,
+                correlation=correlation,
+                gate=mace.modules.gate_dict[gate],
+                interaction_cls_first=mace.modules.interaction_classes[
+                    "RealAgnosticInteractionBlock"
+                ],
+                MLP_irreps=o3.Irreps(MLP_irreps),
+                atomic_inter_scale=std,
+                atomic_inter_shift=0.0,
+                radial_MLP=radial_MLP,
+                radial_type=radial_type,
+            )
         )
         self.atomic_numbers = atomic_numbers
 
@@ -469,7 +474,9 @@ class MaceModel(BaseModel):
             )
             # to one hot
             indices = extended_atype_ff.unsqueeze(-1)
-            oh = torch.zeros((nall, self.ntypes), device=extended_atype.device)
+            oh = torch.zeros(
+                (nall, self.ntypes), device=extended_atype.device, dtype=torch.float64
+            )
             # scatter_ is the in-place version of scatter
             oh.scatter_(dim=-1, index=indices, value=1)
             one_hot = oh.view((nall, self.ntypes))
