@@ -278,10 +278,10 @@ class DescrptSeAtten(DescrptSeA):
         # descrpt config
         self.sel_all_a = [sel]
         self.sel_all_r = [0]
-        avg_zero = np.zeros([self.ntypes, self.ndescrpt]).astype(
+        avg_zero = np.zeros([self.ntypes, self.ndescrpt]).astype(  # pylint: disable=no-explicit-dtype
             GLOBAL_NP_FLOAT_PRECISION
         )
-        std_ones = np.ones([self.ntypes, self.ndescrpt]).astype(
+        std_ones = np.ones([self.ntypes, self.ndescrpt]).astype(  # pylint: disable=no-explicit-dtype
             GLOBAL_NP_FLOAT_PRECISION
         )
         self.attention_layer_variables = None
@@ -563,9 +563,9 @@ class DescrptSeAtten(DescrptSeA):
             check_switch_range(davg, dstd)
         with tf.variable_scope("descrpt_attr" + suffix, reuse=reuse):
             if davg is None:
-                davg = np.zeros([self.ntypes, self.ndescrpt])
+                davg = np.zeros([self.ntypes, self.ndescrpt])  # pylint: disable=no-explicit-dtype
             if dstd is None:
-                dstd = np.ones([self.ntypes, self.ndescrpt])
+                dstd = np.ones([self.ntypes, self.ndescrpt])  # pylint: disable=no-explicit-dtype
             t_rcut = tf.constant(
                 np.max([self.rcut_r, self.rcut_a]),
                 name="rcut",
@@ -765,7 +765,14 @@ class DescrptSeAtten(DescrptSeA):
             type_embedding=type_embedding,
             atype=atype,
         )
-        layer = tf.reshape(layer, [tf.shape(inputs)[0], natoms[0], self.get_dim_out()])
+        layer = tf.reshape(
+            layer,
+            [
+                tf.shape(inputs)[0],
+                natoms[0],
+                self.filter_neuron[-1] * self.n_axis_neuron,
+            ],
+        )
         qmat = tf.reshape(
             qmat, [tf.shape(inputs)[0], natoms[0], self.get_dim_rot_mat_1() * 3]
         )
@@ -963,7 +970,7 @@ class DescrptSeAtten(DescrptSeA):
                 self.attn_weight_final[layer] = attn[0]  # atom 0
         if do_mask:
             nei = int(attn.shape[-1])
-            mask = tf.cast(tf.ones((nei, nei)) - tf.eye(nei), self.filter_precision)
+            mask = tf.cast(tf.ones((nei, nei)) - tf.eye(nei), self.filter_precision)  # pylint: disable=no-explicit-dtype
             attn *= mask
         output = tf.matmul(attn, V)
         return output
@@ -2193,6 +2200,14 @@ class DescrptDPA1Compat(DescrptSeAtten):
                 self.embd_input_dim = 1 + self.tebd_dim
         else:
             self.embd_input_dim = 1
+
+    def get_dim_out(self) -> int:
+        """Returns the output dimension of this descriptor."""
+        return (
+            super().get_dim_out() + self.tebd_dim
+            if self.concat_output_tebd
+            else super().get_dim_out()
+        )
 
     def build(
         self,

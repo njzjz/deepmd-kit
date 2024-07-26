@@ -267,6 +267,8 @@ PATH = "/usr/lib64/mpich/bin:$PATH"
 UV_EXTRA_INDEX_URL = "https://download.pytorch.org/whl/cpu"
 # trick to find the correction version of mpich
 CMAKE_PREFIX_PATH="/opt/python/cp311-cp311/"
+# PT 2.4.0 requires cudnn 9, incompatible with TF with cudnn 8
+PYTORCH_VERSION = "2.3.1"
 
 [tool.cibuildwheel.windows]
 test-extras = ["cpu", "torch"]
@@ -347,6 +349,8 @@ select = [
     "TID253", # banned-module-level-imports
     "T20", # ban print
     "B904", # raise-without-from-inside-except
+    "N804", # invalid-first-argument-name-for-class-method
+    "N805", # invalid-first-argument-name-for-method
 ]
 
 ignore = [
@@ -400,3 +404,8 @@ markers = "run"
 
 [tool.coverage.run]
 plugins = ["source.3rdparty.coverage_plugins.jit_plugin"]
+
+[tool.pylint.'MESSAGES CONTROL']
+load-plugins = "deepmd_checker"
+disable = "all"
+enable = "EDP01,EDP02"
