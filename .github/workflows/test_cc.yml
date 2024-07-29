@@ -49,7 +49,7 @@ jobs:
     # test lammps
     - run: |
         export TENSORFLOW_ROOT=$(python -c 'import importlib,pathlib;print(pathlib.Path(importlib.util.find_spec("tensorflow").origin).parent)')
-        source/install/uv_with_retry.sh pip install --system -e .[cpu,test,lmp] mpi4py
+        source/install/uv_with_retry.sh pip install --system -e .[cpu,test,lmp] "mpi4py<4"
       env:
         DP_BUILD_TESTING: 1
       if: ${{ !matrix.check_memleak }}
