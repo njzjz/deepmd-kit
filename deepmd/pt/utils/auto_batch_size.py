@@ -115,6 +115,9 @@ class AutoBatchSize(AutoBatchSizeBase):
         returned_dict = None
         while index < total_size:
             n_batch, result = self.execute(execute_with_batch_size, index, natoms)
+            if n_batch == 0:
+                # when oom error occurs
+                continue
             returned_dict = (
                 isinstance(result, dict) if returned_dict is None else returned_dict
             )
