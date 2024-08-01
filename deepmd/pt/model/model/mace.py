@@ -513,7 +513,7 @@ class MaceModel(BaseModel):
                     ),
                 },
                 compute_virials=True,
-                training=True,
+                training=self.training,
             )
             energy = ret["energy"]
             assert energy is not None
