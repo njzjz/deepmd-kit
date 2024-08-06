@@ -446,6 +446,7 @@ class MaceModel(BaseModel):
     ):
         extended_coord_ = extended_coord
         nf, nall, _ = extended_coord_.shape
+        _, nloc, _ = nlist.shape
         assert fparam is None
         assert aparam is None
         assert comm_dict is None
@@ -540,7 +541,8 @@ class MaceModel(BaseModel):
             "energy_redu": energies.view(nf, 1),
             "energy_derv_r": forces.view(nf, nall, 1, 3),
             "energy_derv_c_redu": virials.view(nf, 1, 9),
-            "energy": atom_energies.view(nf, nall, 1),
+            # take the first nloc atoms to match other models
+            "energy": atom_energies.view(nf, nall, 1)[:, :nloc, :],
             # fake atom_virial
             "energy_derv_c": torch.zeros(
                 (nf, nall, 1, 9),
