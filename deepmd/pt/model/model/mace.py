@@ -561,12 +561,12 @@ class MaceModel(BaseModel):
     @torch.jit.export
     def get_nnei(self) -> int:
         """Returns the total number of selected neighboring atoms in the cut-off radius."""
-        return 0
+        return self.sel
 
     @torch.jit.export
     def get_nsel(self) -> int:
         """Returns the total number of selected neighboring atoms in the cut-off radius."""
-        return 0
+        return self.sel
 
     @classmethod
     def update_sel(
