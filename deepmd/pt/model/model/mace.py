@@ -185,6 +185,8 @@ class MaceModel(BaseModel):
         Standard deviation of force components in the training set
     """
 
+    mm_types: List[int]
+
     def __init__(
         self,
         type_map: List[str],
