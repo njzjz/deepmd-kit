@@ -436,15 +436,15 @@ class MaceModel(BaseModel):
             model_predict["extended_virial"] = model_ret["energy_derv_c"].squeeze(-3)
         return model_predict
 
-    def forward_lower_common(  # noqa: PLR0915
+    def forward_lower_common(
         self,
         extended_coord: torch.Tensor,
         extended_atype: torch.Tensor,
         nlist: torch.Tensor,
-        mapping: Optional[torch.Tensor] = None,  # noqa: ARG002
+        mapping: Optional[torch.Tensor] = None,
         fparam: Optional[torch.Tensor] = None,
         aparam: Optional[torch.Tensor] = None,
-        do_atomic_virial: bool = False,  # noqa: ARG002
+        do_atomic_virial: bool = False,
         comm_dict: Optional[dict[str, torch.Tensor]] = None,
     ) -> dict[str, torch.Tensor]:
         """Forward lower common pass of the model.
@@ -554,6 +554,9 @@ class MaceModel(BaseModel):
                 torch.ones_like(energy),
             ]
             displacement = ret["displacement"]
+            if displacement is None:
+                msg = "displacement is None"
+                raise ValueError(msg)
             force, virial = torch.autograd.grad(
                 outputs=[energy],
                 inputs=[extended_coord_ff, displacement],
@@ -561,6 +564,12 @@ class MaceModel(BaseModel):
                 retain_graph=True,
                 create_graph=self.training,
             )
+            if force is None:
+                msg = "force is None"
+                raise ValueError(msg)
+            if virial is None:
+                msg = "virial is None"
+                raise ValueError(msg)
             force = -force
             virial = -virial
             force = force.view(1, nall, 3).to(extended_coord_.dtype)
