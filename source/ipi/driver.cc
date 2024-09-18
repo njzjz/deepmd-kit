@@ -48,11 +48,23 @@ char *trimwhitespace(char *str) {
   return str;
 }
 
+bool isValidPath(const std::string &path) {
+  if (path.find("..") != std::string::npos || path.find('/') != std::string::npos || path.find('\\') != std::string::npos) {
+    return false;
+  }
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   if (argc == 1) {
     std::cerr << "usage " << std::endl;
     std::cerr << argv[0] << " input_script " << std::endl;
     return 0;
+  }
+
+  if (!isValidPath(argv[1])) {
+    std::cerr << "Invalid file path." << std::endl;
+    return 1;
   }
 
   std::ifstream fp(argv[1]);
