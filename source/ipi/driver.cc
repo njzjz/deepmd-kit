@@ -49,7 +49,9 @@ char *trimwhitespace(char *str) {
 }
 
 bool isValidPath(const std::string &path) {
-  if (path.find("..") != std::string::npos || path.find('/') != std::string::npos || path.find('\\') != std::string::npos) {
+  if (path.find("..") != std::string::npos ||
+      path.find('/') != std::string::npos ||
+      path.find('\\') != std::string::npos) {
     return false;
   }
   return true;
