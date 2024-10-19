@@ -251,7 +251,7 @@ class Border : public torch::autograd::Function<Border> {
 
     torch::Tensor send_g1_tensor = d_local_g1_tensor;
 
-    int max_recvnum = sendnum_tensor.max().item<int>();
+    int max_recvnum = sendnum_tensor.numel() > 0 ? sendnum_tensor.max().item<int>() : 0;
     auto options = torch::TensorOptions()
                        .dtype(d_local_g1_tensor.dtype())
                        .device(d_local_g1_tensor.device());
