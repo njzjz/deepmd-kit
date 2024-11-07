@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import numpy as np
@@ -18,6 +17,9 @@ from deepmd.pt.utils.nlist import (
 )
 from deepmd.pt.utils.utils import (
     to_numpy_array,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -386,8 +388,8 @@ class SpinTest:
 class TestEnergyModelSpinSeA(unittest.TestCase, SpinTest):
     def setUp(self):
         SpinTest.setUp(self)
-        model_params = copy.deepcopy(model_spin)
-        model_params["descriptor"] = copy.deepcopy(model_se_e2_a["descriptor"])
+        model_params = deepcopy(model_spin)
+        model_params["descriptor"] = deepcopy(model_se_e2_a["descriptor"])
         self.rcut = model_params["descriptor"]["rcut"]
         self.nsel = sum(model_params["descriptor"]["sel"])
         self.type_map = model_params["type_map"]
@@ -397,8 +399,8 @@ class TestEnergyModelSpinSeA(unittest.TestCase, SpinTest):
 class TestEnergyModelSpinDPA1(unittest.TestCase, SpinTest):
     def setUp(self):
         SpinTest.setUp(self)
-        model_params = copy.deepcopy(model_spin)
-        model_params["descriptor"] = copy.deepcopy(model_dpa1["descriptor"])
+        model_params = deepcopy(model_spin)
+        model_params["descriptor"] = deepcopy(model_dpa1["descriptor"])
         self.rcut = model_params["descriptor"]["rcut"]
         self.nsel = model_params["descriptor"]["sel"]
         self.type_map = model_params["type_map"]
@@ -410,8 +412,8 @@ class TestEnergyModelSpinDPA1(unittest.TestCase, SpinTest):
 class TestEnergyModelSpinDPA2(unittest.TestCase, SpinTest):
     def setUp(self):
         SpinTest.setUp(self)
-        model_params = copy.deepcopy(model_spin)
-        model_params["descriptor"] = copy.deepcopy(model_dpa2["descriptor"])
+        model_params = deepcopy(model_spin)
+        model_params["descriptor"] = deepcopy(model_dpa2["descriptor"])
         self.rcut = model_params["descriptor"]["repinit"]["rcut"]
         self.nsel = model_params["descriptor"]["repinit"]["nsel"]
         self.type_map = model_params["type_map"]

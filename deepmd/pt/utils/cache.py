@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy as copy_lib
 import functools
+
+from deepmd.utils.copy import deepcopy as copy_lib
 
 
 def lru_cache(maxsize=16, typed=False, copy=False, deepcopy=False):

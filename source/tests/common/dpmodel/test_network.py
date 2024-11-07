@@ -2,9 +2,6 @@
 import itertools
 import os
 import unittest
-from copy import (
-    deepcopy,
-)
 
 import numpy as np
 
@@ -16,6 +13,9 @@ from deepmd.dpmodel.utils import (
     NetworkCollection,
     load_dp_model,
     save_dp_model,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 

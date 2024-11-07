@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import shutil
 import unittest
 from pathlib import (
@@ -19,6 +18,9 @@ from deepmd.env import (
 )
 from deepmd.infer.deep_eval import (
     DeepEval,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...utils import (
@@ -86,13 +88,13 @@ class IOTest:
                 backend = Backend.get_backend(backend_name)()
                 if not backend.is_available():
                     continue
-                reference_data = copy.deepcopy(self.data)
+                reference_data = deepcopy(self.data)
                 self.save_data_to_model(
                     prefix + backend.suffixes[suffix_idx], reference_data
                 )
                 data = self.get_data_from_model(prefix + backend.suffixes[suffix_idx])
-                data = copy.deepcopy(data)
-                reference_data = copy.deepcopy(self.data)
+                data = deepcopy(data)
+                reference_data = deepcopy(self.data)
                 # some keys are not expected to be not the same
                 for kk in [
                     "backend",
@@ -152,7 +154,7 @@ class IOTest:
             backend = Backend.get_backend(backend_name)()
             if not backend.is_available():
                 continue
-            reference_data = copy.deepcopy(self.data)
+            reference_data = deepcopy(self.data)
             self.save_data_to_model(
                 prefix + backend.suffixes[suffix_idx], reference_data
             )
@@ -221,7 +223,7 @@ class TestDeepPot(unittest.TestCase, IOTest):
                 "seed": 1,
             },
         }
-        model = get_model(copy.deepcopy(model_def_script))
+        model = get_model(deepcopy(model_def_script))
         self.data = {
             "model": model.serialize(),
             "backend": "test",
@@ -265,7 +267,7 @@ class TestDeepPotFparamAparam(unittest.TestCase, IOTest):
                 "numb_aparam": 2,
             },
         }
-        model = get_model(copy.deepcopy(model_def_script))
+        model = get_model(deepcopy(model_def_script))
         self.data = {
             "model": model.serialize(),
             "backend": "test",

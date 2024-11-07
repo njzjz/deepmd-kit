@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     Union,
 )
@@ -8,6 +7,9 @@ import numpy as np
 
 from deepmd.env import (
     GLOBAL_NP_FLOAT_PRECISION,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 
@@ -143,9 +145,7 @@ class Spin:
         if exclude_types is None:
             return self.pair_exclude_types
         else:
-            _exclude_types: list[tuple[int, int]] = copy.deepcopy(
-                self.pair_exclude_types
-            )
+            _exclude_types: list[tuple[int, int]] = deepcopy(self.pair_exclude_types)
             for tt in exclude_types:
                 assert len(tt) == 2
                 _exclude_types.append((tt[0], tt[1]))
@@ -159,7 +159,7 @@ class Spin:
         if exclude_types is None:
             return self.atom_exclude_types_ps
         else:
-            _exclude_types: list[int] = copy.deepcopy(self.atom_exclude_types_ps)
+            _exclude_types: list[int] = deepcopy(self.atom_exclude_types_ps)
             _exclude_types += exclude_types
             _exclude_types = list(set(_exclude_types))
             return _exclude_types
@@ -172,7 +172,7 @@ class Spin:
         if exclude_types is None:
             return self.atom_exclude_types_p
         else:
-            _exclude_types: list[int] = copy.deepcopy(self.atom_exclude_types_p)
+            _exclude_types: list[int] = deepcopy(self.atom_exclude_types_p)
             _exclude_types += exclude_types
             _exclude_types = list(set(_exclude_types))
             return _exclude_types

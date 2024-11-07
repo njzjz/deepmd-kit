@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     Any,
     Optional,
@@ -15,6 +14,9 @@ from deepmd.dpmodel.output_def import (
     FittingOutputDef,
     OutputVariableDef,
     fitting_check_output,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -179,7 +181,7 @@ class InvarFitting(GeneralFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         return super().deserialize(data)
 

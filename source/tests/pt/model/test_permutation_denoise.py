@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import torch
@@ -9,6 +8,9 @@ from deepmd.pt.model.model import (
 )
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -25,9 +27,9 @@ from .test_permutation import (  # model_dpau,
 
 dtype = torch.float64
 
-model_dpa1 = copy.deepcopy(model_dpa1)
-model_dpa2 = copy.deepcopy(model_dpa2)
-model_hybrid = copy.deepcopy(model_hybrid)
+model_dpa1 = deepcopy(model_dpa1)
+model_dpa2 = deepcopy(model_dpa2)
+model_hybrid = deepcopy(model_hybrid)
 model_dpa1["type_map"] = ["O", "H", "B", "MASKED_TOKEN"]
 model_dpa1.pop("fitting_net")
 model_dpa2["type_map"] = ["O", "H", "B", "MASKED_TOKEN"]
@@ -72,7 +74,7 @@ class PermutationDenoiseTest:
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA1(unittest.TestCase, PermutationDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa1)
+        model_params = deepcopy(model_dpa1)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
@@ -80,7 +82,7 @@ class TestDenoiseModelDPA1(unittest.TestCase, PermutationDenoiseTest):
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA2(unittest.TestCase, PermutationDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         self.type_split = True
         self.model = get_model(
             model_params,
@@ -90,7 +92,7 @@ class TestDenoiseModelDPA2(unittest.TestCase, PermutationDenoiseTest):
 # @unittest.skip("hybrid not supported at the moment")
 # class TestDenoiseModelHybrid(unittest.TestCase, TestPermutationDenoise):
 #     def setUp(self):
-#         model_params = copy.deepcopy(model_hybrid_denoise)
+#         model_params = deepcopy(model_hybrid_denoise)
 #         self.type_split = True
 #         self.model = get_model(model_params).to(env.DEVICE)
 

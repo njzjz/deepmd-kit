@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import torch
@@ -9,6 +8,9 @@ from deepmd.pt.model.model import (
 )
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -43,7 +45,7 @@ class TestUnusedParamsDPA2(unittest.TestCase):
             if (not grrg) and (not conv):
                 # skip the case g2 is not involved
                 continue
-            model = copy.deepcopy(model_dpa2)
+            model = deepcopy(model_dpa2)
             model["descriptor"]["repformer"]["nlayers"] = 2
             # model["descriptor"]["combine_grrg"] = cmbg2
             model["descriptor"]["repformer"]["update_g1_has_conv"] = conv

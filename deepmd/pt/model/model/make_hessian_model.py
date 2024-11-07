@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import math
 from typing import (
     Optional,
@@ -10,6 +9,9 @@ import torch
 
 from deepmd.dpmodel import (
     get_hessian_name,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 
@@ -41,7 +43,7 @@ def make_hessian_model(T_Model):
                 *args,
                 **kwargs,
             )
-            self.hess_fitting_def = copy.deepcopy(super().atomic_output_def())
+            self.hess_fitting_def = deepcopy(super().atomic_output_def())
 
         def requires_hessian(
             self,

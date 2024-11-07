@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import argparse
-import copy
 import json
 import logging
 import os
@@ -76,6 +75,9 @@ from deepmd.utils.argcheck import (
 )
 from deepmd.utils.compat import (
     update_deepmd_input,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data_system import (
     get_data,
@@ -384,7 +386,7 @@ def change_bias(
         old_state_dict = torch.load(
             input_file, map_location=env.DEVICE, weights_only=True
         )
-        model_state_dict = copy.deepcopy(old_state_dict.get("model", old_state_dict))
+        model_state_dict = deepcopy(old_state_dict.get("model", old_state_dict))
         model_params = model_state_dict["_extra_state"]["model_params"]
     elif input_file.endswith(".pth"):
         old_model = torch.jit.load(input_file, map_location=env.DEVICE)

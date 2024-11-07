@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from abc import (
     abstractmethod,
 )
@@ -31,6 +30,9 @@ from deepmd.dpmodel.utils.seed import (
 )
 from deepmd.env import (
     GLOBAL_NP_FLOAT_PRECISION,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
@@ -320,7 +322,7 @@ class GeneralFitting(NativeOP, BaseFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         data.pop("@class")
         data.pop("type")
         variables = data.pop("@variables")

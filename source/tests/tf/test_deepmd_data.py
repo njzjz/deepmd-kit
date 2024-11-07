@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import os
 import shutil
 import unittest
@@ -11,6 +10,9 @@ from deepmd.tf.env import (
 )
 from deepmd.tf.utils.data import (
     DeepmdData,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ..seed import (
@@ -209,7 +211,7 @@ class TestData(unittest.TestCase):
             .add("test_frame", 5, atomic=False, must=True)
         )
         data = dd._load_set(os.path.join(self.data_name, "set.foo"))
-        data_bk = copy.deepcopy(data)
+        data_bk = deepcopy(data)
         data, idx = dd._shuffle_data(data)
         self._comp_np_mat2(data_bk["coord"][idx, :], data["coord"])
         self._comp_np_mat2(data_bk["test_atom"][idx, :], data["test_atom"])
@@ -225,7 +227,7 @@ class TestData(unittest.TestCase):
             .add("test_frame", 5, atomic=False, must=True)
         )
         data = dd._load_set(os.path.join(self.data_name, "set.foo"))
-        data_bk = copy.deepcopy(data)
+        data_bk = deepcopy(data)
         data, idx = dd._shuffle_data(data)
         assert idx.size == np.sum(prob)
         self._comp_np_mat2(data_bk["coord"][idx, :], data["coord"])

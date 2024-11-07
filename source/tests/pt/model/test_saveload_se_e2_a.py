@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import json
 import os
 import unittest
@@ -33,6 +32,9 @@ from deepmd.pt.utils.stat import (
 )
 from deepmd.tf.common import (
     expand_sys_str,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 
@@ -100,7 +102,7 @@ class TestSaveLoadSeA(unittest.TestCase):
         return result
 
     def create_wrapper(self):
-        model_config = copy.deepcopy(self.config["model"])
+        model_config = deepcopy(self.config["model"])
         model = get_model(model_config).to(env.DEVICE)
         return ModelWrapper(model, self.loss)
 

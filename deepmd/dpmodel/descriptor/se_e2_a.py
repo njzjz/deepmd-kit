@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import itertools
 from typing import (
     Any,
@@ -32,6 +31,9 @@ from deepmd.dpmodel.utils.update_sel import (
 )
 from deepmd.env import (
     GLOBAL_NP_FLOAT_PRECISION,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data_system import (
     DeepmdDataSystem,
@@ -460,7 +462,7 @@ class DescrptSeA(NativeOP, BaseDescriptor):
     @classmethod
     def deserialize(cls, data: dict) -> "DescrptSeA":
         """Deserialize from dict."""
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data.pop("@class", None)
         data.pop("type", None)

@@ -1,8 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import logging
-from copy import (
-    deepcopy,
-)
 
 import torch
 
@@ -15,6 +12,9 @@ from deepmd.pt.train.wrapper import (
 from deepmd.pt.utils.env import (
     DEVICE,
     JIT,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 if torch.__version__.startswith("2"):

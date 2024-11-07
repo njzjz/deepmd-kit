@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from copy import (
-    deepcopy,
-)
-
 from deepmd.pt.model.descriptor import (
     BaseDescriptor,
 )
 from deepmd.pt.model.task import (
     BaseFitting,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 

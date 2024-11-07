@@ -2,9 +2,6 @@
 import functools
 import logging
 import time
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -64,6 +61,9 @@ from deepmd.pt.utils.stat import (
 )
 from deepmd.pt.utils.utils import (
     to_numpy_array,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data import (
     DataRequirementItem,

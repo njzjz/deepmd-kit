@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     TYPE_CHECKING,
     Optional,
@@ -14,6 +13,9 @@ from deepmd.dpmodel.common import (
 )
 from deepmd.dpmodel.fitting.invar_fitting import (
     InvarFitting,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 if TYPE_CHECKING:
@@ -73,7 +75,7 @@ class DOSFittingNet(InvarFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data["numb_dos"] = data.pop("dim_out")
         data.pop("tot_ener_zero", None)

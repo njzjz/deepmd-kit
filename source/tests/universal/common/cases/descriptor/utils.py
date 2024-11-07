@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import itertools
-from copy import (
-    deepcopy,
-)
 
 import numpy as np
 
 from deepmd.dpmodel.utils import (
     PairExcludeMask,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     get_index_between_two_maps,

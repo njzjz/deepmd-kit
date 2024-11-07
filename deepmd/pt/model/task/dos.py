@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import logging
 from typing import (
     Optional,
@@ -26,6 +25,9 @@ from deepmd.pt.utils.env import (
 )
 from deepmd.pt.utils.utils import (
     to_numpy_array,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -99,7 +101,7 @@ class DOSFittingNet(InvarFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "DOSFittingNet":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data.pop("@class", None)
         data.pop("var_name", None)

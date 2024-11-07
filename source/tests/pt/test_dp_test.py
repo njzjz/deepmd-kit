@@ -4,9 +4,6 @@ import os
 import shutil
 import tempfile
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -20,6 +17,9 @@ from deepmd.pt.entrypoints.main import (
 )
 from deepmd.pt.utils.utils import (
     to_numpy_array,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .model.test_permutation import (

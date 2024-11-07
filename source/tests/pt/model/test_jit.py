@@ -3,9 +3,6 @@ import json
 import os
 import shutil
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -17,6 +14,9 @@ from deepmd.pt.entrypoints.main import (
 )
 from deepmd.pt.infer import (
     inference,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .test_permutation import (

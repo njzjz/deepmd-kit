@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import logging
-from copy import (
-    deepcopy,
-)
 
 import torch
 
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     FinetuneRuleItem,

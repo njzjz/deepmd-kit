@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from abc import (
     ABC,
     abstractmethod,
@@ -56,6 +55,9 @@ from deepmd.tf.utils.spin import (
 )
 from deepmd.tf.utils.type_embed import (
     TypeEmbedNet,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data import (
     DataRequirementItem,
@@ -804,7 +806,7 @@ class StandardModel(Model):
         Descriptor
             The deserialized descriptor
         """
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 2), 2, 1)
         descriptor = Descriptor.deserialize(data.pop("descriptor"), suffix=suffix)
         fitting = Fitting.deserialize(data.pop("fitting"), suffix=suffix)

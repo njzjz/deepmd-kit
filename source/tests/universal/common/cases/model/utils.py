@@ -1,8 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import unittest
-from copy import (
-    deepcopy,
-)
 from typing import (
     Any,
     Callable,
@@ -16,6 +13,9 @@ from deepmd.dpmodel.output_def import (
 )
 from deepmd.dpmodel.utils.nlist import (
     extend_input_and_build_neighbor_list,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .....seed import (

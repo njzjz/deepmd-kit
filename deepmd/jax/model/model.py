@@ -1,8 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from copy import (
-    deepcopy,
-)
-
 from deepmd.jax.atomic_model.dp_atomic_model import (
     DPAtomicModel,
 )
@@ -23,6 +19,9 @@ from deepmd.jax.model.base_model import (
 )
 from deepmd.jax.model.dp_zbl_model import (
     DPZBLModel,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 

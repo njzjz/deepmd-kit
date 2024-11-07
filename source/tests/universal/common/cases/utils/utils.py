@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import itertools
-from copy import (
-    deepcopy,
-)
 
 import numpy as np
+
+from deepmd.utils.copy import (
+    deepcopy,
+)
 
 from .....seed import (
     GLOBAL_SEED,

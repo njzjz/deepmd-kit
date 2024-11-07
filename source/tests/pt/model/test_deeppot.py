@@ -2,9 +2,6 @@
 import json
 import os
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -19,6 +16,9 @@ from deepmd.pt.entrypoints.main import (
 )
 from deepmd.pt.infer.deep_eval import (
     DeepPot,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 

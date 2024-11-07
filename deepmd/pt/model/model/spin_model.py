@@ -1,8 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import functools
-from copy import (
-    deepcopy,
-)
 from typing import (
     Optional,
 )
@@ -17,6 +14,9 @@ from deepmd.pt.model.atomic_model import (
 )
 from deepmd.pt.utils.utils import (
     to_torch_tensor,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.path import (
     DPPath,

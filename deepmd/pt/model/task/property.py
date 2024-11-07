@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import logging
 from typing import (
     Optional,
@@ -22,6 +21,9 @@ from deepmd.pt.utils import (
 )
 from deepmd.pt.utils.env import (
     DEFAULT_PRECISION,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -129,7 +131,7 @@ class PropertyFittingNet(InvarFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "PropertyFittingNet":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data.pop("dim_out")
         data.pop("var_name")

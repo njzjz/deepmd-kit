@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import logging
 from abc import (
     abstractmethod,
@@ -35,6 +34,9 @@ from deepmd.pt.utils.exclude_mask import (
 from deepmd.pt.utils.utils import (
     to_numpy_array,
     to_torch_tensor,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
@@ -312,7 +314,7 @@ class GeneralFitting(Fitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         variables = data.pop("@variables")
         nets = data.pop("nets")
         obj = cls(**data)

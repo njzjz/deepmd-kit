@@ -3,9 +3,6 @@ import json
 import os
 import shutil
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -26,6 +23,9 @@ from deepmd.utils.argcheck import (
 )
 from deepmd.utils.compat import (
     update_deepmd_input,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .model.test_permutation import (

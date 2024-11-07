@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,11 +12,15 @@ from deepmd.dpmodel.common import (
 from deepmd.dpmodel.fitting.invar_fitting import (
     InvarFitting,
 )
+from deepmd.utils.copy import (
+    deepcopy,
+)
 
 if TYPE_CHECKING:
     from deepmd.dpmodel.fitting.general_fitting import (
         GeneralFitting,
     )
+
 from deepmd.utils.version import (
     check_version_compatibility,
 )
@@ -73,7 +76,7 @@ class EnergyFittingNet(InvarFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data.pop("var_name")
         data.pop("dim_out")

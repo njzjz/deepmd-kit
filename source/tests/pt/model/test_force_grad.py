@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import json
 import unittest
 from pathlib import (
@@ -17,6 +16,9 @@ from deepmd.pt.model.model import (
 )
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data import (
     DeepmdData,
@@ -45,7 +47,7 @@ class CheckSymmetry(DeepmdData):
             if index < self.prefix_sum[i]:
                 break
         frames = self._load_set(self.dirs[i - 1])
-        tmp = copy.deepcopy(frames["coord"].reshape(self.nframes, -1, 3))
+        tmp = deepcopy(frames["coord"].reshape(self.nframes, -1, 3))
         tmp[:, atom_index, axis_index] += delta
         frames["coord"] = tmp
         frame = self._get_subdata(frames, index - self.prefix_sum[i - 1])

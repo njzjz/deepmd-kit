@@ -4,9 +4,6 @@ import os
 import shutil
 import tempfile
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -38,6 +35,9 @@ from deepmd.pt.utils.stat import (
 from deepmd.pt.utils.utils import (
     to_numpy_array,
     to_torch_tensor,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data import (
     DataRequirementItem,

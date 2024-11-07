@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     Callable,
     Optional,
@@ -19,6 +18,9 @@ from deepmd.pt.utils.nlist import (
     build_multiple_neighbor_list,
     get_multiple_nlist_key,
     nlist_distinguish_types,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.path import (
     DPPath,
@@ -369,7 +371,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
 
     @classmethod
     def deserialize(cls, data: dict) -> "LinearEnergyAtomicModel":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 2), 2, 1)
         data.pop("@class", None)
         data.pop("type", None)
@@ -563,7 +565,7 @@ class DPZBLLinearEnergyAtomicModel(LinearEnergyAtomicModel):
 
     @classmethod
     def deserialize(cls, data) -> "DPZBLLinearEnergyAtomicModel":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         models = [
             BaseAtomicModel.get_class_by_type(model["type"]).deserialize(model)

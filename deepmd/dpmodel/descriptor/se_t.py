@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import itertools
 from typing import (
     Optional,
@@ -29,6 +28,9 @@ from deepmd.dpmodel.utils.seed import (
 )
 from deepmd.dpmodel.utils.update_sel import (
     UpdateSel,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.data_system import (
     DeepmdDataSystem,
@@ -388,7 +390,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
     @classmethod
     def deserialize(cls, data: dict) -> "DescrptSeT":
         """Deserialize from dict."""
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 1)
         data.pop("@class", None)
         data.pop("type", None)

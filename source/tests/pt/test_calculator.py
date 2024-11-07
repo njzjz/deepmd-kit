@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import json
 import unittest
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -16,6 +13,9 @@ from deepmd.pt.entrypoints.main import (
 )
 from deepmd.pt.utils.ase_calc import (
     DPCalculator,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ..seed import (

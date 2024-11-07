@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import torch
@@ -9,6 +8,9 @@ from deepmd.pt.model.model import (
 )
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -104,7 +106,7 @@ class SmoothDenoiseTest:
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA2(unittest.TestCase, SmoothDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         model_params["descriptor"]["sel"] = 8
         model_params["descriptor"]["rcut_smth"] = 3.5
         self.type_split = True
@@ -117,7 +119,7 @@ class TestDenoiseModelDPA2(unittest.TestCase, SmoothDenoiseTest):
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA2_1(unittest.TestCase, SmoothDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         # model_params["descriptor"]["combine_grrg"] = True
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
@@ -129,7 +131,7 @@ class TestDenoiseModelDPA2_1(unittest.TestCase, SmoothDenoiseTest):
 # @unittest.skip("hybrid not supported at the moment")
 # class TestDenoiseModelHybrid(unittest.TestCase, TestSmoothDenoise):
 #     def setUp(self):
-#         model_params = copy.deepcopy(model_hybrid_denoise)
+#         model_params = deepcopy(model_hybrid_denoise)
 #         self.type_split = True
 #         self.model = get_model(model_params).to(env.DEVICE)
 #         self.epsilon, self.aprec = None, None

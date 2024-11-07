@@ -7,9 +7,6 @@ import unittest
 from contextlib import (
     redirect_stderr,
 )
-from copy import (
-    deepcopy,
-)
 from pathlib import (
     Path,
 )
@@ -19,6 +16,9 @@ from deepmd.pt.entrypoints.main import (
 )
 from deepmd.pt.utils.multi_task import (
     preprocess_shared_params,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .common import (

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     Any,
     Optional,
@@ -25,6 +24,9 @@ from deepmd.dpmodel.output_def import (
     FittingOutputDef,
     OutputVariableDef,
     fitting_check_output,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
@@ -197,7 +199,7 @@ class PolarFitting(GeneralFitting):
 
     @classmethod
     def deserialize(cls, data: dict) -> "GeneralFitting":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 3, 1)
         var_name = data.pop("var_name", None)
         assert var_name == "polar"

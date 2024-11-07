@@ -1,7 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from copy import (
-    deepcopy,
-)
 from typing import (
     Optional,
 )
@@ -13,6 +10,9 @@ from deepmd.pt.model.atomic_model import (
 )
 from deepmd.pt.model.model.model import (
     BaseModel,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from .dp_model import (

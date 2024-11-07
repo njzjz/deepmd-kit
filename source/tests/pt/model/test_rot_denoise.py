@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import torch
@@ -9,6 +8,9 @@ from deepmd.pt.model.model import (
 )
 from deepmd.pt.utils import (
     env,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -105,7 +107,7 @@ class RotDenoiseTest:
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA1(unittest.TestCase, RotDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa1)
+        model_params = deepcopy(model_dpa1)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
@@ -113,7 +115,7 @@ class TestDenoiseModelDPA1(unittest.TestCase, RotDenoiseTest):
 @unittest.skip("support of the denoise is temporally disabled")
 class TestDenoiseModelDPA2(unittest.TestCase, RotDenoiseTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
@@ -121,7 +123,7 @@ class TestDenoiseModelDPA2(unittest.TestCase, RotDenoiseTest):
 # @unittest.skip("hybrid not supported at the moment")
 # class TestEnergyModelHybrid(unittest.TestCase, TestRotDenoise):
 #     def setUp(self):
-#         model_params = copy.deepcopy(model_hybrid_denoise)
+#         model_params = deepcopy(model_hybrid_denoise)
 #         self.type_split = True
 #         self.model = get_model(model_params).to(env.DEVICE)
 

@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
-import copy
 import logging
 from typing import (
     Callable,
@@ -32,6 +31,9 @@ from deepmd.pt.utils.stat import (
 from deepmd.pt.utils.utils import (
     to_numpy_array,
     to_torch_tensor,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
@@ -331,7 +333,7 @@ class BaseAtomicModel(torch.nn.Module, BaseAtomicModel_):
 
     @classmethod
     def deserialize(cls, data: dict) -> "BaseAtomicModel":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         variables = data.pop("@variables", None)
         variables = (
             {"out_bias": None, "out_std": None} if variables is None else variables

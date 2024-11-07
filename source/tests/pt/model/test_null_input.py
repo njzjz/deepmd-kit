@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import numpy as np
@@ -14,6 +13,9 @@ from deepmd.pt.utils import (
 )
 from deepmd.pt.utils.utils import (
     to_numpy_array,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -88,28 +90,28 @@ class NullTest:
 
 class TestEnergyModelSeA(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_se_e2_a)
+        model_params = deepcopy(model_se_e2_a)
         self.type_split = False
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelDPA1(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa1)
+        model_params = deepcopy(model_dpa1)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelDPA2(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestForceModelDPA2(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         model_params["fitting_net"]["type"] = "direct_force_ener"
         self.type_split = True
         self.test_virial = False
@@ -118,14 +120,14 @@ class TestForceModelDPA2(unittest.TestCase, NullTest):
 
 class TestEnergyModelHybrid(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_hybrid)
+        model_params = deepcopy(model_hybrid)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestForceModelHybrid(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_hybrid)
+        model_params = deepcopy(model_hybrid)
         model_params["fitting_net"]["type"] = "direct_force_ener"
         self.type_split = True
         self.test_virial = False
@@ -134,6 +136,6 @@ class TestForceModelHybrid(unittest.TestCase, NullTest):
 
 class TestEnergyModelZBL(unittest.TestCase, NullTest):
     def setUp(self):
-        model_params = copy.deepcopy(model_zbl)
+        model_params = deepcopy(model_zbl)
         self.type_split = False
         self.model = get_zbl_model(model_params).to(env.DEVICE)

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 from typing import (
     Optional,
 )
@@ -14,6 +13,9 @@ from deepmd.dpmodel.fitting.base_fitting import (
 )
 from deepmd.dpmodel.output_def import (
     FittingOutputDef,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -208,7 +210,7 @@ class DPAtomicModel(BaseAtomicModel):
 
     @classmethod
     def deserialize(cls, data) -> "DPAtomicModel":
-        data = copy.deepcopy(data)
+        data = deepcopy(data)
         check_version_compatibility(data.pop("@version", 1), 2, 2)
         data.pop("@class")
         data.pop("type")

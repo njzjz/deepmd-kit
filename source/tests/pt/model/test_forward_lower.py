@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import copy
 import unittest
 
 import torch
@@ -12,6 +11,9 @@ from deepmd.pt.utils import (
 )
 from deepmd.pt.utils.nlist import (
     extend_input_and_build_neighbor_list,
+)
+from deepmd.utils.copy import (
+    deepcopy,
 )
 
 from ...seed import (
@@ -137,35 +139,35 @@ class ForwardLowerTest:
 class TestEnergyModelSeA(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_se_e2_a)
+        model_params = deepcopy(model_se_e2_a)
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelDPA1(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_dpa1)
+        model_params = deepcopy(model_dpa1)
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelDPA2(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_dpa2)
+        model_params = deepcopy(model_dpa2)
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelZBL(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_zbl)
+        model_params = deepcopy(model_zbl)
         self.model = get_model(model_params).to(env.DEVICE)
 
 
 class TestEnergyModelSpinSeA(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_spin)
+        model_params = deepcopy(model_spin)
         self.test_spin = True
         self.model = get_model(model_params).to(env.DEVICE)
 
@@ -173,8 +175,8 @@ class TestEnergyModelSpinSeA(unittest.TestCase, ForwardLowerTest):
 class TestEnergyModelSpinDPA1(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_spin)
-        model_params["descriptor"] = copy.deepcopy(model_dpa1)["descriptor"]
+        model_params = deepcopy(model_spin)
+        model_params["descriptor"] = deepcopy(model_dpa1)["descriptor"]
         # double sel for virtual atoms to avoid large error
         model_params["descriptor"]["sel"] *= 2
         self.test_spin = True
@@ -184,8 +186,8 @@ class TestEnergyModelSpinDPA1(unittest.TestCase, ForwardLowerTest):
 class TestEnergyModelSpinDPA2(unittest.TestCase, ForwardLowerTest):
     def setUp(self):
         self.prec = 1e-10
-        model_params = copy.deepcopy(model_spin)
-        model_params["descriptor"] = copy.deepcopy(model_dpa2)["descriptor"]
+        model_params = deepcopy(model_spin)
+        model_params["descriptor"] = deepcopy(model_dpa2)["descriptor"]
         # double sel for virtual atoms to avoid large error
         model_params["descriptor"]["repinit"]["nsel"] *= 2
         model_params["descriptor"]["repformer"]["nsel"] *= 2
