@@ -68,14 +68,13 @@ def format_nlist(
     def n_nsel_equal_nsel():
         return nlist
 
-    ret = tf.cond(
-        n_nsel < nsel,
-        n_nsel_less_than_nsel,
-        lambda: tf.cond(
-            n_nsel > nsel,
-            n_nsel_greater_than_nsel,
-            n_nsel_equal_nsel,
-        ),
+    ret = tf.case(
+        {
+            tf.less(n_nsel, nsel): n_nsel_less_than_nsel,
+            tf.greater(n_nsel, nsel): n_nsel_greater_than_nsel,
+        },
+        default=n_nsel_equal_nsel,
+        exclusive=True,
     )
     # do a reshape any way; this will tell the xla the shape without any dynamic shape
     ret = tnp.reshape(ret, [n_nf, n_nloc, nsel])
