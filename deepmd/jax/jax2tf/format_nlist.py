@@ -3,7 +3,6 @@ import tensorflow as tf
 import tensorflow.experimental.numpy as tnp
 
 
-@tf.function(autograph=True)
 def format_nlist(
     extended_coord: tnp.ndarray,
     nlist: tnp.ndarray,
@@ -39,9 +38,9 @@ def format_nlist(
     n_nf, n_nloc, n_nsel = nlist_shape[0], nlist_shape[1], nlist_shape[2]
     extended_coord = extended_coord.reshape([n_nf, -1, 3])
 
-    if n_nsel < nsel:
+    def n_nsel_less_than_nsel():
         # make a copy before revise
-        ret = tnp.concatenate(
+        return tnp.concatenate(
             [
                 nlist,
                 tnp.full([n_nf, n_nloc, nsel - n_nsel], -1, dtype=nlist.dtype),
@@ -49,7 +48,7 @@ def format_nlist(
             axis=-1,
         )
 
-    elif n_nsel > nsel:
+    def n_nsel_greater_than_nsel():
         # make a copy before revise
         m_real_nei = nlist >= 0
         ret = tnp.where(m_real_nei, nlist, 0)
@@ -64,8 +63,20 @@ def format_nlist(
         ret = tnp.take_along_axis(ret, ret_mapping, axis=2)
         ret = tnp.where(rr2 > rcut * rcut, -1, ret)
         ret = ret[..., :nsel]
-    else:  # n_nsel == nsel:
-        ret = nlist
+        return ret
+
+    def n_nsel_equal_nsel():
+        return nlist
+
+    ret = tf.cond(
+        n_nsel < nsel,
+        n_nsel_less_than_nsel,
+        lambda: tf.cond(
+            n_nsel > nsel,
+            n_nsel_greater_than_nsel,
+            n_nsel_equal_nsel,
+        ),
+    )
     # do a reshape any way; this will tell the xla the shape without any dynamic shape
     ret = tnp.reshape(ret, [n_nf, n_nloc, nsel])
     return ret
