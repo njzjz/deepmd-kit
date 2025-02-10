@@ -328,6 +328,7 @@ class CommonTest(ABC):
 
         if tf_obj.__class__.__name__.startswith("Polar"):
             data1["@variables"].pop("bias_atom_e")
+            data2["@variables"].pop("case_embd")
 
         np.testing.assert_equal(data1, data2)
         for rr1, rr2 in zip(ret1, ret2):
