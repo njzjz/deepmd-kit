@@ -27,6 +27,9 @@ from deepmd.dpmodel.utils.network import (
     NativeLayer,
     get_activation_fn,
 )
+from deepmd.dpmodel.utils.safe_gradient import (
+    safe_for_vector_norm,
+)
 from deepmd.dpmodel.utils.seed import (
     child_seed,
 )
@@ -111,6 +114,9 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
     optim_update : bool, optional
         Whether to enable the optimized update method.
         Uses a more efficient process when enabled. Defaults to True
+    smooth_edge_update : bool, optional
+        Whether to make edge update smooth.
+        If True, the edge update from angle message will not use self as padding.
     ntypes : int
         Number of element types
     activation_function : str, optional
@@ -158,6 +164,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
         precision: str = "float64",
         fix_stat_std: float = 0.3,
         optim_update: bool = True,
+        smooth_edge_update: bool = False,
         seed: Optional[Union[int, list[int]]] = None,
     ) -> None:
         super().__init__()
@@ -188,6 +195,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
         self.set_stddev_constant = fix_stat_std != 0.0
         self.a_compress_use_split = a_compress_use_split
         self.optim_update = optim_update
+        self.smooth_edge_update = smooth_edge_update
 
         self.n_dim = n_dim
         self.e_dim = e_dim
@@ -240,6 +248,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
                     update_residual_init=self.update_residual_init,
                     precision=precision,
                     optim_update=self.optim_update,
+                    smooth_edge_update=self.smooth_edge_update,
                     seed=child_seed(child_seed(seed, 1), ii),
                 )
             )
@@ -415,7 +424,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
 
         # nf x nloc x a_nnei x 3
         normalized_diff_i = a_diff / (
-            xp.linalg.vector_norm(a_diff, axis=-1, keepdims=True) + 1e-6
+            safe_for_vector_norm(a_diff, axis=-1, keepdims=True) + 1e-6
         )
         # nf x nloc x 3 x a_nnei
         normalized_diff_j = xp.matrix_transpose(normalized_diff_i)
@@ -560,6 +569,7 @@ class RepFlowLayer(NativeOP):
         axis_neuron: int = 4,
         update_angle: bool = True,
         optim_update: bool = True,
+        smooth_edge_update: bool = False,
         activation_function: str = "silu",
         update_style: str = "res_residual",
         update_residual: float = 0.1,
@@ -604,6 +614,7 @@ class RepFlowLayer(NativeOP):
         self.seed = seed
         self.prec = PRECISION_DICT[precision]
         self.optim_update = optim_update
+        self.smooth_edge_update = smooth_edge_update
 
         assert update_residual_init in [
             "norm",
@@ -785,49 +796,44 @@ class RepFlowLayer(NativeOP):
         feat: str = "edge",
     ) -> np.ndarray:
         xp = array_api_compat.array_namespace(angle_ebd, node_ebd, edge_ebd)
-        angle_dim = angle_ebd.shape[-1]
-        node_dim = node_ebd.shape[-1]
-        edge_dim = edge_ebd.shape[-1]
-        sub_angle_idx = (0, angle_dim)
-        sub_node_idx = (angle_dim, angle_dim + node_dim)
-        sub_edge_idx_ij = (angle_dim + node_dim, angle_dim + node_dim + edge_dim)
-        sub_edge_idx_ik = (
-            angle_dim + node_dim + edge_dim,
-            angle_dim + node_dim + 2 * edge_dim,
-        )
 
         if feat == "edge":
+            assert self.edge_angle_linear1 is not None
             matrix, bias = self.edge_angle_linear1.w, self.edge_angle_linear1.b
         elif feat == "angle":
+            assert self.angle_self_linear is not None
             matrix, bias = self.angle_self_linear.w, self.angle_self_linear.b
         else:
             raise NotImplementedError
+        assert bias is not None
+
+        angle_dim = angle_ebd.shape[-1]
+        node_dim = node_ebd.shape[-1]
+        edge_dim = edge_ebd.shape[-1]
         assert angle_dim + node_dim + 2 * edge_dim == matrix.shape[0]
+        # Array API does not provide a way to split the array
+        sub_angle = matrix[:angle_dim, ...]  # angle_dim
+        sub_node = matrix[angle_dim : angle_dim + node_dim, ...]  # node_dim
+        sub_edge_ij = matrix[
+            angle_dim + node_dim : angle_dim + node_dim + edge_dim, ...
+        ]  # edge_dim
+        sub_edge_ik = matrix[angle_dim + node_dim + edge_dim :, ...]  # edge_dim
 
         # nf * nloc * a_sel * a_sel * angle_dim
-        sub_angle_update = xp.matmul(
-            angle_ebd, matrix[sub_angle_idx[0] : sub_angle_idx[1], :]
-        )
-
+        sub_angle_update = xp.matmul(angle_ebd, sub_angle)
         # nf * nloc * angle_dim
-        sub_node_update = xp.matmul(
-            node_ebd, matrix[sub_node_idx[0] : sub_node_idx[1], :]
-        )
-
+        sub_node_update = xp.matmul(node_ebd, sub_node)
         # nf * nloc * a_nnei * angle_dim
-        sub_edge_update_ij = xp.matmul(
-            edge_ebd, matrix[sub_edge_idx_ij[0] : sub_edge_idx_ij[1], :]
-        )
-        sub_edge_update_ik = xp.matmul(
-            edge_ebd, matrix[sub_edge_idx_ik[0] : sub_edge_idx_ik[1], :]
-        )
+        sub_edge_update_ij = xp.matmul(edge_ebd, sub_edge_ij)
+        sub_edge_update_ik = xp.matmul(edge_ebd, sub_edge_ik)
 
         result_update = (
-            sub_angle_update
+            bias
             + sub_node_update[:, :, xp.newaxis, xp.newaxis, :]
             + sub_edge_update_ij[:, :, xp.newaxis, :, :]
             + sub_edge_update_ik[:, :, :, xp.newaxis, :]
-        ) + bias
+            + sub_angle_update
+        )
         return result_update
 
     def optim_edge_update(
@@ -839,11 +845,6 @@ class RepFlowLayer(NativeOP):
         feat: str = "node",
     ) -> np.ndarray:
         xp = array_api_compat.array_namespace(node_ebd, node_ebd_ext, edge_ebd, nlist)
-        node_dim = node_ebd.shape[-1]
-        edge_dim = edge_ebd.shape[-1]
-        sub_node_idx = (0, node_dim)
-        sub_node_ext_idx = (node_dim, 2 * node_dim)
-        sub_edge_idx = (2 * node_dim, 2 * node_dim + edge_dim)
 
         if feat == "node":
             matrix, bias = self.node_edge_linear.w, self.node_edge_linear.b
@@ -851,28 +852,31 @@ class RepFlowLayer(NativeOP):
             matrix, bias = self.edge_self_linear.w, self.edge_self_linear.b
         else:
             raise NotImplementedError
-        assert 2 * node_dim + edge_dim == matrix.shape[0]
+        node_dim = node_ebd.shape[-1]
+        edge_dim = edge_ebd.shape[-1]
+        assert node_dim * 2 + edge_dim == matrix.shape[0]
+        # Array API does not provide a way to split the array
+        node = matrix[:node_dim, ...]  # node_dim
+        node_ext = matrix[node_dim : 2 * node_dim, ...]  # node_dim
+        edge = matrix[2 * node_dim : 2 * node_dim + edge_dim, ...]  # edge_dim
 
         # nf * nloc * node/edge_dim
-        sub_node_update = xp.matmul(
-            node_ebd, matrix[sub_node_idx[0] : sub_node_idx[1], :]
-        )
+        sub_node_update = xp.matmul(node_ebd, node)
 
         # nf * nall * node/edge_dim
-        sub_node_ext_update = xp.matmul(
-            node_ebd_ext, matrix[sub_node_ext_idx[0] : sub_node_ext_idx[1], :]
-        )
+        sub_node_ext_update = xp.matmul(node_ebd_ext, node_ext)
         # nf * nloc * nnei * node/edge_dim
         sub_node_ext_update = _make_nei_g1(sub_node_ext_update, nlist)
 
         # nf * nloc * nnei * node/edge_dim
-        sub_edge_update = xp.matmul(
-            edge_ebd, matrix[sub_edge_idx[0] : sub_edge_idx[1], :]
-        )
+        sub_edge_update = xp.matmul(edge_ebd, edge)
 
         result_update = (
-            sub_edge_update + sub_node_ext_update + sub_node_update[:, :, xp.newaxis, :]
-        ) + bias
+            bias
+            + sub_node_update[:, :, xp.newaxis, :]
+            + sub_edge_update
+            + sub_node_ext_update
+        )
         return result_update
 
     def call(
@@ -1114,9 +1118,9 @@ class RepFlowLayer(NativeOP):
 
             # nb x nloc x a_nnei x a_nnei x e_dim
             weighted_edge_angle_update = (
-                edge_angle_update
-                * a_sw[:, :, :, xp.newaxis, xp.newaxis]
+                a_sw[:, :, :, xp.newaxis, xp.newaxis]
                 * a_sw[:, :, xp.newaxis, :, xp.newaxis]
+                * edge_angle_update
             )
             # nb x nloc x a_nnei x e_dim
             reduced_edge_angle_update = xp.sum(weighted_edge_angle_update, axis=-2) / (
@@ -1133,19 +1137,23 @@ class RepFlowLayer(NativeOP):
                 ],
                 axis=2,
             )
-            full_mask = xp.concat(
-                [
-                    a_nlist_mask,
-                    xp.zeros(
-                        (nb, nloc, self.nnei - self.a_sel),
-                        dtype=a_nlist_mask.dtype,
-                    ),
-                ],
-                axis=-1,
-            )
-            padding_edge_angle_update = xp.where(
-                xp.expand_dims(full_mask, axis=-1), padding_edge_angle_update, edge_ebd
-            )
+            if not self.smooth_edge_update:
+                # will be deprecated in the future
+                full_mask = xp.concat(
+                    [
+                        a_nlist_mask,
+                        xp.zeros(
+                            (nb, nloc, self.nnei - self.a_sel),
+                            dtype=a_nlist_mask.dtype,
+                        ),
+                    ],
+                    axis=-1,
+                )
+                padding_edge_angle_update = xp.where(
+                    xp.expand_dims(full_mask, axis=-1),
+                    padding_edge_angle_update,
+                    edge_ebd,
+                )
             e_update_list.append(
                 self.act(self.edge_angle_linear2(padding_edge_angle_update))
             )
@@ -1232,7 +1240,7 @@ class RepFlowLayer(NativeOP):
             The serialized networks.
         """
         data = {
-            "@class": "RepformerLayer",
+            "@class": "RepFlowLayer",
             "@version": 1,
             "e_rcut": self.e_rcut,
             "e_rcut_smth": self.e_rcut_smth,
@@ -1256,6 +1264,7 @@ class RepFlowLayer(NativeOP):
             "update_residual_init": self.update_residual_init,
             "precision": self.precision,
             "optim_update": self.optim_update,
+            "smooth_edge_update": self.smooth_edge_update,
             "node_self_mlp": self.node_self_mlp.serialize(),
             "node_sym_linear": self.node_sym_linear.serialize(),
             "node_edge_linear": self.node_edge_linear.serialize(),
