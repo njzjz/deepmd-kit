@@ -25,6 +25,8 @@ jobs:
         python-version: ${{ matrix.python }}
     - run: python -m pip install -U uv
     - run: |
+        # https://github.com/tensorflow/tensorflow/issues/90026#issuecomment-2784638551
+        sudo apt-get update && sudo apt-get install -y --no-install-recommends llvm-dev
         source/install/uv_with_retry.sh pip install --system openmpi tensorflow-cpu~=2.19.0
         source/install/uv_with_retry.sh pip install --system torch -i https://download.pytorch.org/whl/cpu
         export TENSORFLOW_ROOT=$(python -c 'import tensorflow;print(tensorflow.__path__[0])')
