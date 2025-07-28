@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import os
 from typing import (
     Optional,
 )
@@ -410,6 +411,10 @@ class EnergyHessianLoss(EnergyLoss):
 
         self.start_pref_h = start_pref_h
         self.limit_pref_h = limit_pref_h
+        if os.environ.get("DP_HESSIAN_ONEROW", "0") == "1":
+            import jax
+
+            self.key = jax.random.PRNGKey(42)
 
     def call(
         self,
@@ -438,6 +443,10 @@ class EnergyHessianLoss(EnergyLoss):
             ) - model_dict["energy_derv_r_derv_r"].reshape(
                 -1,
             )
+            if os.environ.get("DP_HESSIAN_ONEROW", "0") == "1":
+                import jax
+
+                diff_h = jax.random.choice(self.key, diff_h)
             l2_hessian_loss = xp.mean(xp.square(diff_h))
             loss += pref_h * l2_hessian_loss
             rmse_h = xp.sqrt(l2_hessian_loss)
