@@ -446,6 +446,7 @@ class EnergyHessianLoss(EnergyLoss):
             if os.environ.get("DP_HESSIAN_ONEROW", "0") == "1":
                 import jax
 
+                diff_h = diff_h.reshape(-1, natoms)
                 diff_h = jax.random.choice(self.key, diff_h)
             l2_hessian_loss = xp.mean(xp.square(diff_h))
             loss += pref_h * l2_hessian_loss
