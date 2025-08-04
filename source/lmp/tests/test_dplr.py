@@ -265,12 +265,10 @@ beta = 0.4
 mesh = 10
 
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-
-
 def setup_module() -> None:
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+    )
     write_lmp_data_full(
         box, coord, mol_list, type_OH, charge, data_file, bond_list, mass_list
     )

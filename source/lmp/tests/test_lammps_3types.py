@@ -244,15 +244,14 @@ type_HO = np.array([2, 1, 1, 2, 1, 1, 3])
 # https://github.com/lammps/lammps/blob/1e1311cf401c5fc2614b5d6d0ff3230642b76597/src/update.cpp#L193
 nktv2p = 1.6021765e6
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
-)
-
 
 def setup_module() -> None:
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+    )
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
+    )
     write_lmp_data(box, coord, type_OH, data_file)
     write_lmp_data(box, coord, type_HO, data_type_map_file)
 

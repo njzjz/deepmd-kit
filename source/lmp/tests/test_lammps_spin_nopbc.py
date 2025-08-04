@@ -90,15 +90,14 @@ spin = np.array(
 )
 type_NiO = np.array([1, 1, 2, 2])
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
-)
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
-)
-
 
 def setup_module() -> None:
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file.resolve()} -o {pb_file.resolve()}".split()
+    )
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
+    )
     write_lmp_data_spin(box, coord, spin, type_NiO, data_file)
 
 

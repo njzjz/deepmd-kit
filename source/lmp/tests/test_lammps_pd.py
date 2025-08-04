@@ -223,12 +223,10 @@ type_OH = np.array([1, 2, 2, 1, 2, 2])
 type_HO = np.array([2, 1, 1, 2, 1, 1])
 
 
-sp.check_output(
-    f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
-)
-
-
 def setup_module():
+    sp.check_output(
+        f"{sys.executable} -m deepmd convert-from pbtxt -i {pbtxt_file2.resolve()} -o {pb_file2.resolve()}".split()
+    )
     write_lmp_data(box, coord, type_OH, data_file)
     write_lmp_data(box, coord, type_HO, data_type_map_file)
     write_lmp_data(
