@@ -17,6 +17,7 @@ import orbax.checkpoint as ocp
 from packaging.version import (
     Version,
 )
+from jax.sharding import PartitionSpec as P
 
 from deepmd.common import (
     symlink_prefix_files,
@@ -40,6 +41,7 @@ from deepmd.dpmodel.utils.region import (
 )
 from deepmd.jax.env import (
     flax_version,
+    jax,
     jnp,
     nnx,
 )
@@ -187,6 +189,17 @@ class DPTrainer:
                 all_stat, mixed_type=train_data.mixed_type
             )
 
+        # parallel
+        auto_mesh = jax.make_mesh(
+            (
+                1,
+                jax.local_device_count(),
+            ),
+            ("data", "natoms"),
+        )
+        nnx.use_eager_sharding(True)
+        jax.set_mesh(auto_mesh)
+
         def loss_fn(
             model: BaseModel,
             lr: float,
@@ -291,6 +304,27 @@ class DPTrainer:
             jax_data = {
                 kk: jnp.asarray(vv) if not kk.startswith("find_") else bool(vv.item())
                 for kk, vv in batch_data.items()
+            }
+
+            jax_data = {
+                kk: jax.device_put(
+                    vv,
+                    P("data", "natoms")
+                    if kk
+                    not in {"energy", "box", "numb_copy", "virial", "real_natoms_vec"}
+                    else P(
+                        "data",
+                    ),
+                )
+                if not kk.startswith("find_")
+                and vv is not None
+                and kk
+                not in {
+                    "natoms_vec",
+                    "default_mesh",
+                }
+                else vv
+                for kk, vv in jax_data.items()
             }
             extended_coord, extended_atype, nlist, mapping, fp, ap = prepare_input(
                 rcut=model.get_rcut(),
