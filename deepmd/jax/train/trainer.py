@@ -301,31 +301,7 @@ class DPTrainer:
         for step in range(self.start_step, self.num_steps):
             batch_data = train_data.get_batch()
             # numpy to jax
-            jax_data = {
-                kk: jnp.asarray(vv) if not kk.startswith("find_") else bool(vv.item())
-                for kk, vv in batch_data.items()
-            }
-
-            jax_data = {
-                kk: jax.device_put(
-                    vv,
-                    P("data", "natoms")
-                    if kk
-                    not in {"energy", "box", "numb_copy", "virial", "real_natoms_vec"}
-                    else P(
-                        "data",
-                    ),
-                )
-                if not kk.startswith("find_")
-                and vv is not None
-                and kk
-                not in {
-                    "natoms_vec",
-                    "default_mesh",
-                }
-                else vv
-                for kk, vv in jax_data.items()
-            }
+            jax_data = convert_numpy_data_to_jax_data(batch_data)
             extended_coord, extended_atype, nlist, mapping, fp, ap = prepare_input(
                 rcut=model.get_rcut(),
                 sel=model.get_sel(),
@@ -370,9 +346,7 @@ class DPTrainer:
                 )
                 if valid_data is not None:
                     valid_batch_data = valid_data.get_batch()
-                    jax_valid_data = {
-                        kk: jnp.asarray(vv) for kk, vv in valid_batch_data.items()
-                    }
+                    jax_valid_data = convert_numpy_data_to_jax_data(valid_batch_data)
                     extended_coord, extended_atype, nlist, mapping, fp, ap = (
                         prepare_input(
                             rcut=model.get_rcut(),
@@ -543,3 +517,46 @@ def prepare_input(
     )
     extended_coord = extended_coord.reshape(nframes, -1, 3)
     return extended_coord, extended_atype, nlist, mapping, fp, ap
+
+
+def convert_numpy_data_to_jax_data(
+    numpy_data: dict[str, np.ndarray | np.floating],
+) -> dict[str, jnp.ndarray | bool]:
+    """Convert NumPy data to JAX data.
+
+    Parameters
+    ----------
+    numpy_data : dict[str, np.ndarray | np.floating]
+        NumPy data
+
+    Returns
+    -------
+    jax_data
+        JAX data
+    """
+    # numpy to jax
+    jax_data = {
+        kk: jnp.asarray(vv) if not kk.startswith("find_") else bool(vv.item())
+        for kk, vv in numpy_data.items()
+    }
+
+    jax_data = {
+        kk: jax.device_put(
+            vv,
+            P("data", "natoms")
+            if kk not in {"energy", "box", "numb_copy", "virial", "real_natoms_vec"}
+            else P(
+                "data",
+            ),
+        )
+        if not kk.startswith("find_")
+        and vv is not None
+        and kk
+        not in {
+            "natoms_vec",
+            "default_mesh",
+        }
+        else vv
+        for kk, vv in jax_data.items()
+    }
+    return jax_data
