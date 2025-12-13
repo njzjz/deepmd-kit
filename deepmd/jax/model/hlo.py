@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import json
 from typing import (
     Any,
     Optional,
@@ -180,7 +181,7 @@ class HLO(BaseModel):
                     OUTPUT_DEFS[
                         tt
                         if not (
-                            self.model_def_script.get("hessian_mode", False)
+                            json.loads(self.model_def_script).get("hessian_mode", False)
                             and tt == "energy"
                         )
                         else f"{tt}_hessian"
