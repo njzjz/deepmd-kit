@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import logging
+import os
 import shutil
 import time
 from pathlib import (
     Path,
 )
 from typing import (
+    Any,
     Optional,
     TextIO,
 )
@@ -17,7 +19,7 @@ import orbax.checkpoint as ocp
 from packaging.version import (
     Version,
 )
-from jax.sharding import PartitionSpec as P
+from jax.sharding import PartitionSpec as P, NamedSharding
 
 from deepmd.common import (
     symlink_prefix_files,
@@ -192,13 +194,17 @@ class DPTrainer:
         # parallel
         auto_mesh = jax.make_mesh(
             (
-                1,
+                jax.process_count(),
                 jax.local_device_count(),
             ),
             ("data", "natoms"),
         )
         nnx.use_eager_sharding(True)
         jax.set_mesh(auto_mesh)
+        if int(os.environ.get("DP_JAX_MULTI_NPROC", "0")) > 1:
+            sharding = NamedSharding(auto_mesh, P("data"))
+        else:
+            sharding = None
 
         def loss_fn(
             model: BaseModel,
@@ -301,7 +307,7 @@ class DPTrainer:
         for step in range(self.start_step, self.num_steps):
             batch_data = train_data.get_batch()
             # numpy to jax
-            jax_data = convert_numpy_data_to_jax_data(batch_data)
+            jax_data = convert_numpy_data_to_jax_data(batch_data, sharding)
             extended_coord, extended_atype, nlist, mapping, fp, ap = prepare_input(
                 rcut=model.get_rcut(),
                 sel=model.get_sel(),
@@ -346,7 +352,9 @@ class DPTrainer:
                 )
                 if valid_data is not None:
                     valid_batch_data = valid_data.get_batch()
-                    jax_valid_data = convert_numpy_data_to_jax_data(valid_batch_data)
+                    jax_valid_data = convert_numpy_data_to_jax_data(
+                        valid_batch_data, sharding
+                    )
                     extended_coord, extended_atype, nlist, mapping, fp, ap = (
                         prepare_input(
                             rcut=model.get_rcut(),
@@ -521,6 +529,7 @@ def prepare_input(
 
 def convert_numpy_data_to_jax_data(
     numpy_data: dict[str, np.ndarray | np.floating],
+    sharding: Any | None = None,
 ) -> dict[str, jnp.ndarray | bool]:
     """Convert NumPy data to JAX data.
 
@@ -528,6 +537,8 @@ def convert_numpy_data_to_jax_data(
     ----------
     numpy_data : dict[str, np.ndarray | np.floating]
         NumPy data
+    sharding : Any | None
+        sharding
 
     Returns
     -------
@@ -539,6 +550,19 @@ def convert_numpy_data_to_jax_data(
         kk: jnp.asarray(vv) if not kk.startswith("find_") else bool(vv.item())
         for kk, vv in numpy_data.items()
     }
+    if sharding is not None:
+        jax_data = {
+            kk: jax.make_array_from_process_local_data(sharding, vv)
+            if not kk.startswith("find_")
+            and vv is not None
+            and kk
+            not in {
+                "natoms_vec",
+                "default_mesh",
+            }
+            else vv
+            for kk, vv in jax_data.items()
+        }
 
     jax_data = {
         kk: jax.device_put(

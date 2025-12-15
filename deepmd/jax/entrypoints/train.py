@@ -6,11 +6,13 @@ Can handle local or distributed training.
 
 import json
 import logging
+import os
 import time
 from typing import (
     Any,
     Optional,
 )
+
 
 from deepmd.common import (
     j_loader,
@@ -116,6 +118,22 @@ def train(
     RuntimeError
         if distributed training job name is wrong
     """
+    if int(os.environ.get("DP_JAX_MULTI_NPROC", "0")) > 1:
+        multi_nproc = int(os.environ.get("DP_JAX_MULTI_NPROC", "0"))
+        if multi_nproc <= 0:
+            raise ValueError("DP_JAX_MULTI_NPROC is less than or equal to 0")
+        multi_iproc = int(os.environ.get("DP_JAX_MULTI_IPROC", "-1"))
+        if multi_iproc < 0:
+            raise ValueError("DP_JAX_MULTI_IPROC is less than 0")
+        multi_host = os.environ.get("DP_JAX_MULTI_HOST")
+        if multi_host is None:
+            raise ValueError("DP_JAX_MULTI_HOST is not given")
+        jax.distributed.initialize(
+            coordinator_address=multi_host,
+            num_processes=multi_nproc,
+            process_id=multi_iproc,
+        )
+
     # load json database
     jdata = j_loader(INPUT)
 
@@ -150,6 +168,7 @@ def train(
     # init random seed of data systems
     seed = jdata["training"].get("seed", None)
     if seed is not None:
+        seed += jax.process_index()
         seed = seed % (2**32)
     dp_random.seed(seed)
 
