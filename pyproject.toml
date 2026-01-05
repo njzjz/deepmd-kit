@@ -162,11 +162,11 @@ pin_tensorflow_gpu = [
 pin_pytorch_cpu = [
   # https://github.com/pytorch/pytorch/issues/114602
   # macos x86 has been deprecated
-  "torch~=2.8.0; platform_machine!='x86_64' or platform_system != 'Darwin'",
+  "torch>=2.8,<2.10; platform_machine!='x86_64' or platform_system != 'Darwin'",
   "torch; platform_machine=='x86_64' and platform_system == 'Darwin'",
 ]
 pin_pytorch_gpu = [
-  "torch>=2.7,<2.9",
+  "torch>=2.7,<2.10",
 ]
 pin_jax = [
   "jax==0.5.0;python_version>='3.10'",
@@ -354,6 +354,11 @@ ignore = "D413, D416, D203, D107, D213"
 profile = "black"
 force_grid_wrap = 1
 
+[tool.ruff]
+extend-exclude = [
+    "source/3rdparty/**",
+]
+
 [tool.ruff.format]
 docstring-code-format = true
 
@@ -395,10 +400,6 @@ ignore = [
     "D205", # 1 blank line required between summary line and description
     "D401", # TODO: first line should be in imperative mood
     "D404", # TODO: first word of the docstring should not be This
-]
-
-exclude = [
-    "source/3rdparty/**",
 ]
 
 [tool.ruff.lint.pydocstyle]
