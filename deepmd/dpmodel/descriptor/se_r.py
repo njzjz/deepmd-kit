@@ -53,8 +53,8 @@ from .base_descriptor import (
 )
 
 
-@BaseDescriptor.register("se_e2_r")
-@BaseDescriptor.register("se_r")
+@BaseDescriptor.register("se_e2_r")  # type: ignore[attr-defined]
+@BaseDescriptor.register("se_r")  # type: ignore[attr-defined]
 class DescrptSeR(NativeOP, BaseDescriptor):
     r"""DeepPot-SE_R constructed from only the radial information of atomic configurations.
 

@@ -367,7 +367,7 @@ class RepformerArgs:
         return cls(**data)
 
 
-@BaseDescriptor.register("dpa2")
+@BaseDescriptor.register("dpa2")  # type: ignore[attr-defined]
 class DescrptDPA2(NativeOP, BaseDescriptor):
     def __init__(
         self,
@@ -543,6 +543,7 @@ class DescrptDPA2(NativeOP, BaseDescriptor):
             (self.repinit.get_rcut(), self.repinit.get_nsel()),
         ]
         if self.use_three_body:
+            assert self.repinit_three_body is not None
             self.rcsl_list.append(
                 (self.repinit_three_body.get_rcut(), self.repinit_three_body.get_nsel())
             )
@@ -808,7 +809,7 @@ class DescrptDPA2(NativeOP, BaseDescriptor):
         atype_ext: Array,
         nlist: Array,
         mapping: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array, Array, Array]:
         """Compute the descriptor.
 
         Parameters
@@ -1043,6 +1044,8 @@ class DescrptDPA2(NativeOP, BaseDescriptor):
 
         if data["repinit"].use_three_body:
             # deserialize repinit_three_body
+            assert repinit_three_body_variable is not None
+            assert obj.repinit_three_body is not None
             statistic_repinit_three_body = repinit_three_body_variable.pop("@variables")
             env_mat = repinit_three_body_variable.pop("env_mat")
             tebd_input_mode = data["repinit"].tebd_input_mode

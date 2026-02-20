@@ -66,7 +66,7 @@ from .descriptor import (
 )
 
 
-@BaseDescriptor.register("se_e3_tebd")
+@BaseDescriptor.register("se_e3_tebd")  # type: ignore[attr-defined]
 class DescrptSeTTebd(NativeOP, BaseDescriptor):
     r"""Construct an embedding net that takes angles between two neighboring atoms and type embeddings as input.
 
@@ -447,7 +447,7 @@ class DescrptSeTTebd(NativeOP, BaseDescriptor):
         obj.se_ttebd["dstd"] = variables["dstd"]
         obj.se_ttebd.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            obj.se_ttebd.embeddings_strip = NetworkCollection.deserialize(
+            obj.se_ttebd.embeddings_strip = NetworkCollection.deserialize(  # type: ignore[arg-type]
                 embeddings_strip
             )
 
@@ -947,6 +947,6 @@ class DescrptBlockSeTTebd(NativeOP, DescriptorBlock):
         se_ttebd["dstd"] = variables["dstd"]
         se_ttebd.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            se_ttebd.embeddings_strip = NetworkCollection.deserialize(embeddings_strip)
+            se_ttebd.embeddings_strip = NetworkCollection.deserialize(embeddings_strip)  # type: ignore[arg-type]
 
         return se_ttebd

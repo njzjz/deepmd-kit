@@ -89,8 +89,8 @@ def np_normalize(x: Array, axis: int = -1) -> Array:
     return x / xp.linalg.vector_norm(x, axis=axis, keepdims=True)
 
 
-@BaseDescriptor.register("se_atten")
-@BaseDescriptor.register("dpa1")
+@BaseDescriptor.register("se_atten")  # type: ignore[attr-defined]
+@BaseDescriptor.register("dpa1")  # type: ignore[attr-defined]
 class DescrptDPA1(NativeOP, BaseDescriptor):
     r"""Attention-based descriptor which is proposed in the pretrainable DPA-1[1] model.
 
@@ -627,7 +627,7 @@ class DescrptDPA1(NativeOP, BaseDescriptor):
         obj.se_atten["dstd"] = variables["dstd"]
         obj.se_atten.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            obj.se_atten.embeddings_strip = NetworkCollection.deserialize(
+            obj.se_atten.embeddings_strip = NetworkCollection.deserialize(  # type: ignore[arg-type]
                 embeddings_strip
             )
         obj.type_embedding = TypeEmbedNet.deserialize(type_embedding)
@@ -781,7 +781,7 @@ class DescrptBlockSeAtten(NativeOP, DescriptorBlock):
             normalize=self.normalize,
             temperature=self.temperature,
             trainable_ln=self.trainable_ln,
-            ln_eps=self.ln_eps,
+            ln_eps=self.ln_eps,  # type: ignore[arg-type]
             smooth=self.smooth,
             precision=self.precision,
             seed=child_seed(seed, 2),
@@ -964,7 +964,7 @@ class DescrptBlockSeAtten(NativeOP, DescriptorBlock):
         atype_embd_ext: Array | None = None,
         mapping: Array | None = None,
         type_embedding: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array, Array, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
         # nf x nloc x nnei x 4
         dmatrix, diff, sw = self.env_mat.call(
@@ -1001,6 +1001,7 @@ class DescrptBlockSeAtten(NativeOP, DescriptorBlock):
         ss = rr[..., 0:1]
         if self.tebd_input_mode in ["concat"]:
             # nfnl x tebd_dim
+            assert atype_embd_ext is not None
             atype_embd = xp.reshape(
                 atype_embd_ext[:, :nloc, :], (nf * nloc, self.tebd_dim)
             )
@@ -1183,7 +1184,7 @@ class DescrptBlockSeAtten(NativeOP, DescriptorBlock):
         obj["dstd"] = variables["dstd"]
         obj.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            obj.embeddings_strip = NetworkCollection.deserialize(embeddings_strip)
+            obj.embeddings_strip = NetworkCollection.deserialize(embeddings_strip)  # type: ignore[arg-type]
         obj.dpa1_attention = NeighborGatedAttention.deserialize(attention_layers)
         return obj
 
@@ -1538,6 +1539,7 @@ class GatedAttentionLayer(NativeOP):
             nei_mask[:, None, :, None], attn_weights, xp.zeros_like(attn_weights)
         )
         if self.smooth:
+            assert sw is not None
             attn_weights = attn_weights * sw[:, :, :, None] * sw[:, :, None, :]
         if self.dotr:
             angular_weight = xp.reshape(

@@ -31,7 +31,7 @@ from .dpa1 import (
 )
 
 
-@BaseDescriptor.register("se_atten_v2")
+@BaseDescriptor.register("se_atten_v2")  # type: ignore[attr-defined]
 class DescrptSeAttenV2(DescrptDPA1):
     def __init__(
         self,

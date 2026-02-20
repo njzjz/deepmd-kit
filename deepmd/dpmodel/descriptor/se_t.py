@@ -54,9 +54,9 @@ from .base_descriptor import (
 )
 
 
-@BaseDescriptor.register("se_e3")
-@BaseDescriptor.register("se_at")
-@BaseDescriptor.register("se_a_3be")
+@BaseDescriptor.register("se_e3")  # type: ignore[attr-defined]
+@BaseDescriptor.register("se_at")  # type: ignore[attr-defined]
+@BaseDescriptor.register("se_a_3be")  # type: ignore[attr-defined]
 class DescrptSeT(NativeOP, BaseDescriptor):
     r"""DeepPot-SE constructed from all information (both angular and radial) of atomic
     configurations.

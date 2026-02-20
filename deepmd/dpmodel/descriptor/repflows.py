@@ -484,7 +484,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
         atype_ext: Array,
         atype_embd_ext: Array | None = None,
         mapping: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array, Array, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
         nframes, nloc, nnei = nlist.shape
         nall = xp.reshape(coord_ext, (nframes, -1)).shape[1] // 3
@@ -533,6 +533,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
 
         # get node embedding
         # nb x nloc x tebd_dim
+        assert atype_embd_ext is not None
         atype_embd = atype_embd_ext[:, :nloc, :]
         assert list(atype_embd.shape) == [nframes, nloc, self.n_dim]
 
@@ -889,10 +890,10 @@ class RepFlowLayer(NativeOP):
         self.e_rcut = float(e_rcut)
         self.e_rcut_smth = float(e_rcut_smth)
         self.ntypes = ntypes
-        e_sel = [e_sel] if isinstance(e_sel, int) else e_sel
-        self.nnei = sum(e_sel)
-        assert len(e_sel) == 1
-        self.e_sel = e_sel
+        e_sel_list: list[int] = [e_sel]
+        self.nnei = sum(e_sel_list)
+        assert len(e_sel_list) == 1
+        self.e_sel = e_sel_list
         self.sec = self.e_sel
         self.a_rcut = a_rcut
         self.a_rcut_smth = a_rcut_smth
@@ -1177,11 +1178,14 @@ class RepFlowLayer(NativeOP):
         )
 
         if feat == "edge":
+            assert self.edge_angle_linear1 is not None
             matrix, bias = self.edge_angle_linear1.w, self.edge_angle_linear1.b
         elif feat == "angle":
+            assert self.angle_self_linear is not None
             matrix, bias = self.angle_self_linear.w, self.angle_self_linear.b
         else:
             raise NotImplementedError
+        assert matrix is not None
         assert bias is not None
 
         nf, nloc, node_dim = node_ebd.shape
@@ -1883,6 +1887,9 @@ class RepFlowLayer(NativeOP):
             "edge_self_linear": self.edge_self_linear.serialize(),
         }
         if self.update_angle:
+            assert self.edge_angle_linear1 is not None
+            assert self.edge_angle_linear2 is not None
+            assert self.angle_self_linear is not None
             data.update(
                 {
                     "edge_angle_linear1": self.edge_angle_linear1.serialize(),
@@ -1891,6 +1898,8 @@ class RepFlowLayer(NativeOP):
                 }
             )
             if self.a_compress_rate != 0 and not self.a_compress_use_split:
+                assert self.a_compress_n_linear is not None
+                assert self.a_compress_e_linear is not None
                 data.update(
                     {
                         "a_compress_n_linear": self.a_compress_n_linear.serialize(),

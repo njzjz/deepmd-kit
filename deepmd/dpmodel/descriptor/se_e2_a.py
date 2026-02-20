@@ -53,8 +53,8 @@ from .base_descriptor import (
 )
 
 
-@BaseDescriptor.register("se_e2_a")
-@BaseDescriptor.register("se_a")
+@BaseDescriptor.register("se_e2_a")  # type: ignore[attr-defined]
+@BaseDescriptor.register("se_a")  # type: ignore[attr-defined]
 class DescrptSeA(NativeOP, BaseDescriptor):
     r"""DeepPot-SE constructed from all information (both angular and radial) of
     atomic configurations. The embedding takes the distance between atoms as input.

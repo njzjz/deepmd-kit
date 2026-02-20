@@ -31,7 +31,7 @@ from deepmd.utils.version import (
 )
 
 
-@BaseDescriptor.register("hybrid")
+@BaseDescriptor.register("hybrid")  # type: ignore[attr-defined]
 class DescrptHybrid(BaseDescriptor, NativeOP):
     """Concate a list of descriptors to form a new descriptor.
 
@@ -356,7 +356,7 @@ class DescrptHybrid(BaseDescriptor, NativeOP):
         new_list = []
         min_nbor_dist = None
         for sub_jdata in local_jdata["list"]:
-            new_sub_jdata, min_nbor_dist_ = BaseDescriptor.update_sel(
+            new_sub_jdata, min_nbor_dist_ = BaseDescriptor.update_sel(  # type: ignore[attr-defined]
                 train_data, type_map, sub_jdata
             )
             if min_nbor_dist_ is not None:
@@ -382,6 +382,6 @@ class DescrptHybrid(BaseDescriptor, NativeOP):
         assert class_type == "hybrid"
         check_version_compatibility(data.pop("@version"), 1, 1)
         obj = cls(
-            list=[BaseDescriptor.deserialize(ii) for ii in data["list"]],
+            list=[BaseDescriptor.deserialize(ii) for ii in data["list"]],  # type: ignore[attr-defined]
         )
         return obj

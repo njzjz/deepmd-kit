@@ -250,7 +250,7 @@ class RepFlowArgs:
         return cls(**data)
 
 
-@BaseDescriptor.register("dpa3")
+@BaseDescriptor.register("dpa3")  # type: ignore[attr-defined]
 class DescrptDPA3(NativeOP, BaseDescriptor):
     r"""The DPA3 descriptor[1]_.
 
@@ -531,7 +531,7 @@ class DescrptDPA3(NativeOP, BaseDescriptor):
         atype_ext: Array,
         nlist: Array,
         mapping: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array, Array, Array]:
         """Compute the descriptor.
 
         Parameters

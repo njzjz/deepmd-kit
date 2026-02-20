@@ -215,11 +215,11 @@ class DescrptBlockRepformers(NativeOP, DescriptorBlock):
         self.rcut_smth = rcut_smth
         self.ntypes = ntypes
         self.nlayers = nlayers
-        sel = [sel] if isinstance(sel, int) else sel
-        self.nnei = sum(sel)
+        sel_list: list[int] = [sel]
+        self.nnei = sum(sel_list)
         self.ndescrpt = self.nnei * 4  # use full descriptor.
-        assert len(sel) == 1
-        self.sel = sel
+        assert len(sel_list) == 1
+        self.sel = sel_list
         self.sec = self.sel
         self.split_sel = self.sel
         self.axis_neuron = axis_neuron
@@ -449,7 +449,7 @@ class DescrptBlockRepformers(NativeOP, DescriptorBlock):
         atype_embd_ext: Array | None = None,
         mapping: Array | None = None,
         type_embedding: Array | None = None,
-    ) -> Array:
+    ) -> tuple[Array, Array, Array, Array, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
         exclude_mask = self.emask.build_type_exclude_mask(nlist, atype_ext)
         exclude_mask = xp.astype(exclude_mask, xp.bool)
@@ -469,6 +469,7 @@ class DescrptBlockRepformers(NativeOP, DescriptorBlock):
         sw = xp.reshape(sw, (nf, nloc, nnei))
         sw = xp.where(nlist_mask, sw, xp.zeros_like(sw))
         # nf x nloc x tebd_dim
+        assert atype_embd_ext is not None
         atype_embd = atype_embd_ext[:, :nloc, :]
         assert list(atype_embd.shape) == [nf, nloc, self.g1_dim]
 
@@ -1334,10 +1335,10 @@ class RepformerLayer(NativeOP):
         self.rcut = rcut
         self.rcut_smth = rcut_smth
         self.ntypes = ntypes
-        sel = [sel] if isinstance(sel, int) else sel
-        self.nnei = sum(sel)
-        assert len(sel) == 1
-        self.sel = sel
+        sel_list: list[int] = [sel]
+        self.nnei = sum(sel_list)
+        assert len(sel_list) == 1
+        self.sel = sel_list
         self.sec = self.sel
         self.axis_neuron = axis_neuron
         self.activation_function = activation_function
@@ -1933,30 +1934,36 @@ class RepformerLayer(NativeOP):
             "linear1": self.linear1.serialize(),
         }
         if self.update_chnnl_2:
+            assert self.linear2 is not None
             data.update(
                 {
                     "linear2": self.linear2.serialize(),
                 }
             )
         if self.update_g1_has_conv:
+            assert self.proj_g1g2 is not None
             data.update(
                 {
                     "proj_g1g2": self.proj_g1g2.serialize(),
                 }
             )
         if self.update_g2_has_g1g1:
+            assert self.proj_g1g1g2 is not None
             data.update(
                 {
                     "proj_g1g1g2": self.proj_g1g1g2.serialize(),
                 }
             )
         if self.update_g2_has_attn or self.update_h2:
+            assert self.attn2g_map is not None
             data.update(
                 {
                     "attn2g_map": self.attn2g_map.serialize(),
                 }
             )
             if self.update_g2_has_attn:
+                assert self.attn2_mh_apply is not None
+                assert self.attn2_lm is not None
                 data.update(
                     {
                         "attn2_mh_apply": self.attn2_mh_apply.serialize(),
@@ -1965,18 +1972,21 @@ class RepformerLayer(NativeOP):
                 )
 
             if self.update_h2:
+                assert self.attn2_ev_apply is not None
                 data.update(
                     {
                         "attn2_ev_apply": self.attn2_ev_apply.serialize(),
                     }
                 )
         if self.update_g1_has_attn:
+            assert self.loc_attn is not None
             data.update(
                 {
                     "loc_attn": self.loc_attn.serialize(),
                 }
             )
         if self.g1_out_mlp:
+            assert self.g1_self_mlp is not None
             data.update(
                 {
                     "g1_self_mlp": self.g1_self_mlp.serialize(),
