@@ -65,7 +65,7 @@ class DOSFittingNet(InvarFitting):
             numb_aparam=numb_aparam,
             dim_case_embd=dim_case_embd,
             rcond=rcond,
-            trainable=trainable,
+            trainable=trainable,  # type: ignore[arg-type]
             activation_function=activation_function,
             precision=precision,
             mixed_types=mixed_types,
@@ -94,6 +94,6 @@ class DOSFittingNet(InvarFitting):
             **super().serialize(),
             "type": "dos",
         }
-        dd["@variables"]["bias_atom_e"] = to_numpy_array(self.bias_atom_e)
+        dd["@variables"]["bias_atom_e"] = to_numpy_array(self.bias_atom_e)  # type: ignore[index]
 
         return dd

@@ -39,7 +39,7 @@ def make_base_fitting(
     class BF(ABC, PluginVariant, make_plugin_registry("fitting")):
         """Base fitting provides the interfaces of fitting net."""
 
-        def __new__(cls: type, *args: Any, **kwargs: Any) -> Any:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
             if cls is BF:
                 cls = cls.get_class_by_type(j_get_type(kwargs, cls.__name__))
             return super().__new__(cls)

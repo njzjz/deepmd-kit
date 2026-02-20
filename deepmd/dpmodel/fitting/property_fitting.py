@@ -105,7 +105,7 @@ class PropertyFittingNet(InvarFitting):
             numb_aparam=numb_aparam,
             dim_case_embd=dim_case_embd,
             rcond=rcond,
-            trainable=trainable,
+            trainable=trainable,  # type: ignore[arg-type]
             activation_function=activation_function,
             precision=precision,
             mixed_types=mixed_types,

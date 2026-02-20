@@ -180,7 +180,8 @@ class EnergyLoss(Loss):
                 )
                 loss += pref_e * l_huber_loss
             more_loss["rmse_e"] = self.display_if_exist(
-                xp.sqrt(l2_ener_loss) * atom_norm_ener, find_energy
+                xp.sqrt(l2_ener_loss) * atom_norm_ener,
+                find_energy,  # type: ignore[arg-type]
             )
         if self.has_f:
             l2_force_loss = xp.mean(xp.square(diff_f))
@@ -194,7 +195,8 @@ class EnergyLoss(Loss):
                 )
                 loss += pref_f * l_huber_loss
             more_loss["rmse_f"] = self.display_if_exist(
-                xp.sqrt(l2_force_loss), find_force
+                xp.sqrt(l2_force_loss),
+                find_force,  # type: ignore[arg-type]
             )
         if self.has_v:
             virial_reshape = xp.reshape(virial, (-1,))
@@ -212,7 +214,8 @@ class EnergyLoss(Loss):
                 )
                 loss += pref_v * l_huber_loss
             more_loss["rmse_v"] = self.display_if_exist(
-                xp.sqrt(l2_virial_loss), find_virial
+                xp.sqrt(l2_virial_loss),
+                find_virial,  # type: ignore[arg-type]
             )
         if self.has_ae:
             atom_ener_reshape = xp.reshape(atom_ener, (-1,))
@@ -230,7 +233,8 @@ class EnergyLoss(Loss):
                 )
                 loss += pref_ae * l_huber_loss
             more_loss["rmse_ae"] = self.display_if_exist(
-                xp.sqrt(l2_atom_ener_loss), find_atom_ener
+                xp.sqrt(l2_atom_ener_loss),
+                find_atom_ener,  # type: ignore[arg-type]
             )
         if self.has_pf:
             atom_pref_reshape = xp.reshape(atom_pref, (-1,))
@@ -239,15 +243,17 @@ class EnergyLoss(Loss):
             )
             loss += pref_pf * l2_pref_force_loss
             more_loss["rmse_pf"] = self.display_if_exist(
-                xp.sqrt(l2_pref_force_loss), find_atom_pref
+                xp.sqrt(l2_pref_force_loss),
+                find_atom_pref,  # type: ignore[arg-type]
             )
         if self.has_gf:
             find_drdq = label_dict["find_drdq"]
             drdq = label_dict["drdq"]
-            force_reshape_nframes = xp.reshape(force, (-1, natoms[0] * 3))
-            force_hat_reshape_nframes = xp.reshape(force_hat, (-1, natoms[0] * 3))
+            force_reshape_nframes = xp.reshape(force, (-1, natoms[0] * 3))  # type: ignore[index]
+            force_hat_reshape_nframes = xp.reshape(force_hat, (-1, natoms[0] * 3))  # type: ignore[index]
             drdq_reshape = xp.reshape(
-                drdq, (-1, natoms[0] * 3, self.numb_generalized_coord)
+                drdq,
+                (-1, natoms[0] * 3, self.numb_generalized_coord),  # type: ignore[index]
             )
             gen_force_hat = xp.einsum(
                 "bij,bi->bj", drdq_reshape, force_hat_reshape_nframes
@@ -261,11 +267,12 @@ class EnergyLoss(Loss):
             )
             loss += pref_gf * l2_gen_force_loss
             more_loss["rmse_gf"] = self.display_if_exist(
-                xp.sqrt(l2_gen_force_loss), find_drdq
+                xp.sqrt(l2_gen_force_loss),
+                find_drdq,  # type: ignore[arg-type]
             )
 
         self.l2_l = loss
-        more_loss["rmse"] = xp.sqrt(loss)
+        more_loss["rmse"] = xp.sqrt(loss)  # type: ignore[arg-type]
         self.l2_more = more_loss
         return loss, more_loss
 

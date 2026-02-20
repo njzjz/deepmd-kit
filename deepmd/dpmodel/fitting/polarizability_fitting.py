@@ -39,7 +39,7 @@ from .general_fitting import (
 )
 
 
-@BaseFitting.register("polar")
+@BaseFitting.register("polar")  # type: ignore[attr-defined]
 @fitting_check_output
 class PolarFitting(GeneralFitting):
     r"""Fitting rotationally equivariant polarizability of the system.

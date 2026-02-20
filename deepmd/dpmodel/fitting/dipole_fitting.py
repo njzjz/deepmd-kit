@@ -31,7 +31,7 @@ from .general_fitting import (
 )
 
 
-@BaseFitting.register("dipole")
+@BaseFitting.register("dipole")  # type: ignore[attr-defined]
 @fitting_check_output
 class DipoleFitting(GeneralFitting):
     r"""Fitting rotationally equivariant diploe of the system.

@@ -40,15 +40,15 @@ class DPModelCommon:
             The minimum distance between two atoms
         """
         local_jdata_cpy = local_jdata.copy()
-        local_jdata_cpy["descriptor"], min_nbor_dist = BaseDescriptor.update_sel(
+        local_jdata_cpy["descriptor"], min_nbor_dist = BaseDescriptor.update_sel(  # type: ignore[attr-defined]
             train_data, type_map, local_jdata["descriptor"]
         )
         return local_jdata_cpy, min_nbor_dist
 
     def get_fitting_net(self) -> BaseFitting:
         """Get the fitting network."""
-        return self.atomic_model.fitting
+        return self.atomic_model.fitting  # type: ignore[attr-defined]
 
     def get_descriptor(self) -> BaseDescriptor:
         """Get the descriptor."""
-        return self.atomic_model.descriptor
+        return self.atomic_model.descriptor  # type: ignore[attr-defined]

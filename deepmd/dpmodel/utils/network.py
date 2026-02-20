@@ -576,7 +576,7 @@ def make_multilayer_network(T_NetworkLayer: type, ModuleBase: type) -> type:
             super().__init__()
             if layers is None:
                 layers = []
-            self.layers = [T_NetworkLayer.deserialize(layer) for layer in layers]
+            self.layers = [T_NetworkLayer.deserialize(layer) for layer in layers]  # type: ignore[attr-defined]
             self.check_shape_consistency()
 
         def serialize(self) -> dict:
@@ -997,7 +997,7 @@ def make_fitting_network(
             data.pop("@class", None)
             layers = data.pop("layers")
             obj = cls(**data)
-            T_Network.__init__(obj, layers)
+            T_Network.__init__(obj, layers)  # type: ignore[call-overload]
             return obj
 
     return FN
@@ -1197,7 +1197,7 @@ class NetworkCollection:
         elif isinstance(value, self.network_type):
             pass
         elif isinstance(value, dict):
-            value = self.network_type.deserialize(value)
+            value = self.network_type.deserialize(value)  # type: ignore[attr-defined]
         else:
             raise TypeError(value)
         self._networks[self._convert_key(key)] = value

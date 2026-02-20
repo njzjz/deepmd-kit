@@ -197,7 +197,7 @@ def get_model(data: dict) -> BaseModel:
     model_type = data.get("type", "standard")
     if model_type == "standard":
         if "spin" in data:
-            return get_spin_model(data)
+            return get_spin_model(data)  # type: ignore[return-value]
         elif "use_srtab" in data:
             return get_zbl_model(data)
         else:

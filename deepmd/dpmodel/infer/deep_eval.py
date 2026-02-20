@@ -284,6 +284,7 @@ class DeepEval(DeepEvalBackend):
         if self.auto_batch_size is not None:
 
             def eval_func(*args: Any, **kwargs: Any) -> Any:
+                assert self.auto_batch_size is not None
                 return self.auto_batch_size.execute_all(
                     inner_func, numb_test, natoms, *args, **kwargs
                 )
@@ -317,7 +318,7 @@ class DeepEval(DeepEvalBackend):
         fparam: Array | None,
         aparam: Array | None,
         request_defs: list[OutputVariableDef],
-    ) -> dict[str, Array]:
+    ) -> tuple[Array, ...]:
         model = self.dp
 
         nframes = coords.shape[0]
