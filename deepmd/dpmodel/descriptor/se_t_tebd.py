@@ -329,7 +329,7 @@ class DescrptSeTTebd(NativeOP, BaseDescriptor):
         atype_ext: Array,
         nlist: Array,
         mapping: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array | None, Array | None, Array]:
         """Compute the descriptor.
 
         Parameters
@@ -447,7 +447,8 @@ class DescrptSeTTebd(NativeOP, BaseDescriptor):
         obj.se_ttebd["dstd"] = variables["dstd"]
         obj.se_ttebd.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            obj.se_ttebd.embeddings_strip = NetworkCollection.deserialize(  # type: ignore[arg-type]
+            assert embeddings_strip is not None
+            obj.se_ttebd.embeddings_strip = NetworkCollection.deserialize(
                 embeddings_strip
             )
 
@@ -745,9 +746,8 @@ class DescrptBlockSeTTebd(NativeOP, DescriptorBlock):
         atype_embd_ext: Array | None = None,
         mapping: Array | None = None,
         type_embedding: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array | None, Array | None, Array | None, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
-        # nf x nloc x nnei x 4
         dmatrix, diff, sw = self.env_mat.call(
             coord_ext,
             atype_ext,

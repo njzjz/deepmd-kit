@@ -454,7 +454,7 @@ class SpinModel(NativeOP):
             mapping=mapping_updated,
             fparam=fparam,
             aparam=aparam,
-            do_atomic_virial=do_atomic_virial,  # type: ignore[arg-type]
+            do_atomic_virial=do_atomic_virial,
         )
         model_output_type = self.backbone_model.model_output_type()
         if "mask" in model_output_type:

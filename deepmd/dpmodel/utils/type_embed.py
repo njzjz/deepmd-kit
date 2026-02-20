@@ -81,9 +81,10 @@ class TypeEmbedNet(NativeOP):
         self.type_map = type_map
         embed_input_dim = ntypes
         if self.use_econf_tebd:
+            assert self.type_map is not None
             self.econf_tebd, embed_input_dim = get_econf_tebd(
                 self.type_map,
-                precision=self.precision,  # type: ignore[arg-type]
+                precision=self.precision,
             )
         self.embedding_net = EmbeddingNet(
             embed_input_dim,

@@ -1710,7 +1710,7 @@ class RepformerLayer(NativeOP):
         nlist: Array,  # nf x nloc x nnei
         nlist_mask: Array,  # nf x nloc x nnei
         sw: Array,  # switch func, nf x nloc x nnei
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array]:
         """
         Parameters
         ----------

@@ -93,7 +93,7 @@ class EnergyLoss(Loss):
         natoms: int,
         model_dict: dict[str, Array],
         label_dict: dict[str, Array],
-    ) -> dict[str, Array]:
+    ) -> tuple[Array, dict[str, Array]]:
         """Calculate loss from model results and labeled results."""
         energy = model_dict["energy_redu"]
         force = model_dict["energy_derv_r"]
@@ -272,7 +272,7 @@ class EnergyLoss(Loss):
             )
 
         self.l2_l = loss
-        more_loss["rmse"] = xp.sqrt(loss)  # type: ignore[arg-type]
+        more_loss["rmse"] = xp.sqrt(loss)
         self.l2_more = more_loss
         return loss, more_loss
 

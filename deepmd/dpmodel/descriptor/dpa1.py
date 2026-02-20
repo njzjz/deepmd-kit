@@ -627,7 +627,8 @@ class DescrptDPA1(NativeOP, BaseDescriptor):
         obj.se_atten["dstd"] = variables["dstd"]
         obj.se_atten.embeddings = NetworkCollection.deserialize(embeddings)
         if tebd_input_mode in ["strip"]:
-            obj.se_atten.embeddings_strip = NetworkCollection.deserialize(  # type: ignore[arg-type]
+            assert embeddings_strip is not None
+            obj.se_atten.embeddings_strip = NetworkCollection.deserialize(
                 embeddings_strip
             )
         obj.type_embedding = TypeEmbedNet.deserialize(type_embedding)

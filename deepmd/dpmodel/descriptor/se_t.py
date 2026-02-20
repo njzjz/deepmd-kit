@@ -324,7 +324,7 @@ class DescrptSeT(NativeOP, BaseDescriptor):
         atype_ext: Array,
         nlist: Array,
         mapping: Array | None = None,
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array | None, Array | None, Array | None, Array]:
         """Compute the descriptor.
 
         Parameters

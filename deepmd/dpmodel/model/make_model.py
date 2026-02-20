@@ -125,9 +125,9 @@ def model_call_from_call_lower(
         extended_atype,
         nlist,
         mapping,
-        fparam=fp,
-        aparam=ap,
-        do_atomic_virial=do_atomic_virial,
+        fparam=fp,  # type: ignore[arg-type]
+        aparam=ap,  # type: ignore[arg-type]
+        do_atomic_virial=do_atomic_virial,  # type: ignore[arg-type]
     )
     model_predict = communicate_extended_output(
         model_predict_lower,

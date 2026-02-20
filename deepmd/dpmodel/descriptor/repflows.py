@@ -1330,7 +1330,7 @@ class RepFlowLayer(NativeOP):
         a_sw: Array,  # switch func, nf x nloc x a_nnei
         edge_index: Array,  # 2 x n_edge
         angle_index: Array,  # 3 x n_angle
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array]:
         """
         Parameters
         ----------
