@@ -484,6 +484,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
         atype_ext: Array,
         atype_embd_ext: Array | None = None,
         mapping: Array | None = None,
+        type_embedding: Array | None = None,
     ) -> tuple[Array, Array, Array, Array, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
         nframes, nloc, nnei = nlist.shape

@@ -195,7 +195,8 @@ class EnvMatStatSe(EnvMatStat):
                 pair_exclude_types = system["pair_exclude_types"]
                 assert isinstance(pair_exclude_types, list)
                 pair_exclude_mask = PairExcludeMask(
-                    self.descriptor.get_ntypes(), pair_exclude_types
+                    self.descriptor.get_ntypes(),
+                    pair_exclude_types,  # type: ignore[arg-type]
                 )
                 pair_exclude_mask.type_mask = xp.asarray(
                     pair_exclude_mask.type_mask,
