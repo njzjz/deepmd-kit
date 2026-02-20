@@ -372,7 +372,7 @@ class DescrptSeA(NativeOP, BaseDescriptor):
     def cal_g(
         self,
         ss: Array,
-        embedding_idx: int,
+        embedding_idx: int | tuple[int, ...],
     ) -> Array:
         xp = array_api_compat.array_namespace(ss)
         nf_times_nloc, nnei = ss.shape[0:2]
@@ -383,7 +383,7 @@ class DescrptSeA(NativeOP, BaseDescriptor):
 
     def reinit_exclude(
         self,
-        exclude_types: list[tuple[int, int]] = [],
+        exclude_types: list[tuple[int, int]] | list[list[int]] = [],
     ) -> None:
         self.exclude_types = exclude_types
         self.emask = PairExcludeMask(self.ntypes, exclude_types=exclude_types)

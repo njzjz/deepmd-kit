@@ -119,12 +119,14 @@ class EnvMatStat(ABC):
                 self.stats[kk] += iter_stats[kk]
 
     @abstractmethod
-    def iter(self, data: list[dict[str, np.ndarray]]) -> Iterator[dict[str, StatItem]]:
+    def iter(
+        self, data: list[dict[str, np.ndarray | list[tuple[int, int]]]]
+    ) -> Iterator[dict[str, StatItem]]:
         """Get the iterator of the environment matrix.
 
         Parameters
         ----------
-        data : list[dict[str, np.ndarray]]
+        data : list[dict[str, np.ndarray | list[tuple[int, int]]]]
             The environment matrix.
 
         Yields

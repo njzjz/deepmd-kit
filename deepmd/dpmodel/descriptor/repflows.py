@@ -859,7 +859,7 @@ class RepFlowLayer(NativeOP):
         self,
         e_rcut: float,
         e_rcut_smth: float,
-        e_sel: int,
+        e_sel: int | list[int],
         a_rcut: float,
         a_rcut_smth: float,
         a_sel: int,
@@ -890,7 +890,7 @@ class RepFlowLayer(NativeOP):
         self.e_rcut = float(e_rcut)
         self.e_rcut_smth = float(e_rcut_smth)
         self.ntypes = ntypes
-        e_sel_list: list[int] = [e_sel]
+        e_sel_list: list[int] = [e_sel] if isinstance(e_sel, int) else e_sel
         self.nnei = sum(e_sel_list)
         assert len(e_sel_list) == 1
         self.e_sel = e_sel_list

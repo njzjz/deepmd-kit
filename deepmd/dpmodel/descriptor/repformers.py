@@ -1298,7 +1298,7 @@ class RepformerLayer(NativeOP):
         self,
         rcut: float,
         rcut_smth: float,
-        sel: int,
+        sel: int | list[int],
         ntypes: int,
         g1_dim: int = 128,
         g2_dim: int = 16,
@@ -1335,7 +1335,7 @@ class RepformerLayer(NativeOP):
         self.rcut = rcut
         self.rcut_smth = rcut_smth
         self.ntypes = ntypes
-        sel_list: list[int] = [sel]
+        sel_list: list[int] = [sel] if isinstance(sel, int) else sel
         self.nnei = sum(sel_list)
         assert len(sel_list) == 1
         self.sel = sel_list
@@ -1520,7 +1520,7 @@ class RepformerLayer(NativeOP):
                 )
                 self.attn2_lm = LayerNorm(
                     g2_dim,
-                    eps=ln_eps,
+                    eps=ln_eps,  # type: ignore[arg-type]
                     trainable=trainable_ln,
                     precision=precision,
                     seed=child_seed(seed, 9),

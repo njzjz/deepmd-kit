@@ -65,7 +65,7 @@ class PairExcludeMask:
     def __init__(
         self,
         ntypes: int,
-        exclude_types: list[tuple[int, int]] = [],
+        exclude_types: list[tuple[int, int]] | list[list[int]] = [],
     ) -> None:
         self.ntypes = ntypes
         self.exclude_types = set()

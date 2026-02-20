@@ -224,7 +224,7 @@ def safe_cast_array(
     """
     if input is not None and array_api_compat.is_array_api_obj(input):
         xp = array_api_compat.array_namespace(input)
-        if input.dtype == get_xp_precision(xp, from_precision):
+        if input.dtype == get_xp_precision(xp, from_precision):  # type: ignore[union-attr]
             return xp.astype(input, get_xp_precision(xp, to_precision))
     return input
 
