@@ -748,6 +748,7 @@ class DescrptBlockSeTTebd(NativeOP, DescriptorBlock):
         type_embedding: Array | None = None,
     ) -> tuple[Array, Array | None, Array | None, Array | None, Array]:
         xp = array_api_compat.array_namespace(nlist, coord_ext, atype_ext)
+        # nf x nloc x nnei x 4
         dmatrix, diff, sw = self.env_mat.call(
             coord_ext,
             atype_ext,

@@ -215,7 +215,7 @@ class DescrptBlockRepformers(NativeOP, DescriptorBlock):
         self.rcut_smth = rcut_smth
         self.ntypes = ntypes
         self.nlayers = nlayers
-        sel_list: list[int] = [sel]
+        sel_list: list[int] = [sel] if isinstance(sel, int) else sel
         self.nnei = sum(sel_list)
         self.ndescrpt = self.nnei * 4  # use full descriptor.
         assert len(sel_list) == 1
