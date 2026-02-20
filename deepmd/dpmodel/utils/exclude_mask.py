@@ -87,7 +87,7 @@ class PairExcludeMask:
         # (ntypes+1 x ntypes+1)
         self.type_mask = type_mask.reshape([-1])
 
-    def get_exclude_types(self) -> list[tuple[int, int]]:
+    def get_exclude_types(self) -> set[tuple[int, int]]:
         return self.exclude_types
 
     def build_type_exclude_mask(

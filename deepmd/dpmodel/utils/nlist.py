@@ -20,7 +20,7 @@ def extend_input_and_build_neighbor_list(
     sel: list[int],
     mixed_types: bool = False,
     box: Array | None = None,
-) -> tuple[Array, Array]:
+) -> tuple[Array, Array, Array, Array]:
     xp = array_api_compat.array_namespace(coord, atype)
     nframes, nloc = atype.shape[:2]
     if box is not None:
@@ -268,7 +268,7 @@ def extend_coord_with_ghosts(
     atype: Array,
     cell: Array | None,
     rcut: float,
-) -> tuple[Array, Array]:
+) -> tuple[Array, Array, Array]:
     """Extend the coordinates of the atoms by appending peridoc images.
     The number of images is large enough to ensure all the neighbors
     within rcut are appended.

@@ -193,7 +193,9 @@ class PairTabAtomicModel(BaseAtomicModel):
 
         tab_model.tab = tab
         tab_model.tab_info = tab_model.tab.tab_info
+        assert tab_model.tab_info is not None
         nspline, ntypes = tab_model.tab_info[-2:].astype(int)
+        assert tab_model.tab.tab_data is not None
         tab_model.tab_data = tab_model.tab.tab_data.reshape(ntypes, ntypes, nspline, 4)
         return tab_model
 

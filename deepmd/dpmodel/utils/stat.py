@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 
 def _restore_from_file(
-    stat_file_path: DPPath,
+    stat_file_path: DPPath | None,
     keys: list[str],
 ) -> tuple[dict | None, dict | None]:
     """Restore bias and std from stat file."""
@@ -277,7 +277,7 @@ def compute_output_stats(
                 for kk in model_pred_g.keys()
                 if len(model_pred_g[kk]) > 0
             }
-            if model_pred
+            if model_pred_g
             else None
         )
         model_pred_a = (
@@ -286,7 +286,7 @@ def compute_output_stats(
                 for kk in model_pred_a.keys()
                 if len(model_pred_a[kk]) > 0
             }
-            if model_pred
+            if model_pred_a
             else None
         )
 
@@ -332,6 +332,8 @@ def compute_output_stats(
         if stat_file_path is not None:
             _save_to_file(stat_file_path, bias_atom_e, std_atom_e)
 
+    assert bias_atom_e is not None
+    assert std_atom_e is not None
     return bias_atom_e, std_atom_e
 
 
@@ -370,11 +372,13 @@ def compute_output_stats_global(
 
     # shape: (nframes, ndim)
     merged_output = {
-        kk: np.concatenate(outputs[kk]) for kk in keys if len(outputs[kk]) > 0
+        kk: np.concatenate([v for v in outputs[kk] if v is not None])
+        for kk in keys
+        if len(outputs[kk]) > 0
     }
     # shape: (nframes, ntypes)
     merged_natoms = {
-        kk: np.concatenate(input_natoms[kk])[:, 2:]
+        kk: np.concatenate([v for v in input_natoms[kk] if v is not None])[:, 2:]
         for kk in keys
         if len(input_natoms[kk]) > 0
     }
@@ -485,7 +489,10 @@ def compute_output_stats_atomic(
 
     # reshape outputs [nframes, nloc * ndim] --> reshape to [nframes * nloc, 1, ndim] for concatenation
     # reshape natoms [nframes, nloc] --> reshape to [nframes * nolc, 1] for concatenation
-    natoms = {k: [sys_v.reshape(-1, 1) for sys_v in v] for k, v in natoms.items()}
+    natoms = {
+        k: [sys_v.reshape(-1, 1) for sys_v in v if sys_v is not None]
+        for k, v in natoms.items()
+    }
     outputs = {
         k: [
             sys.reshape(natoms[k][sys_idx].shape[0], 1, -1)

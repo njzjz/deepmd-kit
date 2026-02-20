@@ -22,7 +22,7 @@ import numpy as np
 import yaml
 
 try:
-    from deepmd._version import version as __version__
+    from deepmd._version import version as __version__  # type: ignore[import]
 except ImportError:
     __version__ = "unknown"
 
@@ -107,7 +107,7 @@ def save_dp_model(filename: str, model_dict: dict) -> None:
             model_dict = traverse_model_dict(
                 model_dict,
                 lambda x: (
-                    f.create_dataset(f"variable_{variable_counter():04d}", data=x).name
+                    f.create_dataset(f"variable_{variable_counter():04d}", data=x).name  # type: ignore[union-attr]
                 ),
             )
             save_dict = {
@@ -159,7 +159,7 @@ def load_dp_model(filename: str) -> dict:
     if filename_extension in {".dp", ".hlo"}:
         with h5py.File(filename, "r") as f:
             model_dict = json.loads(f.attrs["json"])
-            model_dict = traverse_model_dict(model_dict, lambda x: f[x][()].copy())
+            model_dict = traverse_model_dict(model_dict, lambda x: f[x][()].copy())  # type: ignore[index]
     elif filename_extension in {".yaml", ".yml"}:
 
         def convert_numpy_ndarray(x: Any) -> Any:

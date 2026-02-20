@@ -422,7 +422,8 @@ class BaseAtomicModel(BaseAtomicModel_, NativeOP):
                 aparam=aparam,
             )
             # Convert outputs back to numpy arrays
-            return {kk: to_numpy_array(vv) for kk, vv in atomic_ret.items()}
+            ret = {kk: to_numpy_array(vv) for kk, vv in atomic_ret.items()}
+            return {kk: vv for kk, vv in ret.items() if vv is not None}
 
         return model_forward
 

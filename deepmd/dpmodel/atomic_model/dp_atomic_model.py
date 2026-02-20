@@ -221,8 +221,8 @@ class DPAtomicModel(BaseAtomicModel):
         check_version_compatibility(data.pop("@version", 1), 2, 2)
         data.pop("@class")
         data.pop("type")
-        descriptor_obj = cls.base_descriptor_cls.deserialize(data.pop("descriptor"))
-        fitting_obj = cls.base_fitting_cls.deserialize(data.pop("fitting"))
+        descriptor_obj = cls.base_descriptor_cls.deserialize(data.pop("descriptor"))  # type: ignore[attr-defined]
+        fitting_obj = cls.base_fitting_cls.deserialize(data.pop("fitting"))  # type: ignore[attr-defined]
         data["descriptor"] = descriptor_obj
         data["fitting"] = fitting_obj
         obj = super().deserialize(data)

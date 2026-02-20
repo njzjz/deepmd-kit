@@ -72,7 +72,7 @@ def xp_scatter_sum(input: Array, dim: int, index: Array, src: Array) -> Array:
         # PyTorch: use scatter_add (non-mutating version) for better performance
         import torch
 
-        return torch.scatter_add(input, dim, index, src)
+        return torch.scatter_add(input, dim, index, src)  # type: ignore[arg-type]
 
     # Generic array_api implementation (works for JAX, NumPy, array-api-strict, etc.)
     xp = array_api_compat.array_namespace(input)
@@ -107,12 +107,12 @@ def xp_add_at(x: Array, indices: Array, values: Array) -> Array:
 
     elif array_api_compat.is_jax_array(x):
         # JAX: functional update, not in-place
-        return x.at[indices].add(values)
+        return x.at[indices].add(values)  # type: ignore[union-attr]
     elif array_api_compat.is_torch_array(x):
         # PyTorch: use index_add (non-mutating version)
         import torch
 
-        return torch.index_add(x, 0, indices, values)
+        return torch.index_add(x, 0, indices, values)  # type: ignore[arg-type]
     else:
         # Fallback for array_api_strict: use basic indexing only
         # may need a more efficient way to do this
@@ -165,13 +165,13 @@ def xp_setitem_at(x: Array, mask: Array, values: Array) -> Array:
     """
     if array_api_compat.is_jax_array(x):
         # JAX doesn't support in-place item assignment
-        return x.at[mask].set(values)
+        return x.at[mask].set(values)  # type: ignore[union-attr]
     elif array_api_compat.is_torch_array(x):
         # PyTorch: clone to avoid mutating the input (non-mutating version)
         import torch
 
         result = torch.clone(x)
-        result[mask] = values
+        result[mask] = values  # type: ignore[index]
         return result
     # Standard item assignment for NumPy, array-api-strict, etc.
     x[mask] = values

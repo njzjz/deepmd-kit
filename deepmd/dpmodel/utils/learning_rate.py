@@ -23,7 +23,7 @@ from deepmd.utils.plugin import (
 
 
 class BaseLR(ABC, PluginVariant, make_plugin_registry("lr")):
-    def __new__(cls: type, *args: Any, **kwargs: Any) -> Any:
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         if cls is BaseLR:
             cls = cls.get_class_by_type(j_get_type(kwargs, cls.__name__))
         return super().__new__(cls)

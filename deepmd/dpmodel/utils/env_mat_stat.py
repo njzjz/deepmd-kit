@@ -34,8 +34,8 @@ from deepmd.utils.env_mat_stat import (
 )
 
 if TYPE_CHECKING:
-    from deepmd.dpmodel.descriptor import (
-        Descriptor,
+    from deepmd.dpmodel.descriptor.base_descriptor import BaseDescriptor as Descriptor
+    from deepmd.dpmodel.descriptor.descriptor import (
         DescriptorBlock,
     )
 
@@ -134,6 +134,8 @@ class EnvMatStatSe(EnvMatStat):
                 system["box"],
                 system["natoms"],
             )
+            assert not isinstance(coord, list)
+            assert not isinstance(atype, list)
             (
                 extended_coord,
                 extended_atype,
@@ -190,8 +192,10 @@ class EnvMatStatSe(EnvMatStat):
                 ),
             )
             if "pair_exclude_types" in system:
+                pair_exclude_types = system["pair_exclude_types"]
+                assert isinstance(pair_exclude_types, list)
                 pair_exclude_mask = PairExcludeMask(
-                    self.descriptor.get_ntypes(), system["pair_exclude_types"]
+                    self.descriptor.get_ntypes(), pair_exclude_types
                 )
                 pair_exclude_mask.type_mask = xp.asarray(
                     pair_exclude_mask.type_mask,
