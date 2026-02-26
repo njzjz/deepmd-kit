@@ -116,8 +116,15 @@ def build_neighbor_list(
     )
     assert list(diff.shape) == [batch_size, nloc, nall, 3]
     rr = xp.linalg.vector_norm(diff, axis=-1)
+    device = array_api_compat.device(diff)
+    if array_api_compat.is_jax_namespace(xp):
+        # fix jax sharding "list index out of range"
+        from jax.sharding import PartitionSpec as P, NamedSharding
+
+        if isinstance(device, NamedSharding):
+            device = NamedSharding(device.mesh, P())
     # if central atom has two zero distances, sorting sometimes can not exclude itself
-    rr -= xp.eye(nloc, nall, dtype=diff.dtype, device=array_api_compat.device(diff))[
+    rr -= xp.eye(nloc, nall, dtype=diff.dtype, device=device)[
         xp.newaxis, :, :
     ]
     nlist = xp.argsort(rr, axis=-1)
