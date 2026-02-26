@@ -172,7 +172,9 @@ class DeepmdDataSystem:
                 rule = int(words[1])
                 filtered_data_systems = []
                 filtered_system_dirs = []
-                for sys_dir, data_sys in zip(self.system_dirs, self.data_systems):
+                for sys_dir, data_sys in zip(
+                    self.system_dirs, self.data_systems, strict=True
+                ):
                     if data_sys.get_natoms() <= rule:
                         filtered_data_systems.append(data_sys)
                         filtered_system_dirs.append(sys_dir)
@@ -713,9 +715,9 @@ def print_summary(
     # width 65
     sys_width = 42
     log.info(
-        f"---Summary of DataSystem: {name:13s}-----------------------------------------------"
+        f"---Summary of DataSystem: {name.capitalize():13s}-----------------------------------------------"
     )
-    log.info("found %d system(s):", nsystems)
+    log.info("Found %d System(s):", nsystems)
     log.info(
         "%s  %6s  %6s  %6s  %9s  %3s",
         _format_name_length("system", sys_width),

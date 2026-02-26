@@ -90,6 +90,7 @@ class DeepEval(DeepEvalBackend):
 
         model_data = load_dp_model(model_file)
         self.dp = BaseModel.deserialize(model_data["model"])
+        self.dp.model_def_script = json.dumps(model_data.get("model_def_script", {}))
         self.rcut = self.dp.get_rcut()
         self.type_map = self.dp.get_type_map()
         if isinstance(auto_batch_size, bool):
@@ -228,6 +229,7 @@ class DeepEval(DeepEvalBackend):
             zip(
                 [x.name for x in request_defs],
                 out,
+                strict=True,
             )
         )
 
@@ -356,9 +358,7 @@ class DeepEval(DeepEvalBackend):
 
         results = []
         for odef in request_defs:
-            # it seems not doing conversion
-            # dp_name = self._OUTDEF_DP2BACKEND[odef.name]
-            dp_name = odef.name
+            dp_name = self._OUTDEF_DP2BACKEND[odef.name]
             if dp_name in batch_output:
                 shape = self._get_output_shape(odef, nframes, natoms)
                 if batch_output[dp_name] is not None:

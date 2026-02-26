@@ -38,7 +38,18 @@ from .pairtab_atomic_model import (
 
 @BaseAtomicModel.register("linear")
 class LinearEnergyAtomicModel(BaseAtomicModel):
-    """Linear model make linear combinations of several existing models.
+    r"""Linear model makes linear combinations of several existing models.
+
+    The linear model combines predictions from multiple atomic models:
+
+    .. math::
+        E^i = \sum_{k=1}^{K} w_k \cdot E_k^i,
+
+    where :math:`E_k^i` is the energy predicted by the :math:`k`-th sub-model
+    for atom :math:`i`, and :math:`w_k` is the corresponding weight.
+
+    This is useful for combining different interaction types, e.g., DP + ZBL
+    for short-range repulsion, or DP + D3 for dispersion corrections.
 
     Parameters
     ----------
@@ -155,7 +166,7 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
     def _sort_rcuts_sels(self) -> tuple[tuple[Array, Array], list[int]]:
         # sort the pair of rcut and sels in ascending order, first based on sel, then on rcut.
         zipped = sorted(
-            zip(self.get_model_rcuts(), self.get_model_nsels()),
+            zip(self.get_model_rcuts(), self.get_model_nsels(), strict=True),
             key=lambda x: (x[1], x[0]),
         )
         return [p[0] for p in zipped], [p[1] for p in zipped]
@@ -235,12 +246,14 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         )
         raw_nlists = [
             nlists[get_multiple_nlist_key(rcut, sel)]
-            for rcut, sel in zip(self.get_model_rcuts(), self.get_model_nsels())
+            for rcut, sel in zip(
+                self.get_model_rcuts(), self.get_model_nsels(), strict=True
+            )
         ]
         nlists_ = [
             nl if mt else nlist_distinguish_types(nl, extended_atype, sel)
             for mt, nl, sel in zip(
-                self.mixed_types_list, raw_nlists, self.get_model_sels()
+                self.mixed_types_list, raw_nlists, self.get_model_sels(), strict=True
             )
         ]
         ener_list = []
@@ -335,9 +348,11 @@ class LinearEnergyAtomicModel(BaseAtomicModel):
         xp = array_api_compat.array_namespace(extended_coord, extended_atype, nlists_)
         nmodels = len(self.models)
         nframes, nloc, _ = nlists_[0].shape
+        dev = array_api_compat.device(extended_coord)
         # the dtype of weights is the interface data type.
         return [
-            xp.ones((nframes, nloc, 1), dtype=GLOBAL_NP_FLOAT_PRECISION) / nmodels
+            xp.ones((nframes, nloc, 1), dtype=GLOBAL_NP_FLOAT_PRECISION, device=dev)
+            / nmodels
             for _ in range(nmodels)
         ]
 

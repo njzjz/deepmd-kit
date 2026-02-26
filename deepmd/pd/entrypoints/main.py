@@ -219,10 +219,24 @@ class SummaryPrinter(BaseSummaryPrinter):
         op_info = {}
         return {
             "Backend": "Paddle",
-            "PD ver": f"v{paddle.__version__}-g{paddle.version.commit[:11]}",
-            "Enable custom OP": False,
+            "PD Ver": f"v{paddle.__version__}-g{paddle.version.commit[:11]}",
+            "Custom OP Enabled": False,
             **op_info,
         }
+
+    def get_device_name(self) -> str | None:
+        """Get the underlying GPU name.
+
+        Returns
+        -------
+        str or None
+            The device name if available, otherwise None.
+        """
+        if paddle.device.is_compiled_with_cuda():
+            cuda = paddle.device.cuda
+            if cuda.device_count() > 0:
+                return cuda.get_device_name()
+        return None
 
 
 def train(
@@ -560,7 +574,7 @@ def change_bias(
     log.info(f"Saved model to {output_path}")
 
 
-def main(args: list[str] | argparse.Namespace | None = None):
+def main(args: list[str] | argparse.Namespace | None = None) -> None:
     if not isinstance(args, argparse.Namespace):
         FLAGS = parse_args(args=args)
     else:

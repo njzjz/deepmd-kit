@@ -249,6 +249,7 @@ class DeepEval(DeepEvalBackend):
             zip(
                 [x.name for x in request_defs],
                 out,
+                strict=True,
             )
         )
 
@@ -355,6 +356,14 @@ class DeepEval(DeepEvalBackend):
             box_input = None
         if fparam is not None:
             fparam_input = fparam.reshape(nframes, self.get_dim_fparam())
+        elif self.dp.has_default_fparam():
+            # JAX (XLA) requires static shapes, so default must be implemented here
+            default_fparam = self.dp.get_default_fparam()
+            assert default_fparam is not None
+            fparam_input = np.tile(
+                np.array(default_fparam, dtype=GLOBAL_NP_FLOAT_PRECISION),
+                (nframes, 1),
+            )
         else:
             fparam_input = None
         if aparam is not None:
@@ -380,8 +389,8 @@ class DeepEval(DeepEvalBackend):
 
         results = []
         for odef in request_defs:
-            # it seems not doing conversion
-            # dp_name = self._OUTDEF_DP2BACKEND[odef.name]
+            # HLO and TFModelWrapper return raw internal keys (not translated),
+            # so no key mapping is needed here.
             dp_name = odef.name
             if dp_name in batch_output:
                 shape = self._get_output_shape(odef, nframes, natoms)
@@ -438,3 +447,7 @@ class DeepEval(DeepEvalBackend):
             The JAX model as BaseModel instance.
         """
         return self.dp
+
+    def has_default_fparam(self) -> bool:
+        """Check if the model has default frame parameters."""
+        return self.dp.has_default_fparam()

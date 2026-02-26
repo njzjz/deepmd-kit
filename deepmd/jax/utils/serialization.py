@@ -57,7 +57,7 @@ def deserialize_to_file(model_file: str, data: dict, hessian: bool = False) -> N
         if hessian:
             model.enable_hessian()
             model_def_script["hessian_mode"] = True
-        call_lower = model.call_lower
+        call_lower = model.call_common_lower
 
         nf, nloc, nghost = jax_export.symbolic_shape("nf, nloc, nghost")
 
@@ -141,6 +141,8 @@ def deserialize_to_file(model_file: str, data: dict, hessian: bool = False) -> N
             "mixed_types": model.mixed_types(),
             "min_nbor_dist": model.get_min_nbor_dist(),
             "sel": model.get_sel(),
+            "has_default_fparam": model.has_default_fparam(),
+            "default_fparam": model.get_default_fparam(),
         }
         save_dp_model(filename=model_file, model_dict=data)
     elif model_file.endswith(".savedmodel"):

@@ -23,6 +23,11 @@ import torch
 from deepmd.common import (
     symlink_prefix_files,
 )
+from deepmd.dpmodel.utils import (
+    compute_total_numb_batch,
+    resolve_model_prob,
+    resolve_model_prob_from_epochs,
+)
 from deepmd.loggers.training import (
     format_training_message,
     format_training_message_per_task,
@@ -42,6 +47,8 @@ from deepmd.pt.model.model import (
     get_zbl_model,
 )
 from deepmd.pt.optimizer import (
+    AdaMuonOptimizer,
+    HybridMuonOptimizer,
     KFOptimizerWrapper,
     LKFOptimizer,
 )
@@ -63,7 +70,7 @@ from deepmd.pt.utils.env import (
     SAMPLER_RECORD,
 )
 from deepmd.pt.utils.learning_rate import (
-    LearningRateExp,
+    BaseLR,
 )
 from deepmd.pt.utils.stat import (
     make_stat_input,
@@ -79,6 +86,18 @@ if torch.__version__.startswith("2"):
     import torch._dynamo
 
 import torch.distributed as dist
+from torch.distributed.checkpoint.state_dict import (
+    StateDictOptions,
+    get_model_state_dict,
+    get_optimizer_state_dict,
+    set_optimizer_state_dict,
+)
+from torch.distributed.fsdp import (
+    fully_shard,
+)
+from torch.distributed.optim import (
+    ZeroRedundancyOptimizer,
+)
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import (
     DataLoader,
@@ -129,18 +148,16 @@ class Trainer:
         self.model_keys = (
             list(model_params["model_dict"]) if self.multi_task else ["Default"]
         )
-        self.rank = (
-            dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
-        )
-        self.world_size = (
-            dist.get_world_size()
-            if dist.is_available() and dist.is_initialized()
-            else 1
-        )
+        self.is_distributed = dist.is_available() and dist.is_initialized()
+        self.rank = dist.get_rank() if self.is_distributed else 0
+        self.world_size = dist.get_world_size() if self.is_distributed else 1
         self.num_model = len(self.model_keys)
+        self.model_prob = None
 
         # Iteration config
-        self.num_steps = training_params["numb_steps"]
+        self.num_steps = training_params.get("numb_steps")
+        self.num_epoch = training_params.get("num_epoch")
+        self.num_epoch_dict = training_params.get("num_epoch_dict")
         self.disp_file = training_params.get("disp_file", "lcurve.out")
         self.disp_freq = training_params.get("disp_freq", 1000)
         self.disp_avg = training_params.get("disp_avg", False)
@@ -152,17 +169,41 @@ class Trainer:
         self.change_bias_after_training = training_params.get(
             "change_bias_after_training", False
         )
+        self.zero_stage = int(training_params.get("zero_stage", 0))
+        if self.zero_stage not in (0, 1, 2, 3):
+            raise ValueError(
+                f"training.zero_stage must be 0, 1, 2, or 3, got {self.zero_stage}"
+            )
+        if self.zero_stage > 0 and not self.is_distributed:
+            raise ValueError(
+                "training.zero_stage requires distributed launch via torchrun."
+            )
+        if self.zero_stage > 0 and self.change_bias_after_training:
+            raise ValueError(
+                "training.zero_stage does not support change_bias_after_training."
+            )
         self.lcurve_should_print_header = True
 
         def get_opt_param(params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
             opt_type = params.get("opt_type", "Adam")
             opt_param = {
+                # LKF parameters
                 "kf_blocksize": params.get("kf_blocksize", 5120),
                 "kf_start_pref_e": params.get("kf_start_pref_e", 1),
                 "kf_limit_pref_e": params.get("kf_limit_pref_e", 1),
                 "kf_start_pref_f": params.get("kf_start_pref_f", 1),
                 "kf_limit_pref_f": params.get("kf_limit_pref_f", 1),
+                # Common parameters
                 "weight_decay": params.get("weight_decay", 0.001),
+                # Muon/AdaMuon parameters
+                "momentum": params.get("momentum", 0.95),
+                "adam_beta1": params.get("adam_beta1", 0.9),
+                "adam_beta2": params.get("adam_beta2", 0.95),
+                "lr_adjust": params.get("lr_adjust", 10.0),
+                "lr_adjust_coeff": params.get("lr_adjust_coeff", 0.2),
+                "muon_2d_only": params.get("muon_2d_only", True),
+                "min_2d_dim": params.get("min_2d_dim", 1),
+                "flash_muon": params.get("flash_muon", True),
             }
             return opt_type, opt_param
 
@@ -245,16 +286,9 @@ class Trainer:
             _model: Any,
             _data_stat_nbatch: int,
             _training_data: DpLoaderSet,
-            _validation_data: DpLoaderSet | None,
             _stat_file_path: str | None,
-            _data_requirement: list[DataRequirementItem],
             finetune_has_new_type: bool = False,
         ) -> Callable[[], Any]:
-            _data_requirement += get_additional_data_requirement(_model)
-            _training_data.add_data_requirement(_data_requirement)
-            if _validation_data is not None:
-                _validation_data.add_data_requirement(_data_requirement)
-
             @functools.lru_cache
             def get_sample() -> Any:
                 sampled = make_stat_input(
@@ -273,13 +307,10 @@ class Trainer:
                     _stat_file_path.root.close()
             return get_sample
 
-        def get_lr(lr_params: dict[str, Any]) -> LearningRateExp:
-            assert lr_params.get("type", "exp") == "exp", (
-                "Only learning rate `exp` is supported!"
-            )
-            lr_params["stop_steps"] = self.num_steps - self.warmup_steps
-            lr_exp = LearningRateExp(**lr_params)
-            return lr_exp
+        def get_lr(lr_params: dict[str, Any]) -> BaseLR:
+            lr_params["num_steps"] = self.num_steps
+            lr_schedule = BaseLR(**lr_params)
+            return lr_schedule
 
         # Optimizer
         if self.multi_task and training_params.get("optim_dict", None) is not None:
@@ -298,6 +329,12 @@ class Trainer:
                 )
         else:
             self.opt_type, self.opt_param = get_opt_param(training_params)
+        if self.zero_stage > 0 and self.multi_task:
+            raise ValueError(
+                "training.zero_stage is currently only supported in single-task training."
+            )
+        if self.zero_stage > 0 and self.opt_type == "LKF":
+            raise ValueError("training.zero_stage does not support LKF optimizer.")
 
         # loss_param_tmp for Hessian activation
         loss_param_tmp = None
@@ -339,13 +376,21 @@ class Trainer:
 
         # Data
         if not self.multi_task:
+            # add data requirement for labels
+            data_requirement = self.loss.label_requirement
+            data_requirement += get_additional_data_requirement(self.model)
+            training_data.add_data_requirement(data_requirement)
+            if validation_data is not None:
+                validation_data.add_data_requirement(data_requirement)
+            # Preload and apply modifiers to all data before computing statistics
+            training_data.preload_and_modify_all_data_torch()
+            if validation_data is not None:
+                validation_data.preload_and_modify_all_data_torch()
             self.get_sample_func = single_model_stat(
                 self.model,
                 model_params.get("data_stat_nbatch", 10),
                 training_data,
-                validation_data,
                 stat_file_path,
-                self.loss.label_requirement,
                 finetune_has_new_type=self.finetune_links["Default"].get_has_new_type()
                 if self.finetune_links is not None
                 else False,
@@ -375,19 +420,30 @@ class Trainer:
                 self.get_sample_func,
             ) = {}, {}, {}, {}, {}, {}
             for model_key in self.model_keys:
+                # add data requirement for labels
+                data_requirement = self.loss[model_key].label_requirement
+                data_requirement += get_additional_data_requirement(
+                    self.model[model_key]
+                )
+                training_data[model_key].add_data_requirement(data_requirement)
+                if validation_data[model_key] is not None:
+                    validation_data[model_key].add_data_requirement(data_requirement)
+                # Preload and apply modifiers to all data before computing statistics
+                training_data[model_key].preload_and_modify_all_data_torch()
+                if validation_data[model_key] is not None:
+                    validation_data[model_key].preload_and_modify_all_data_torch()
                 self.get_sample_func[model_key] = single_model_stat(
                     self.model[model_key],
                     model_params["model_dict"][model_key].get("data_stat_nbatch", 10),
                     training_data[model_key],
-                    validation_data[model_key],
                     stat_file_path[model_key],
-                    self.loss[model_key].label_requirement,
                     finetune_has_new_type=self.finetune_links[
                         model_key
                     ].get_has_new_type()
                     if self.finetune_links is not None
                     else False,
                 )
+
                 (
                     self.training_dataloader[model_key],
                     self.training_data[model_key],
@@ -415,18 +471,91 @@ class Trainer:
                         ),
                     )
 
-        # Learning rate
-        self.warmup_steps = training_params.get("warmup_steps", 0)
-        self.gradient_max_norm = training_params.get("gradient_max_norm", 0.0)
-        assert self.num_steps - self.warmup_steps > 0 or self.warmup_steps == 0, (
-            "Warm up steps must be less than total training steps!"
-        )
-        if self.multi_task and config.get("learning_rate_dict", None) is not None:
-            self.lr_exp = {}
-            for model_key in self.model_keys:
-                self.lr_exp[model_key] = get_lr(config["learning_rate_dict"][model_key])
+        # Resolve training steps
+        per_task_total = []
+        if not self.multi_task:
+            if self.num_steps is None:
+                if self.num_epoch is None:
+                    raise ValueError(
+                        "Either training.numb_steps or training.num_epoch must be set."
+                    )
+                if self.num_epoch <= 0:
+                    raise ValueError("training.num_epoch must be positive.")
+                sampler_weights = to_numpy_array(
+                    self.training_dataloader.sampler.weights
+                )
+                total_numb_batch = compute_total_numb_batch(
+                    training_data.index,
+                    sampler_weights,
+                )
+                if total_numb_batch <= 0:
+                    raise ValueError(
+                        "Total number of training batches must be positive."
+                    )
+                self.num_steps = int(np.ceil(self.num_epoch * total_numb_batch))
+                log.info(
+                    "Computed num_steps=%d from num_epoch=%s and total_numb_batch=%d.",
+                    self.num_steps,
+                    self.num_epoch,
+                    total_numb_batch,
+                )
         else:
-            self.lr_exp = get_lr(config["learning_rate"])
+            if self.num_epoch_dict:
+                if self.num_steps is not None:
+                    raise ValueError(
+                        "training.numb_steps and training.num_epoch_dict "
+                        "are mutually exclusive."
+                    )
+                for model_key in self.model_keys:
+                    sampler_weights = to_numpy_array(
+                        self.training_dataloader[model_key].sampler.weights
+                    )
+                    per_task_total.append(
+                        compute_total_numb_batch(
+                            training_data[model_key].index,
+                            sampler_weights,
+                        )
+                    )
+                (
+                    self.model_prob,
+                    self.num_steps,
+                    per_task_steps,
+                ) = resolve_model_prob_from_epochs(
+                    self.model_keys,
+                    self.num_epoch_dict,
+                    np.asarray(per_task_total, dtype=np.float64),
+                )
+                log.info(
+                    "Computed model_prob=%s and num_steps=%d from num_epoch_dict=%s "
+                    "with per-task target steps: %s.",
+                    self.model_prob,
+                    self.num_steps,
+                    self.num_epoch_dict,
+                    {k: int(np.ceil(v)) for k, v in per_task_steps.items()},
+                )
+            else:
+                if self.num_steps is None:
+                    raise ValueError(
+                        "Either training.numb_steps (multi-task only) or "
+                        "training.num_epoch_dict must be set."
+                    )
+                self.model_prob = resolve_model_prob(
+                    self.model_keys,
+                    training_params.get("model_prob"),
+                    training_data,
+                    rank=self.rank,
+                )
+
+        # Learning rate
+        self.gradient_max_norm = training_params.get("gradient_max_norm", 0.0)
+        if self.multi_task and config.get("learning_rate_dict", None) is not None:
+            self.lr_schedule = {}
+            for model_key in self.model_keys:
+                self.lr_schedule[model_key] = get_lr(
+                    config["learning_rate_dict"][model_key]
+                )
+        else:
+            self.lr_schedule = get_lr(config["learning_rate"])
 
         # JIT
         if JIT:
@@ -613,22 +742,12 @@ class Trainer:
 
         if init_frz_model is not None:
             frz_model = torch.jit.load(init_frz_model, map_location=DEVICE)
-            self.model.load_state_dict(frz_model.state_dict())
-
-        # Get model prob for multi-task
-        if self.multi_task:
-            self.model_prob = np.array([0.0 for key in self.model_keys])
-            if training_params.get("model_prob", None) is not None:
-                model_prob = training_params["model_prob"]
-                for ii, model_key in enumerate(self.model_keys):
-                    if model_key in model_prob:
-                        self.model_prob[ii] += float(model_prob[model_key])
-            else:
-                for ii, model_key in enumerate(self.model_keys):
-                    self.model_prob[ii] += float(len(self.training_data[model_key]))
-            sum_prob = np.sum(self.model_prob)
-            assert sum_prob > 0.0, "Sum of model prob must be larger than 0!"
-            self.model_prob = self.model_prob / sum_prob
+            state = frz_model.state_dict()
+            missing, unexpected = self.model.load_state_dict(state, strict=False)
+            if missing or unexpected:
+                log.warning(
+                    f"Checkpoint loaded non-strictly. Missing keys: {missing}, Unexpected keys: {unexpected}"
+                )
 
         # Multi-task share params
         if shared_links is not None:
@@ -648,52 +767,118 @@ class Trainer:
                 data_stat_protect=_data_stat_protect[0],
             )
 
-        if dist.is_available() and dist.is_initialized():
+        if self.is_distributed:
             torch.cuda.set_device(LOCAL_RANK)
-            # DDP will guarantee the model parameters are identical across all processes
-            self.wrapper = DDP(
-                self.wrapper,
-                device_ids=[LOCAL_RANK],
-                find_unused_parameters=True,
-                output_device=LOCAL_RANK,
-            )
+            if self.zero_stage >= 2:
+                # FSDP2 does NOT broadcast params (unlike DDP constructor).
+                # Ensure all ranks share identical weights before sharding.
+                for p in self.wrapper.parameters():
+                    dist.broadcast(p.data, src=0)
+                for b in self.wrapper.buffers():
+                    dist.broadcast(b.data, src=0)
+                reshard = self.zero_stage >= 3
+                self.wrapper = fully_shard(self.wrapper, reshard_after_forward=reshard)
+            else:
+                # zero_stage=0 or 1: standard DDP (ZeRO-1 will wrap the optimizer)
+                self.wrapper = DDP(
+                    self.wrapper,
+                    device_ids=[LOCAL_RANK],
+                    find_unused_parameters=True,
+                    output_device=LOCAL_RANK,
+                )
 
         # TODO add lr warmups for multitask
         # author: iProzd
-        def warm_up_linear(step: int, warmup_steps: int) -> float:
-            if step < warmup_steps:
-                return step / warmup_steps
-            else:
-                return self.lr_exp.value(step - warmup_steps) / self.lr_exp.start_lr
-
         # TODO add optimizers for multitask
         # author: iProzd
+        initial_lr = self.lr_schedule.value(self.start_step)
         if self.opt_type in ["Adam", "AdamW"]:
+            # Initialize optimizer with the actual learning rate at start_step
+            # to ensure warmup is applied from the first step
             if self.opt_type == "Adam":
-                self.optimizer = torch.optim.Adam(
-                    self.wrapper.parameters(),
-                    lr=self.lr_exp.start_lr,
-                    fused=False if DEVICE.type == "cpu" else True,
+                self.optimizer = self._create_optimizer(
+                    torch.optim.Adam,
+                    lr=initial_lr,
+                    fused=DEVICE.type != "cpu",
                 )
             else:
-                self.optimizer = torch.optim.AdamW(
-                    self.wrapper.parameters(),
-                    lr=self.lr_exp.start_lr,
+                self.optimizer = self._create_optimizer(
+                    torch.optim.AdamW,
+                    lr=initial_lr,
                     weight_decay=float(self.opt_param["weight_decay"]),
-                    fused=False if DEVICE.type == "cpu" else True,
+                    fused=DEVICE.type != "cpu",
                 )
-            if optimizer_state_dict is not None and self.restart_training:
-                self.optimizer.load_state_dict(optimizer_state_dict)
+            self._load_optimizer_state(optimizer_state_dict)
             self.scheduler = torch.optim.lr_scheduler.LambdaLR(
                 self.optimizer,
-                lambda step: warm_up_linear(step + self.start_step, self.warmup_steps),
+                lambda step: (
+                    self.lr_schedule.value(step + self.start_step) / initial_lr
+                ),
+                last_epoch=self.start_step - 1,
             )
         elif self.opt_type == "LKF":
             self.optimizer = LKFOptimizer(
                 self.wrapper.parameters(), 0.98, 0.99870, self.opt_param["kf_blocksize"]
             )
+        elif self.opt_type == "AdaMuon":
+            self.optimizer = self._create_optimizer(
+                AdaMuonOptimizer,
+                lr=initial_lr,
+                momentum=float(self.opt_param["momentum"]),
+                weight_decay=float(self.opt_param["weight_decay"]),
+                adam_betas=(
+                    float(self.opt_param["adam_beta1"]),
+                    float(self.opt_param["adam_beta2"]),
+                ),
+                lr_adjust=float(self.opt_param["lr_adjust"]),
+                lr_adjust_coeff=float(self.opt_param["lr_adjust_coeff"]),
+            )
+            if optimizer_state_dict is not None and self.restart_training:
+                self.optimizer.load_state_dict(optimizer_state_dict)
+            self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+                self.optimizer,
+                lambda step: (
+                    self.lr_schedule.value(step + self.start_step) / initial_lr
+                ),
+                last_epoch=self.start_step - 1,
+            )
+        elif self.opt_type == "HybridMuon":
+            self.optimizer = self._create_optimizer(
+                HybridMuonOptimizer,
+                lr=initial_lr,
+                momentum=float(self.opt_param["momentum"]),
+                weight_decay=float(self.opt_param["weight_decay"]),
+                adam_betas=(
+                    float(self.opt_param["adam_beta1"]),
+                    float(self.opt_param["adam_beta2"]),
+                ),
+                lr_adjust=float(self.opt_param["lr_adjust"]),
+                lr_adjust_coeff=float(self.opt_param["lr_adjust_coeff"]),
+                muon_2d_only=bool(self.opt_param["muon_2d_only"]),
+                min_2d_dim=int(self.opt_param["min_2d_dim"]),
+                flash_muon=bool(self.opt_param["flash_muon"]),
+            )
+            self._load_optimizer_state(optimizer_state_dict)
+            self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+                self.optimizer,
+                lambda step: (
+                    self.lr_schedule.value(step + self.start_step) / initial_lr
+                ),
+                last_epoch=self.start_step - 1,
+            )
         else:
             raise ValueError(f"Not supported optimizer type '{self.opt_type}'")
+
+        if self.zero_stage > 0 and self.rank == 0:
+            if self.zero_stage == 1:
+                log.info("Enabled DDP + ZeRO Stage-1 Optimizer State Sharding.")
+            else:
+                stage = (
+                    "FULL_SHARD (Stage 3)"
+                    if self.zero_stage >= 3
+                    else "SHARD_GRAD_OP (Stage 2)"
+                )
+                log.info(f"Enabled FSDP2 {stage}.")
 
         # Tensorboard
         self.enable_tensorboard = training_params.get("tensorboard", False)
@@ -702,6 +887,99 @@ class Trainer:
         self.enable_profiler = training_params.get("enable_profiler", False)
         self.profiling = training_params.get("profiling", False)
         self.profiling_file = training_params.get("profiling_file", "timeline.json")
+
+        # Log model parameter count
+        if self.rank == 0:
+            self._log_parameter_count()
+
+    @staticmethod
+    def _count_parameters(model: torch.nn.Module) -> tuple[int, int]:
+        """
+        Count model parameters.
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            The model to count parameters for.
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple of (trainable, total) parameter counts.
+        """
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        total = sum(p.numel() for p in model.parameters())
+        return trainable, total
+
+    def _log_parameter_count(self) -> None:
+        """Log model parameter count."""
+        if not self.multi_task:
+            trainable, total = self._count_parameters(self.model)
+            log.info(
+                f"Model Params:  {total / 1e6:.3f} M   (Trainable: {trainable / 1e6:.3f} M)"
+            )
+        else:
+            log.warning(
+                "In multitask mode, parameters may be shared across tasks. "
+                "The following per-task counts may include duplicates."
+            )
+            for model_key in self.model_keys:
+                trainable, total = self._count_parameters(self.model[model_key])
+                log.info(
+                    f"Model Params [{model_key}]: {total / 1e6:.3f} M   (Trainable: {trainable / 1e6:.3f} M)"
+                )
+
+    def _create_optimizer(
+        self,
+        optimizer_class: type[torch.optim.Optimizer],
+        **kwargs: Any,
+    ) -> torch.optim.Optimizer:
+        """
+        Construct optimizer, wrapping with ZeroRedundancyOptimizer when zero_stage=1.
+
+        Parameters
+        ----------
+        optimizer_class : type[torch.optim.Optimizer]
+            The optimizer class to instantiate.
+        **kwargs : Any
+            Keyword arguments forwarded to the optimizer constructor.
+
+        Returns
+        -------
+        torch.optim.Optimizer
+            Constructed optimizer instance.
+        """
+        if self.zero_stage == 1:
+            return ZeroRedundancyOptimizer(
+                self.wrapper.parameters(),
+                optimizer_class=optimizer_class,
+                **kwargs,
+            )
+        return optimizer_class(self.wrapper.parameters(), **kwargs)
+
+    def _get_inner_module(self) -> ModelWrapper:
+        """Unwrap DDP if needed. FSDP2 is in-place so no unwrapping required."""
+        if self.is_distributed and self.zero_stage <= 1:
+            return self.wrapper.module
+        return self.wrapper
+
+    def _load_optimizer_state(
+        self, optimizer_state_dict: dict[str, Any] | None
+    ) -> None:
+        """Load optimizer state for restart training when available."""
+        if optimizer_state_dict is None or not self.restart_training:
+            return
+        if self.zero_stage >= 2:
+            set_optimizer_state_dict(
+                self.wrapper,
+                self.optimizer,
+                optim_state_dict=optimizer_state_dict,
+                options=StateDictOptions(
+                    full_state_dict=True, broadcast_from_rank0=True
+                ),
+            )
+        else:
+            self.optimizer.load_state_dict(optimizer_state_dict)
 
     def run(self) -> None:
         fout = (
@@ -748,10 +1026,10 @@ class Trainer:
             # PyTorch Profiler
             if self.enable_profiler or self.profiling:
                 prof.step()
-            if isinstance(self.lr_exp, dict):
-                _lr = self.lr_exp[task_key]
+            if isinstance(self.lr_schedule, dict):
+                _lr = self.lr_schedule[task_key]
             else:
-                _lr = self.lr_exp
+                _lr = self.lr_schedule
             cur_lr = _lr.value(_step_id)
             pref_lr = cur_lr
             self.optimizer.zero_grad(set_to_none=True)
@@ -762,23 +1040,38 @@ class Trainer:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)
                 fout1.flush()
-            if self.opt_type in ["Adam", "AdamW"]:
+            if self.opt_type in ["Adam", "AdamW", "AdaMuon", "HybridMuon"]:
                 cur_lr = self.scheduler.get_last_lr()[0]
-                if _step_id < self.warmup_steps:
-                    pref_lr = _lr.start_lr
-                else:
-                    pref_lr = cur_lr
+                pref_lr = cur_lr
                 model_pred, loss, more_loss = self.wrapper(
                     **input_dict, cur_lr=pref_lr, label=label_dict, task_key=task_key
                 )
                 loss.backward()
                 if self.gradient_max_norm > 0.0:
-                    torch.nn.utils.clip_grad_norm_(
+                    # FSDP2 sharded DTensor gradients don't support error_if_nonfinite; use manual isfinite check instead.
+                    total_norm = torch.nn.utils.clip_grad_norm_(
                         self.wrapper.parameters(),
                         self.gradient_max_norm,
-                        error_if_nonfinite=True,
                     )
-                with torch.device("cpu"):
+                    if not torch.isfinite(total_norm):
+                        bad_params = []
+                        for name, p in self.wrapper.named_parameters():
+                            if p.grad is not None:
+                                grad_norm = p.grad.data.norm()
+                                if not torch.isfinite(grad_norm):
+                                    bad_params.append(
+                                        f"  {name}: grad_norm={grad_norm}, shape={list(p.shape)}"
+                                    )
+                        detail = (
+                            "\n".join(bad_params)
+                            if bad_params
+                            else "  (all individual grads finite, overflow in norm reduction)"
+                        )
+                        raise RuntimeError(
+                            f"Non-finite gradient norm: {total_norm}\n"
+                            f"Parameters with non-finite gradients:\n{detail}"
+                        )
+                with torch.device(DEVICE):
                     self.optimizer.step()
                 self.scheduler.step()
             elif self.opt_type == "LKF":
@@ -1086,20 +1379,15 @@ class Trainer:
                     and _step_id != self.start_step
                 )
                 or (display_step_id) == self.num_steps
-            ) and (self.rank == 0 or dist.get_rank() == 0):
+            ) and (self.zero_stage > 0 or self.rank == 0 or dist.get_rank() == 0):
                 # Handle the case if rank 0 aborted and re-assigned
                 self.latest_model = Path(self.save_ckpt + f"-{display_step_id}.pt")
-
-                module = (
-                    self.wrapper.module
-                    if dist.is_available() and dist.is_initialized()
-                    else self.wrapper
-                )
                 self.save_model(self.latest_model, lr=cur_lr, step=_step_id)
-                log.info(f"Saved model to {self.latest_model}")
-                symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
-                with open("checkpoint", "w") as f:
-                    f.write(str(self.latest_model))
+                if self.rank == 0 or dist.get_rank() == 0:
+                    log.info(f"Saved model to {self.latest_model}")
+                    symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
+                    with open("checkpoint", "w") as f:
+                        f.write(str(self.latest_model))
 
             # tensorboard
             if self.enable_tensorboard and (
@@ -1147,20 +1435,26 @@ class Trainer:
                         _bias_adjust_mode="change-by-statistic",
                     )
             self.latest_model = Path(self.save_ckpt + f"-{self.num_steps}.pt")
-            cur_lr = self.lr_exp.value(self.num_steps - 1)
+            cur_lr = self.lr_schedule.value(self.num_steps - 1)
             self.save_model(self.latest_model, lr=cur_lr, step=self.num_steps - 1)
             log.info(f"Saved model to {self.latest_model}")
             symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
             with open("checkpoint", "w") as f:
                 f.write(str(self.latest_model))
 
+        if self.num_steps == 0 and self.zero_stage > 0:
+            # ZeRO-1 / FSDP: all ranks participate in save_model (collective op)
+            self.latest_model = Path(self.save_ckpt + "-0.pt")
+            self.save_model(self.latest_model, lr=0, step=0)
+
         if (
             self.rank == 0 or dist.get_rank() == 0
         ):  # Handle the case if rank 0 aborted and re-assigned
             if self.num_steps == 0:
-                # when num_steps is 0, the checkpoint is never not saved
-                self.latest_model = Path(self.save_ckpt + "-0.pt")
-                self.save_model(self.latest_model, lr=0, step=0)
+                if self.zero_stage == 0:
+                    # When num_steps is 0, the checkpoint is never saved in the loop
+                    self.latest_model = Path(self.save_ckpt + "-0.pt")
+                    self.save_model(self.latest_model, lr=0, step=0)
                 log.info(f"Saved model to {self.latest_model}")
                 symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
                 with open("checkpoint", "w") as f:
@@ -1202,18 +1496,36 @@ class Trainer:
                 )
 
     def save_model(self, save_path: str, lr: float = 0.0, step: int = 0) -> None:
-        module = (
-            self.wrapper.module
-            if dist.is_available() and dist.is_initialized()
-            else self.wrapper
-        )
+        module = self._get_inner_module()
         module.train_infos["lr"] = float(lr)
         module.train_infos["step"] = step
-        optim_state_dict = deepcopy(self.optimizer.state_dict())
-        for item in optim_state_dict["param_groups"]:
+
+        # === Collect state dicts ===
+        if self.zero_stage >= 2:
+            # FSDP2: collective op, all ranks participate; rank 0 gets full state
+            options = StateDictOptions(full_state_dict=True, cpu_offload=True)
+            model_state = get_model_state_dict(self.wrapper, options=options)
+            optim_state = get_optimizer_state_dict(
+                self.wrapper, self.optimizer, options=options
+            )
+        elif self.zero_stage == 1:
+            # ZeRO-1: consolidate sharded optimizer state to rank 0
+            model_state = module.state_dict()
+            self.optimizer.consolidate_state_dict(to=0)
+            optim_state = (
+                deepcopy(self.optimizer.state_dict()) if self.rank == 0 else {}
+            )
+        else:
+            model_state = module.state_dict()
+            optim_state = deepcopy(self.optimizer.state_dict())
+
+        # === Only rank 0 writes to disk ===
+        if self.rank != 0:
+            return
+        for item in optim_state["param_groups"]:
             item["lr"] = float(item["lr"])
         torch.save(
-            {"model": module.state_dict(), "optimizer": optim_state_dict},
+            {"model": model_state, "optimizer": optim_state},
             save_path,
         )
         checkpoint_dir = save_path.parent
@@ -1504,8 +1816,6 @@ def model_change_out_bias(
 
     model_type_map = _model.get_type_map()
     log.info(
-        f"Change output bias of {model_type_map!s} "
-        f"from {to_numpy_array(old_bias).reshape(-1)!s} "
-        f"to {to_numpy_array(new_bias).reshape(-1)!s}."
+        f"Change output bias of {model_type_map!s} from {to_numpy_array(old_bias).reshape(-1)!s} to {to_numpy_array(new_bias).reshape(-1)!s}."
     )
     return _model

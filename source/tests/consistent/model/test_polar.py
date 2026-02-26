@@ -182,19 +182,30 @@ class TestPolar(CommonTest, ModelTest, unittest.TestCase):
 
     def extract_ret(self, ret: Any, backend) -> tuple[np.ndarray, ...]:
         # shape not matched. ravel...
-        if backend in {self.RefBackend.DP, self.RefBackend.JAX}:
-            return (
-                ret["polarizability_redu"].ravel(),
-                ret["polarizability"].ravel(),
-            )
-        elif backend is self.RefBackend.PT:
-            return (
-                ret["global_polar"].ravel(),
-                ret["polar"].ravel(),
-            )
-        elif backend is self.RefBackend.TF:
+        if backend is self.RefBackend.TF:
             return (
                 ret[0].ravel(),
                 ret[1].ravel(),
             )
+        elif backend in {
+            self.RefBackend.DP,
+            self.RefBackend.PT,
+            self.RefBackend.JAX,
+        }:
+            return (
+                ret["global_polar"].ravel(),
+                ret["polar"].ravel(),
+            )
         raise ValueError(f"Unknown backend: {backend}")
+
+    def test_atom_exclude_types(self):
+        if self.skip_pt:
+            self.skipTest("Unsupported backend")
+        if self.skip_tf:
+            self.skipTest("Unsupported backend")
+        _ret, data = self.get_reference_ret_serialization(self.RefBackend.PT)
+        data["atom_exclude_types"] = [1]
+        self.reset_unique_id()
+        tf_obj = self.tf_class.deserialize(data, suffix=self.unique_id)
+        pt_obj = self.pt_class.deserialize(data)
+        self.assertEqual(tf_obj.get_sel_type(), pt_obj.get_sel_type())

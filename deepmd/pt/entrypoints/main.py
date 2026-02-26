@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import argparse
 import copy
+import io
 import json
 import logging
 import os
@@ -46,6 +47,9 @@ from deepmd.pt.infer import (
 )
 from deepmd.pt.model.model import (
     BaseModel,
+)
+from deepmd.pt.modifier import (
+    get_data_modifier,
 )
 from deepmd.pt.train import (
     training,
@@ -111,6 +115,12 @@ def get_trainer(
         rank: int = 0,
         seed: int | None = None,
     ) -> tuple[DpLoaderSet, DpLoaderSet | None, DPPath | None]:
+        # get data modifier
+        modifier = None
+        modifier_params = model_params_single.get("modifier", None)
+        if modifier_params is not None:
+            modifier = get_data_modifier(modifier_params).to(DEVICE)
+
         training_dataset_params = data_dict_single["training_data"]
         validation_dataset_params = data_dict_single.get("validation_data", None)
         validation_systems = (
@@ -145,6 +155,7 @@ def get_trainer(
                 validation_dataset_params["batch_size"],
                 model_params_single["type_map"],
                 seed=rank_seed,
+                modifier=modifier,
             )
             if validation_systems
             else None
@@ -154,6 +165,7 @@ def get_trainer(
             training_dataset_params["batch_size"],
             model_params_single["type_map"],
             seed=rank_seed,
+            modifier=modifier,
         )
         return (
             train_data_single,
@@ -227,18 +239,30 @@ class SummaryPrinter(BaseSummaryPrinter):
         """Get backend information."""
         if ENABLE_CUSTOMIZED_OP:
             op_info = {
-                "build with PT ver": GLOBAL_CONFIG["pt_version"],
-                "build with PT inc": GLOBAL_CONFIG["pt_include_dir"].replace(";", "\n"),
-                "build with PT lib": GLOBAL_CONFIG["pt_libs"].replace(";", "\n"),
+                "Built with PT Ver": GLOBAL_CONFIG["pt_version"],
+                "Built with PT Inc": GLOBAL_CONFIG["pt_include_dir"].replace(";", "\n"),
+                "Built with PT Lib": GLOBAL_CONFIG["pt_libs"].replace(";", "\n"),
             }
         else:
             op_info = {}
         return {
             "Backend": "PyTorch",
-            "PT ver": f"v{torch.__version__}-g{torch.version.git_version[:11]}",
-            "Enable custom OP": ENABLE_CUSTOMIZED_OP,
+            "PT Ver": f"v{torch.__version__}-g{torch.version.git_version[:11]}",
+            "Custom OP Enabled": ENABLE_CUSTOMIZED_OP,
             **op_info,
         }
+
+    def get_device_name(self) -> str | None:
+        """Use PyTorch's current device name as the device identifier.
+
+        Returns
+        -------
+        str or None
+            The device name if available, otherwise None.
+        """
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_name(torch.cuda.current_device())
+        return None
 
 
 def train(
@@ -372,10 +396,22 @@ def freeze(
     output: str = "frozen_model.pth",
     head: str | None = None,
 ) -> None:
-    model = inference.Tester(model, head=head).model
+    tester = inference.Tester(model, head=head)
+    model = tester.model
     model.eval()
     model = torch.jit.script(model)
-    extra_files = {}
+
+    dm_output = "data_modifier.pth"
+    extra_files = {dm_output: ""}
+    if tester.modifier is not None:
+        dm = tester.modifier
+        dm.eval()
+        buffer = io.BytesIO()
+        torch.jit.save(
+            torch.jit.script(dm),
+            buffer,
+        )
+        extra_files = {dm_output: buffer.getvalue()}
     torch.jit.save(
         model,
         output,

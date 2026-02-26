@@ -26,7 +26,21 @@ from .base_atomic_model import (
 
 @BaseAtomicModel.register("standard")
 class DPAtomicModel(BaseAtomicModel):
-    """Model give atomic prediction of some physical property.
+    r"""Model give atomic prediction of some physical property.
+
+    The atomic model computes atomic properties by first extracting a descriptor
+    from the atomic environment, then passing it through a fitting network:
+
+    .. math::
+        \mathcal{D}^i = \mathcal{D}(\mathbf{R}^i, \mathbf{R}_j, \alpha_j),
+
+    .. math::
+        \mathbf{y}^i = \mathcal{F}(\mathcal{D}^i),
+
+    where :math:`\mathcal{D}^i` is the descriptor for atom :math:`i`,
+    :math:`\alpha_j` is the atom type of neighbor :math:`j`,
+    :math:`\mathcal{F}` is the fitting network, and
+    :math:`\mathbf{y}^i` is the predicted atomic property (energy, dipole, etc.).
 
     Parameters
     ----------
@@ -51,6 +65,8 @@ class DPAtomicModel(BaseAtomicModel):
         self.type_map = type_map
         self.descriptor = descriptor
         self.fitting = fitting
+        if hasattr(self.fitting, "reinit_exclude"):
+            self.fitting.reinit_exclude(self.atom_exclude_types)
         self.type_map = type_map
         super().init_out_stat()
 
@@ -191,7 +207,7 @@ class DPAtomicModel(BaseAtomicModel):
             if model_with_new_type_stat is not None
             else None,
         )
-        self.fitting_net.change_type_map(type_map=type_map)
+        self.fitting.change_type_map(type_map=type_map)
 
     def serialize(self) -> dict:
         dd = super().serialize()
@@ -237,6 +253,10 @@ class DPAtomicModel(BaseAtomicModel):
     def has_default_fparam(self) -> bool:
         """Check if the model has default frame parameters."""
         return self.fitting.has_default_fparam()
+
+    def get_default_fparam(self) -> list[float] | None:
+        """Get the default frame parameters."""
+        return self.fitting.get_default_fparam()
 
     def get_sel_type(self) -> list[int]:
         """Get the selected atom types of this model.

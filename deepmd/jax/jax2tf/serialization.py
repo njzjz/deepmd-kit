@@ -39,7 +39,7 @@ def deserialize_to_file(model_file: str, data: dict, hessian: bool = False) -> N
         if hessian:
             model.enable_hessian()
             model_def_script["hessian_mode"] = True
-        call_lower = model.call_lower
+        call_lower = model.call_common_lower
 
         tf_model = tf.Module()
 
@@ -324,6 +324,23 @@ def deserialize_to_file(model_file: str, data: dict, hessian: bool = False) -> N
             return tf.constant(model.has_message_passing(), dtype=tf.bool)
 
         tf_model.has_message_passing = has_message_passing
+
+        @tf.function
+        def has_default_fparam() -> tf.Tensor:
+            return tf.constant(model.has_default_fparam(), dtype=tf.bool)
+
+        tf_model.has_default_fparam = has_default_fparam
+
+        @tf.function
+        def get_default_fparam() -> tf.Tensor:
+            default_fparam = model.get_default_fparam()
+            if default_fparam is None:
+                return tf.constant([], dtype=tf.double)
+            else:
+                return tf.constant(default_fparam, dtype=tf.double)
+
+        tf_model.get_default_fparam = get_default_fparam
+
         tf.saved_model.save(
             tf_model,
             model_file,

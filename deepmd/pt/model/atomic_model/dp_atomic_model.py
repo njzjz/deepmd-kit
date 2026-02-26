@@ -64,6 +64,8 @@ class DPAtomicModel(BaseAtomicModel):
         self.rcut = self.descriptor.get_rcut()
         self.sel = self.descriptor.get_sel()
         self.fitting_net = fitting
+        if hasattr(self.fitting_net, "reinit_exclude"):
+            self.fitting_net.reinit_exclude(self.atom_exclude_types)
         super().init_out_stat()
         self.enable_eval_descriptor_hook = False
         self.enable_eval_fitting_last_layer_hook = False
@@ -81,6 +83,11 @@ class DPAtomicModel(BaseAtomicModel):
 
     def eval_descriptor(self) -> torch.Tensor:
         """Evaluate the descriptor."""
+        if not self.eval_descriptor_list:
+            raise RuntimeError(
+                "eval_descriptor_list is empty. "
+                "Call set_eval_descriptor_hook(True) and perform a forward pass first."
+            )
         return torch.concat(self.eval_descriptor_list)
 
     def set_eval_fitting_last_layer_hook(self, enable: bool) -> None:
@@ -92,6 +99,11 @@ class DPAtomicModel(BaseAtomicModel):
 
     def eval_fitting_last_layer(self) -> torch.Tensor:
         """Evaluate the fitting last layer output."""
+        if not self.eval_fitting_last_layer_list:
+            raise RuntimeError(
+                "eval_fitting_last_layer_list is empty. "
+                "Call set_eval_fitting_last_layer_hook(True) and perform a forward pass first."
+            )
         return torch.concat(self.eval_fitting_last_layer_list)
 
     @torch.jit.export
@@ -151,6 +163,9 @@ class DPAtomicModel(BaseAtomicModel):
             else None,
         )
         self.fitting_net.change_type_map(type_map=type_map)
+        # Reinitialize fitting to get correct sel_type
+        if hasattr(self.fitting_net, "reinit_exclude"):
+            self.fitting_net.reinit_exclude(self.atom_exclude_types)
 
     def has_message_passing(self) -> bool:
         """Returns whether the atomic model has message passing."""

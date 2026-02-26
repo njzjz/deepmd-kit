@@ -474,7 +474,7 @@ class DeepEval(DeepEvalBackend):
         fparam: np.ndarray | None,
         aparam: np.ndarray | None,
         request_defs: list[OutputVariableDef],
-    ):
+    ) -> tuple[np.ndarray, ...]:
         if not self.static_model:
             model = self.dp.to(DEVICE)
         prec = NP_PRECISION_DICT[RESERVED_PRECISION_DICT[GLOBAL_PD_FLOAT_PRECISION]]
@@ -726,7 +726,7 @@ class DeepEval(DeepEvalBackend):
         typeebd = paddle.concat(out, axis=1)
         return to_numpy_array(typeebd)
 
-    def get_model_def_script(self) -> str:
+    def get_model_def_script(self) -> dict:
         """Get model definition script."""
         return self.model_def_script
 
