@@ -99,12 +99,18 @@ class TypeEmbedNet(NativeOP):
         """Compute the type embedding network."""
         sample_array = self.embedding_net[0]["w"]
         xp = array_api_compat.array_namespace(sample_array)
+        if array_api_compat.is_jax_namespace(xp):
+            # fix: AttributeError: 'ShapedArray' object has no attribute 'device'.
+            # or, considering accept a sample input?
+            device = None
+        else:
+            device = array_api_compat.device(sample_array)
         if not self.use_econf_tebd:
             embed = self.embedding_net(
                 xp.eye(
                     self.ntypes,
                     dtype=sample_array.dtype,
-                    device=array_api_compat.device(sample_array),
+                    device=device,
                 )
             )
         else:

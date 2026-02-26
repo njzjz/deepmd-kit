@@ -296,9 +296,20 @@ def extend_coord_with_ghosts(
     """
     xp = array_api_compat.array_namespace(coord, atype)
     nf, nloc = atype.shape
+    device = array_api_compat.device(atype)
+    device_nloc = device_none = device
+
+    if array_api_compat.is_jax_namespace(xp):
+        # fix jax: Sharding is only valid for values of rank at least 2,
+        # but was applied to a value of rank 1.
+        from jax.sharding import PartitionSpec as P, NamedSharding
+
+        if isinstance(device, NamedSharding):
+            device_nloc = NamedSharding(device.mesh, P(device.spec[1]))
+            device_none = NamedSharding(device.mesh, P())
     # int64 for index
     aidx = xp.tile(
-        xp.arange(nloc, dtype=xp.int64, device=array_api_compat.device(atype))[
+        xp.arange(nloc, dtype=xp.int64, device=device_nloc)[
             xp.newaxis, :
         ],
         (nf, 1),
@@ -319,21 +330,21 @@ def extend_coord_with_ghosts(
             int(nbuff[0]) + 1,
             1,
             dtype=xp.int64,
-            device=array_api_compat.device(coord),
+            device=device_none,
         )
         yi = xp.arange(
             -int(nbuff[1]),
             int(nbuff[1]) + 1,
             1,
             dtype=xp.int64,
-            device=array_api_compat.device(coord),
+            device=device_none,
         )
         zi = xp.arange(
             -int(nbuff[2]),
             int(nbuff[2]) + 1,
             1,
             dtype=xp.int64,
-            device=array_api_compat.device(coord),
+            device=device_none,
         )
         xyz = xp.linalg.outer(
             xi, xp.asarray([1, 0, 0], device=array_api_compat.device(xi))

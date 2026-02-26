@@ -101,10 +101,8 @@ class DPTrainer:
             lr_type = lr_param.get("type", "exp")
             if lr_type == "exp":
                 lr = LearningRateExp(
-                    lr_param["start_lr"],
-                    lr_param["stop_lr"],
-                    lr_param["decay_steps"],
-                    self.num_steps,
+                    **lr_param,
+                    num_steps=self.num_steps,
                 )
             else:
                 raise RuntimeError("unknown learning_rate type " + lr_type)
@@ -164,7 +162,7 @@ class DPTrainer:
     ) -> None:
         model = self.model
         tx = optax.adam(
-            learning_rate=lambda step: self.lr.value(self.start_step + step, xp=jnp),
+            learning_rate=lambda step: self.lr.value(self.start_step + step),
         )
         optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
 
@@ -205,6 +203,8 @@ class DPTrainer:
             sharding = NamedSharding(auto_mesh, P("data"))
         else:
             sharding = None
+        # a hack to apply the sharding to all parameters
+        model = BaseModel.deserialize(model.serialize())
 
         def loss_fn(
             model: BaseModel,
@@ -217,7 +217,7 @@ class DPTrainer:
             fp: jnp.ndarray | None,
             ap: jnp.ndarray | None,
         ) -> jnp.ndarray:
-            model_dict_lower = model.call_lower(
+            model_dict_lower = model.call_common_lower(
                 extended_coord,
                 extended_atype,
                 nlist,
@@ -251,7 +251,7 @@ class DPTrainer:
             fp: jnp.ndarray | None,
             ap: jnp.ndarray | None,
         ) -> dict[str, jnp.ndarray]:
-            model_dict_lower = model.call_lower(
+            model_dict_lower = model.call_common_lower(
                 extended_coord,
                 extended_atype,
                 nlist,

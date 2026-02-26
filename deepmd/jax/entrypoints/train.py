@@ -67,6 +67,14 @@ class SummaryPrinter(BaseSummaryPrinter):
             "JAX ver": jax.__version__,
         }
 
+    def get_device_name(self) -> str:
+        """Get the name of the device."""
+        devices = jax.devices()
+        if devices:
+            return devices[0].device_kind
+        else:
+            return "Unknown"
+
 
 def train(
     *,
