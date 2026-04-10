@@ -87,9 +87,11 @@ class DPTrainer:
         if self.init_model is not None:
             model_dict = serialize_from_file(self.init_model)
             self.model = BaseModel.deserialize(model_dict["model"])
+            self.model_def_script = model_dict["model_def_script"]
         elif self.restart is not None:
             model_dict = serialize_from_file(self.restart)
             self.model = BaseModel.deserialize(model_dict["model"])
+            self.model_def_script = model_dict["model_def_script"]
             self.start_step = model_dict["@variables"].get("current_step", 0)
         else:
             # from scratch
@@ -164,7 +166,6 @@ class DPTrainer:
         tx = optax.adam(
             learning_rate=lambda step: self.lr.value(self.start_step + step),
         )
-        optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
 
         # data stat
         if self.init_model is None and self.restart is None:
@@ -205,6 +206,9 @@ class DPTrainer:
             sharding = None
         # a hack to apply the sharding to all parameters
         model = BaseModel.deserialize(model.serialize())
+        if isinstance(self.loss, EnergyHessianLoss):
+            model.enable_hessian()
+        optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
 
         def loss_fn(
             model: BaseModel,
