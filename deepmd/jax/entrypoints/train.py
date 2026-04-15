@@ -24,6 +24,9 @@ from deepmd.jax.env import (
 from deepmd.jax.train.trainer import (
     DPTrainer,
 )
+from deepmd.jax.utils.finetune import (
+    get_finetune_rules,
+)
 from deepmd.utils import random as dp_random
 from deepmd.utils.argcheck import (
     normalize,
@@ -116,8 +119,8 @@ def train(
     finetune : Optional[str]
         path to pretrained model or None
     use_pretrain_script : bool
-        Whether to use model script in pretrained model when doing init-model or init-frz-model.
-        Note that this option is true and unchangeable for fine-tuning.
+        Whether to use the model script in the pretrained model when updating the
+        target model configuration for init-model, init-frz-model, or finetune.
     **kwargs
         additional arguments
 
@@ -146,6 +149,14 @@ def train(
     jdata = j_loader(INPUT)
 
     origin_type_map = None
+    finetune_links = None
+    finetune_data = None
+    if finetune is not None:
+        jdata["model"], finetune_links, finetune_data = get_finetune_rules(
+            finetune,
+            jdata["model"],
+            change_model_params=use_pretrain_script,
+        )
 
     jdata = update_deepmd_input(jdata, warning=True, dump="input_v2_compat.json")
 
@@ -165,6 +176,9 @@ def train(
         jdata,
         init_model=init_model,
         restart=restart,
+        finetune_model=finetune,
+        finetune_links=finetune_links,
+        finetune_model_data=finetune_data,
     )
     rcut = model.model.get_rcut()
     type_map = model.model.get_type_map()

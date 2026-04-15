@@ -4,6 +4,9 @@ import logging
 import os
 import shutil
 import time
+from copy import (
+    deepcopy,
+)
 from pathlib import (
     Path,
 )
@@ -53,6 +56,9 @@ from deepmd.jax.model.base_model import (
 from deepmd.jax.model.model import (
     get_model,
 )
+from deepmd.jax.utils.finetune import (
+    merge_finetune_model_data,
+)
 from deepmd.jax.utils.serialization import (
     serialize_from_file,
 )
@@ -69,6 +75,9 @@ from deepmd.utils.data_system import (
 from deepmd.utils.model_stat import (
     make_stat_input,
 )
+from deepmd.utils.finetune import (
+    FinetuneRuleItem,
+)
 
 log = logging.getLogger(__name__)
 
@@ -79,10 +88,16 @@ class DPTrainer:
         jdata: dict,
         init_model: Optional[str] = None,
         restart: Optional[str] = None,
+        finetune_model: Optional[str] = None,
+        finetune_links: dict[str, FinetuneRuleItem] | None = None,
+        finetune_model_data: dict[str, Any] | None = None,
     ) -> None:
         self.init_model = init_model
         self.restart = restart
-        self.model_def_script = jdata["model"]
+        self.finetune_model = finetune_model
+        self.finetune_links = finetune_links or {}
+        self.finetune_model_data = finetune_model_data
+        self.model_def_script = deepcopy(jdata["model"])
         self.start_step = 0
         if self.init_model is not None:
             model_dict = serialize_from_file(self.init_model)
@@ -159,6 +174,25 @@ class DPTrainer:
     def data_requirements(self) -> list[DataRequirementItem]:
         return self.loss.label_requirement
 
+    def _apply_single_finetune(
+        self,
+        target_model: BaseModel,
+        pretrained_model_data: dict[str, Any],
+        finetune_rule: FinetuneRuleItem,
+    ) -> BaseModel:
+        pretrained_model = BaseModel.deserialize(pretrained_model_data)
+        if finetune_rule.get_update_type():
+            pretrained_model.change_type_map(
+                target_model.get_type_map(),
+                model_with_new_type_stat=target_model.atomic_model,
+            )
+        merged_model_data = merge_finetune_model_data(
+            target_model.serialize(),
+            pretrained_model.serialize(),
+            finetune_rule,
+        )
+        return BaseModel.deserialize(merged_model_data)
+
     def train(
         self, train_data: DeepmdDataSystem, valid_data: DeepmdDataSystem | None = None
     ) -> None:
@@ -166,9 +200,19 @@ class DPTrainer:
         tx = optax.adam(
             learning_rate=lambda step: self.lr.value(self.start_step + step),
         )
+        finetune_rule = self.finetune_links.get("Default")
+        finetune_has_new_type = (
+            self.finetune_model is not None
+            and finetune_rule is not None
+            and finetune_rule.get_has_new_type()
+        )
 
         # data stat
-        if self.init_model is None and self.restart is None:
+        if (
+            self.init_model is None
+            and self.restart is None
+            and (self.finetune_model is None or finetune_has_new_type)
+        ):
             data_stat_nbatch = 10  # TODO
             all_stat = make_stat_input(train_data, data_stat_nbatch, merge_sys=False)
             all_stat["atype"] = all_stat.pop("type")
@@ -189,6 +233,18 @@ class DPTrainer:
             model.atomic_model.fitting.compute_output_stats(
                 all_stat, mixed_type=train_data.mixed_type
             )
+
+        if self.finetune_model is not None:
+            if self.finetune_model_data is None:
+                self.finetune_model_data = serialize_from_file(self.finetune_model)
+            model = self._apply_single_finetune(
+                model,
+                self.finetune_model_data["model"],
+                finetune_rule,
+            )
+            if isinstance(self.loss, EnergyHessianLoss):
+                model.enable_hessian()
+            self.model = model
 
         # parallel
         auto_mesh = jax.make_mesh(

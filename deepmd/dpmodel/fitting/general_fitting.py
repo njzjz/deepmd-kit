@@ -368,7 +368,13 @@ class GeneralFitting(NativeOP, BaseFitting):
             self.bias_atom_e = np.concatenate(
                 [self.bias_atom_e, extend_bias_atom_e], axis=0
             )
-        self.bias_atom_e = self.bias_atom_e[remap_index]
+        xp = array_api_compat.array_namespace(self.bias_atom_e)
+        remap_index_array = xp.asarray(
+            remap_index,
+            dtype=xp.int32,
+            device=array_api_compat.device(self.bias_atom_e),
+        )
+        self.bias_atom_e = self.bias_atom_e[remap_index_array]
 
     def __setitem__(self, key: str, value: Any) -> None:
         if key in ["bias_atom_e"]:

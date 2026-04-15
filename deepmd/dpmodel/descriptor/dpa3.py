@@ -487,8 +487,14 @@ class DescrptDPA3(NativeOP, BaseDescriptor):
             )
         repflow.ntypes = self.ntypes
         repflow.reinit_exclude(self.exclude_types)
-        repflow["davg"] = repflow["davg"][remap_index]
-        repflow["dstd"] = repflow["dstd"][remap_index]
+        xp = array_api_compat.array_namespace(repflow["davg"])
+        remap_index_array = xp.asarray(
+            remap_index,
+            dtype=xp.int32,
+            device=array_api_compat.device(repflow["davg"]),
+        )
+        repflow["davg"] = repflow["davg"][remap_index_array]
+        repflow["dstd"] = repflow["dstd"][remap_index_array]
 
     @property
     def dim_out(self) -> int:
