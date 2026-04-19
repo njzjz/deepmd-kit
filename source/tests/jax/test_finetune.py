@@ -410,7 +410,7 @@ class TestJAXFinetuneWiring(unittest.TestCase):
     def test_trainer_finetune_does_not_restore_step(self) -> None:
         dummy_model = Mock()
         dummy_model.get_dim_fparam.return_value = 0
-        with patch("deepmd.jax.train.trainer.get_model", return_value=dummy_model), patch(
+        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
             "deepmd.jax.train.trainer.EnergyLoss.get_loss",
             return_value=Mock(label_requirement=[]),
         ), patch("deepmd.jax.train.trainer.serialize_from_file") as mock_serialize:
@@ -423,6 +423,55 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         self.assertEqual(trainer.start_step, 0)
         mock_serialize.assert_not_called()
 
+    def test_trainer_finetune_selects_multitask_source_branch(self) -> None:
+        dummy_model = Mock()
+        dummy_model.get_dim_fparam.return_value = 0
+        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
+            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+            return_value=Mock(label_requirement=[]),
+        ), patch.object(
+            DPTrainer,
+            "_apply_single_finetune",
+            return_value=dummy_model,
+        ) as mock_apply, patch(
+            "deepmd.jax.train.trainer.select_model_branch",
+            return_value={
+                "model_def_script": {"type": "standard"},
+                "model": {"branch_value": "selected"},
+            },
+        ) as mock_select, patch(
+            "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
+            return_value={"coord": np.zeros((1, 1, 3))},
+        ), patch(
+            "deepmd.jax.train.trainer.model_change_out_bias",
+            return_value=dummy_model,
+        ):
+            trainer = DPTrainer(
+                self._trainer_jdata(),
+                finetune_model="pretrained.jax",
+                finetune_links={"Default": FinetuneRuleItem(["H"], ["H"], model_branch="branch_b")},
+                finetune_model_data={
+                    "model_def_script": {
+                        "model_dict": {
+                            "branch_a": {"type": "standard"},
+                            "branch_b": {"type": "standard"},
+                        }
+                    },
+                    "model": {
+                        "model_dict": {
+                            "branch_a": {"branch_value": "a"},
+                            "branch_b": {"branch_value": "b"},
+                        }
+                    },
+                },
+            )
+            train_data = Mock()
+            train_data.get_nsystems.return_value = 1
+            trainer._finetune_single(train_data)
+        mock_select.assert_called_once()
+        self.assertEqual(mock_select.call_args.args[1], "branch_b")
+        self.assertEqual(mock_apply.call_args.args[1], {"branch_value": "selected"})
+
     def test_trainer_finetune_with_new_type_computes_stats(self) -> None:
         dummy_model = Mock()
         dummy_model.get_dim_fparam.return_value = 0
@@ -430,7 +479,7 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         dummy_model.serialize.return_value = {"descriptor": np.zeros((1,))}
         loss = Mock(label_requirement=[])
 
-        with patch("deepmd.jax.train.trainer.get_model", return_value=dummy_model), patch(
+        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
             "deepmd.jax.train.trainer.EnergyLoss.get_loss",
             return_value=loss,
         ), patch(
@@ -489,9 +538,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         ) as mock_rules, patch.object(
             jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
         ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x: x
+            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
         ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x: x
+            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
         ), patch.object(
             jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
         ), patch.object(
@@ -519,6 +568,8 @@ class TestJAXFinetuneWiring(unittest.TestCase):
                 use_pretrain_script=False,
             )
         mock_rules.assert_called_once()
+        _, rule_kwargs = mock_rules.call_args
+        self.assertFalse(rule_kwargs["change_model_params"])
         _, kwargs = mock_trainer.call_args
         self.assertEqual(kwargs["finetune_model"], "pretrained.jax")
         self.assertEqual(kwargs["finetune_links"]["Default"].get_model_branch(), "Default")

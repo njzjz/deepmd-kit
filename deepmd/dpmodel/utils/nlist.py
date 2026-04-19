@@ -312,7 +312,10 @@ def extend_coord_with_ghosts(
         from jax.sharding import PartitionSpec as P, NamedSharding
 
         if isinstance(device, NamedSharding):
-            device_nloc = NamedSharding(device.mesh, P(device.spec[1]))
+            if len(device.spec) > 1:
+                device_nloc = NamedSharding(device.mesh, P(device.spec[1]))
+            else:
+                device_nloc = NamedSharding(device.mesh, P())
             device_none = NamedSharding(device.mesh, P())
     # int64 for index
     aidx = xp.tile(
