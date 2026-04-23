@@ -29,6 +29,9 @@ from deepmd.jax.utils.finetune import (
 from deepmd.jax.utils.multi_task import (
     preprocess_shared_params,
 )
+from deepmd.jax.utils.serialization import (
+    serialize_from_file,
+)
 from deepmd.utils import random as dp_random
 from deepmd.utils.argcheck import (
     normalize,
@@ -87,6 +90,7 @@ def train(
     skip_neighbor_stat: bool = False,
     finetune: Optional[str] = None,
     use_pretrain_script: bool = False,
+    force_load: bool = False,
     model_branch: str = "",
     **kwargs: Any,
 ) -> None:
@@ -124,6 +128,10 @@ def train(
             model_branch=model_branch,
             change_model_params=use_pretrain_script,
         )
+    if (init_model is not None or init_frz_model) and use_pretrain_script:
+        source_model = init_model if init_model is not None else init_frz_model
+        source_model_data = serialize_from_file(source_model)
+        jdata["model"] = source_model_data["model_def_script"]
 
     jdata = update_deepmd_input(jdata, warning=True, dump="input_v2_compat.json")
     jdata = normalize(jdata, multi_task=multi_task)
@@ -137,7 +145,9 @@ def train(
         jdata,
         init_model=init_model,
         restart=restart,
+        init_frz_model=init_frz_model or None,
         finetune_model=finetune,
+        force_load=force_load,
         shared_links=shared_links,
         finetune_links=finetune_links,
         finetune_model_data=finetune_data,

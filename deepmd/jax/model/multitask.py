@@ -24,7 +24,7 @@ def _get_component(model: BaseModel, shared_type: str) -> Any:
         return model.atomic_model.fitting
     if shared_type.startswith("descriptor_hybrid_"):
         idx = int(shared_type.rsplit("_", 1)[1])
-        return model.atomic_model.descriptor.list[idx]
+        return model.atomic_model.descriptor.descrpt_list[idx]
     raise NotImplementedError(f"Unsupported shared_type {shared_type}")
 
 
@@ -37,7 +37,7 @@ def _set_component(model: BaseModel, shared_type: str, value: Any) -> None:
         return
     if shared_type.startswith("descriptor_hybrid_"):
         idx = int(shared_type.rsplit("_", 1)[1])
-        model.atomic_model.descriptor.list[idx] = value
+        model.atomic_model.descriptor.descrpt_list[idx] = value
         return
     raise NotImplementedError(f"Unsupported shared_type {shared_type}")
 
@@ -71,20 +71,43 @@ def _share_fitting_component(base_model: BaseModel, link_model: BaseModel) -> No
         )
 
 
+def _share_partial_descriptor_component(
+    base_component: Any,
+    link_component: Any,
+    shared_level: int,
+) -> None:
+    if base_component.__class__ is not link_component.__class__:
+        raise TypeError("Only descriptors of the same type can share params!")
+
+    descriptor_name = base_component.__class__.__name__
+    if shared_level == 1 and descriptor_name in {
+        "DescrptDPA1",
+        "DescrptDPA2",
+        "DescrptDPA3",
+        "DescrptSeTTebd",
+    }:
+        object.__setattr__(
+            link_component,
+            "type_embedding",
+            base_component.type_embedding,
+        )
+        return
+
+    raise NotImplementedError(
+        f"Unsupported descriptor partial sharing for {descriptor_name} "
+        f"with shared_level={shared_level}."
+    )
+
+
 def _check_supported_share(link_info: dict[str, Any]) -> None:
     links = link_info.get("links", [])
     for link in links:
         shared_type = link["shared_type"]
         shared_level = int(link.get("shared_level", 0))
-        if shared_level != 0:
+        if shared_type == "fitting_net" and shared_level != 0:
             raise NotImplementedError(
-                "JAX multitask only supports full parameter sharing "
-                f"(shared_level=0), but got {shared_type}:{shared_level}."
-            )
-        if shared_type.startswith("descriptor_hybrid_"):
-            raise NotImplementedError(
-                "JAX multitask does not support hybrid descriptor sub-component "
-                "sharing yet."
+                "JAX multitask fitting_net sharing only supports shared_level=0, "
+                f"but got {shared_type}:{shared_level}."
             )
 
 
@@ -134,16 +157,27 @@ class ModelWrapper:
                 continue
             base_link = links[0]
             base_model = self[base_link["model_key"]]
-            if base_link["shared_type"] == "fitting_net":
+            base_shared_type = base_link["shared_type"]
+            if base_shared_type == "fitting_net":
                 for link in links[1:]:
                     _share_fitting_component(base_model, self[link["model_key"]])
                 continue
-            base_component = _get_component(base_model, base_link["shared_type"])
+            base_component = _get_component(base_model, base_shared_type)
             for link in links[1:]:
-                _set_component(
-                    self[link["model_key"]],
-                    link["shared_type"],
+                shared_level = int(link.get("shared_level", 0))
+                link_model = self[link["model_key"]]
+                if shared_level == 0:
+                    _set_component(
+                        link_model,
+                        link["shared_type"],
+                        base_component,
+                    )
+                    continue
+                link_component = _get_component(link_model, link["shared_type"])
+                _share_partial_descriptor_component(
                     base_component,
+                    link_component,
+                    shared_level,
                 )
 
     def set_case_embd(self, key: str) -> None:

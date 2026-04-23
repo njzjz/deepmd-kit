@@ -81,28 +81,76 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
         self.assertTrue(enabled)
         self.assertEqual(case_embd_index, {"task_a": 0, "task_b": 1})
 
-    def test_partial_shared_level_is_rejected(self) -> None:
+    def test_partial_shared_level_shares_only_type_embedding(self) -> None:
         model_config = {
             "shared_dict": {
                 "shared_tm": ["O", "H"],
-                "shared_desc": {"type": "se_e2_a", "sel": [4, 4], "rcut": 6.0},
+                "shared_desc": deepcopy(model_dpa3["descriptor"]),
             },
             "model_dict": {
                 "task_a": {
                     "type_map": "shared_tm",
                     "descriptor": "shared_desc",
-                    "fitting_net": {"type": "ener", "neuron": [16]},
+                    "fitting_net": {
+                        "type": "ener",
+                        **deepcopy(model_dpa3["fitting_net"]),
+                    },
                 },
                 "task_b": {
                     "type_map": "shared_tm",
                     "descriptor": "shared_desc:1",
-                    "fitting_net": {"type": "ener", "neuron": [16]},
+                    "fitting_net": {
+                        "type": "ener",
+                        **deepcopy(model_dpa3["fitting_net"]),
+                    },
                 },
             },
         }
         updated_model_config, shared_links = preprocess_shared_params(deepcopy(model_config))
-        with self.assertRaisesRegex(NotImplementedError, "shared_level=0"):
-            get_model_for_wrapper(updated_model_config, shared_links=shared_links)
+        model = get_model_for_wrapper(updated_model_config, shared_links=shared_links)
+        desc_a = model["task_a"].atomic_model.descriptor
+        desc_b = model["task_b"].atomic_model.descriptor
+        self.assertIs(desc_a.type_embedding, desc_b.type_embedding)
+        self.assertIsNot(desc_a, desc_b)
+        self.assertIsNot(desc_a.repflows, desc_b.repflows)
+
+    def test_hybrid_subcomponent_full_sharing_is_supported(self) -> None:
+        hybrid_descriptor = {
+            "type": "hybrid",
+            "list": [
+                "shared_desc",
+                deepcopy(model_se_e2_a["descriptor"]),
+            ],
+        }
+        model_config = {
+            "shared_dict": {
+                "shared_tm": ["O", "H", "B"],
+                "shared_desc": deepcopy(model_se_e2_a["descriptor"]),
+            },
+            "model_dict": {
+                "task_a": {
+                    "type_map": "shared_tm",
+                    "descriptor": deepcopy(hybrid_descriptor),
+                    "fitting_net": {
+                        "type": "ener",
+                        **deepcopy(model_se_e2_a["fitting_net"]),
+                    },
+                },
+                "task_b": {
+                    "type_map": "shared_tm",
+                    "descriptor": deepcopy(hybrid_descriptor),
+                    "fitting_net": {
+                        "type": "ener",
+                        **deepcopy(model_se_e2_a["fitting_net"]),
+                    },
+                },
+            },
+        }
+        updated_model_config, shared_links = preprocess_shared_params(deepcopy(model_config))
+        model = get_model_for_wrapper(updated_model_config, shared_links=shared_links)
+        desc_a = model["task_a"].atomic_model.descriptor.descrpt_list[0]
+        desc_b = model["task_b"].atomic_model.descriptor.descrpt_list[0]
+        self.assertIs(desc_a, desc_b)
 
     def test_multitask_data_stat_merges_shared_components_once(self) -> None:
         class FakeWrapper:

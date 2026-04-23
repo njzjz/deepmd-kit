@@ -100,6 +100,99 @@ DefModel = BaseModel | ModelWrapper
 DefLoss = EnergyLoss | EnergyHessianLoss
 
 
+def _merge_init_frz_model_data(
+    target_node: Any,
+    source_node: Any,
+    *,
+    path: tuple[Any, ...] = (),
+    missing: list[tuple[Any, ...]] | None = None,
+    unexpected: list[tuple[Any, ...]] | None = None,
+) -> Any:
+    """Merge overlapping frozen-model tensor leaves into a target model tree."""
+    if missing is None:
+        missing = []
+    if unexpected is None:
+        unexpected = []
+
+    if isinstance(target_node, dict):
+        merged = deepcopy(target_node)
+        if not isinstance(source_node, dict):
+            missing.append(path)
+            return merged
+        for key in source_node:
+            if key not in target_node:
+                unexpected.append(path + (key,))
+        for key, value in target_node.items():
+            if key not in source_node:
+                missing.append(path + (key,))
+                continue
+            merged[key] = _merge_init_frz_model_data(
+                value,
+                source_node[key],
+                path=path + (key,),
+                missing=missing,
+                unexpected=unexpected,
+            )
+        return merged
+
+    if isinstance(target_node, list):
+        merged = deepcopy(target_node)
+        if not isinstance(source_node, list):
+            missing.append(path)
+            return merged
+        if len(target_node) != len(source_node):
+            raise ValueError(
+                f"Shape mismatch at {path}: target list len {len(target_node)}, "
+                f"source list len {len(source_node)}"
+            )
+        for idx, value in enumerate(target_node):
+            merged[idx] = _merge_init_frz_model_data(
+                value,
+                source_node[idx],
+                path=path + (idx,),
+                missing=missing,
+                unexpected=unexpected,
+            )
+        return merged
+
+    if isinstance(target_node, tuple):
+        if not isinstance(source_node, tuple):
+            missing.append(path)
+            return deepcopy(target_node)
+        if len(target_node) != len(source_node):
+            raise ValueError(
+                f"Shape mismatch at {path}: target tuple len {len(target_node)}, "
+                f"source tuple len {len(source_node)}"
+            )
+        return tuple(
+            _merge_init_frz_model_data(
+                tv,
+                sv,
+                path=path + (idx,),
+                missing=missing,
+                unexpected=unexpected,
+            )
+            for idx, (tv, sv) in enumerate(zip(target_node, source_node))
+        )
+
+    if isinstance(target_node, np.ndarray):
+        if not isinstance(source_node, np.ndarray):
+            missing.append(path)
+            return np.array(target_node, copy=True)
+        if target_node.shape == source_node.shape:
+            return np.array(source_node, copy=True)
+        if target_node.size == source_node.size:
+            return np.array(source_node, copy=True).reshape(target_node.shape)
+        if target_node.shape != source_node.shape:
+            raise ValueError(
+                f"Shape mismatch at {path}: target {target_node.shape}, "
+                f"source {source_node.shape}"
+            )
+        return np.array(source_node, copy=True)
+
+    return deepcopy(target_node)
+
+
 def _clear_jax_mesh_for_host_ops() -> None:
     nnx.use_eager_sharding(False)
     jax.set_mesh(Mesh(np.empty((), dtype=object), ()))
@@ -428,14 +521,18 @@ class DPTrainer:
         jdata: dict,
         init_model: Optional[str] = None,
         restart: Optional[str] = None,
+        init_frz_model: Optional[str] = None,
         finetune_model: Optional[str] = None,
+        force_load: bool = False,
         shared_links: dict[str, Any] | None = None,
         finetune_links: dict[str, FinetuneRuleItem] | None = None,
         finetune_model_data: dict[str, Any] | None = None,
     ) -> None:
         self.init_model = init_model
         self.restart = restart
+        self.init_frz_model = init_frz_model
         self.finetune_model = finetune_model
+        self.force_load = force_load
         self.shared_links = shared_links or {}
         self.finetune_links = finetune_links or {}
         self.finetune_model_data = finetune_model_data
@@ -488,12 +585,14 @@ class DPTrainer:
         if self.init_model is not None:
             model_dict = serialize_from_file(self.init_model)
             self._load_model_data(model_dict)
-            self.model_def_script = deepcopy(model_dict["model_def_script"])
         elif self.restart is not None:
             model_dict = serialize_from_file(self.restart)
             self._load_model_data(model_dict)
             self.model_def_script = deepcopy(model_dict["model_def_script"])
             self.start_step = model_dict["@variables"].get("current_step", 0)
+        if self.init_frz_model is not None:
+            frozen_model_data = serialize_from_file(self.init_frz_model)
+            self._load_frozen_model_data(frozen_model_data)
 
         tr_data = self.training_param
         self.disp_file = tr_data.get("disp_file", "lcurve.out")
@@ -540,6 +639,21 @@ class DPTrainer:
 
     def _load_model_data(self, model_data: dict[str, Any]) -> None:
         serialized_model = model_data["model"]
+        if self.force_load:
+            missing: list[tuple[Any, ...]] = []
+            unexpected: list[tuple[Any, ...]] = []
+            serialized_model = _merge_init_frz_model_data(
+                self.model.serialize(),
+                serialized_model,
+                missing=missing,
+                unexpected=unexpected,
+            )
+            if missing or unexpected:
+                log.warning(
+                    "Checkpoint loaded in force_load mode. Missing keys reinitialized: %s; Unexpected keys ignored: %s",
+                    [".".join(map(str, item)) for item in missing[:20]],
+                    [".".join(map(str, item)) for item in unexpected[:20]],
+                )
         effective_shared_links = (
             self.shared_links
             or model_data.get("model_def_script", {}).get("shared_links", {})
@@ -562,6 +676,131 @@ class DPTrainer:
             self.model = BaseModel.deserialize(serialized_model)
         self._apply_hessian_flags(self.model)
 
+    def _validate_shared_finetune_rules(self) -> None:
+        if not self.multi_task or not self.shared_links or not self.finetune_links:
+            return
+        for shared_key, link_info in self.shared_links.items():
+            for link in link_info.get("links", []):
+                shared_level = int(link.get("shared_level", 0))
+                if link["shared_type"] == "fitting_net" and shared_level != 0:
+                    raise NotImplementedError(
+                        "JAX multitask finetune fitting_net sharing only supports shared_level=0, "
+                        f"but got '{shared_key}' at level {shared_level}."
+                    )
+
+    def _load_frozen_model_data(self, model_data: dict[str, Any]) -> None:
+        missing: list[tuple[Any, ...]] = []
+        unexpected: list[tuple[Any, ...]] = []
+        merged_model_data = _merge_init_frz_model_data(
+            self.model.serialize(),
+            model_data["model"],
+            missing=missing,
+            unexpected=unexpected,
+        )
+        if self.multi_task:
+            self.model = ModelWrapper.deserialize(
+                merged_model_data,
+                shared_links=self.shared_links,
+                case_embd_index=self.case_embd_index,
+            )
+        else:
+            self.model = BaseModel.deserialize(merged_model_data)
+        self._apply_hessian_flags(self.model)
+        if missing or unexpected:
+            log.warning(
+                "Frozen model loaded non-strictly. Missing keys: %s, Unexpected keys: %s",
+                [".".join(map(str, item)) for item in missing[:20]],
+                [".".join(map(str, item)) for item in unexpected[:20]],
+            )
+
+    @staticmethod
+    def _shared_type_to_serialized_paths(
+        shared_type: str,
+        shared_level: int,
+        source_model_data: dict[str, Any],
+    ) -> list[tuple[Any, ...]]:
+        def descriptor_paths(
+            path_prefix: tuple[Any, ...],
+            descriptor_data: dict[str, Any],
+        ) -> list[tuple[Any, ...]]:
+            descriptor_type = descriptor_data.get("type")
+            if shared_level == 0:
+                return [path_prefix]
+            if shared_level == 1 and descriptor_type in {
+                "dpa1",
+                "dpa2",
+                "dpa3",
+                "se_e3_tebd",
+            }:
+                return [path_prefix + ("type_embedding",)]
+            raise NotImplementedError(
+                "JAX multitask finetune does not support shared override for "
+                f"{shared_type}:{shared_level} with descriptor type {descriptor_type}."
+            )
+
+        if shared_type == "descriptor":
+            return descriptor_paths(("descriptor",), source_model_data["descriptor"])
+        if shared_type.startswith("descriptor_hybrid_"):
+            idx = int(shared_type.rsplit("_", 1)[1])
+            return descriptor_paths(
+                ("descriptor", "list", idx),
+                source_model_data["descriptor"]["list"][idx],
+            )
+        if shared_type == "fitting_net":
+            if shared_level != 0:
+                raise NotImplementedError(
+                    "JAX multitask finetune fitting_net sharing only supports shared_level=0, "
+                    f"but got {shared_level}."
+                )
+            fitting_paths = [("fitting", "nets")]
+            fitting_vars = source_model_data.get("fitting", {}).get("@variables", {})
+            for key in fitting_vars:
+                if key not in {"bias_atom_e", "case_embd"}:
+                    fitting_paths.append(("fitting", "@variables", key))
+            return fitting_paths
+        return []
+
+    def _collect_shared_source_overrides(
+        self,
+        source_multi: bool,
+    ) -> dict[str, dict[tuple[Any, ...], dict[str, Any]]]:
+        overrides: dict[str, dict[tuple[Any, ...], dict[str, Any]]] = {
+            model_key: {} for model_key in self.model_keys
+        }
+        if not self.shared_links or not self.finetune_links or self.finetune_model_data is None:
+            return overrides
+
+        for _, link_info in self.shared_links.items():
+            shareable_links = [
+                link
+                for link in link_info.get("links", [])
+                if (
+                    link["shared_type"].startswith("descriptor")
+                    or link["shared_type"] == "fitting_net"
+                )
+            ]
+            if not shareable_links:
+                continue
+            base_link = shareable_links[0]
+            canonical_source_key = self.finetune_links[base_link["model_key"]].get_model_branch()
+            canonical_source_model_data = (
+                self.finetune_model_data["model"]["model_dict"][canonical_source_key]
+                if source_multi
+                else self.finetune_model_data["model"]
+            )
+            for link in shareable_links[1:]:
+                current_source_key = self.finetune_links[link["model_key"]].get_model_branch()
+                if current_source_key == canonical_source_key:
+                    continue
+                paths = self._shared_type_to_serialized_paths(
+                    link["shared_type"],
+                    int(link.get("shared_level", 0)),
+                    canonical_source_model_data,
+                )
+                for path in paths:
+                    overrides[link["model_key"]][path] = canonical_source_model_data
+        return overrides
+
     @property
     def data_requirements(self) -> list[DataRequirementItem] | dict[str, list[DataRequirementItem]]:
         if self.multi_task:
@@ -576,7 +815,24 @@ class DPTrainer:
         target_model: BaseModel,
         pretrained_model_data: dict[str, Any],
         finetune_rule: FinetuneRuleItem,
+        *,
+        source_overrides: dict[tuple[Any, ...], dict[str, Any]] | None = None,
     ) -> BaseModel:
+        if self.force_load:
+            missing: list[tuple[Any, ...]] = []
+            unexpected: list[tuple[Any, ...]] = []
+            pretrained_model_data = _merge_init_frz_model_data(
+                target_model.serialize(),
+                pretrained_model_data,
+                missing=missing,
+                unexpected=unexpected,
+            )
+            if missing or unexpected:
+                log.warning(
+                    "Finetune checkpoint loaded in force_load mode. Missing keys reinitialized: %s; Unexpected keys ignored: %s",
+                    [".".join(map(str, item)) for item in missing[:20]],
+                    [".".join(map(str, item)) for item in unexpected[:20]],
+                )
         pretrained_model = BaseModel.deserialize(pretrained_model_data)
         if finetune_rule.get_update_type():
             pretrained_model.change_type_map(
@@ -587,6 +843,7 @@ class DPTrainer:
             target_model.serialize(),
             pretrained_model.serialize(),
             finetune_rule,
+            source_overrides=source_overrides,
         )
         return BaseModel.deserialize(merged_model_data)
 
@@ -617,6 +874,58 @@ class DPTrainer:
                 else "change-by-statistic"
             ),
         )
+
+    def _finetune_multi(self, train_data: dict[str, DeepmdDataSystem]) -> None:
+        if not isinstance(self.model, ModelWrapper):
+            raise TypeError("multitask JAX finetune expected a multitask model.")
+        self._validate_shared_finetune_rules()
+        if self.finetune_model_data is None:
+            self.finetune_model_data = serialize_from_file(self.finetune_model)
+        source_multi = "model_dict" in self.finetune_model_data.get("model", {})
+        shared_source_overrides = self._collect_shared_source_overrides(source_multi)
+        merged_branch_models: dict[str, Any] = {}
+        for model_key in self.model_keys:
+            branch_model = self.model[model_key]
+            finetune_rule = self.finetune_links[model_key]
+            source_key = finetune_rule.get_model_branch()
+            source_model_data = (
+                self.finetune_model_data["model"]["model_dict"][source_key]
+                if source_multi
+                else self.finetune_model_data["model"]
+            )
+            merged_branch_model = self._apply_single_finetune(
+                branch_model,
+                source_model_data,
+                finetune_rule,
+                source_overrides=shared_source_overrides.get(model_key),
+            )
+            if self.branch_has_hessian[model_key]:
+                merged_branch_model.enable_hessian()
+            if not finetune_rule.get_resuming():
+                log.info(
+                    "Model branch %s will be fine-tuned. This may take a long time...",
+                    model_key,
+                )
+                merged_branch_model = model_change_out_bias(
+                    merged_branch_model,
+                    _pack_data_for_bias_adjust(
+                        train_data[model_key], self.data_bias_nsample[model_key]
+                    ),
+                    bias_adjust_mode=(
+                        "set-by-statistic"
+                        if finetune_rule.get_random_fitting()
+                        else "change-by-statistic"
+                    ),
+                )
+            else:
+                log.info("Model branch %s will resume training.", model_key)
+            merged_branch_models[model_key] = merged_branch_model.serialize()
+        self.model = ModelWrapper.deserialize(
+            {"model_dict": merged_branch_models},
+            shared_links=self.shared_links,
+            case_embd_index=self.case_embd_index,
+        )
+        self._apply_hessian_flags(self.model)
 
     def train(
         self,
@@ -878,10 +1187,6 @@ class DPTrainer:
         train_data: dict[str, DeepmdDataSystem],
         valid_data: dict[str, DeepmdDataSystem | None],
     ) -> None:
-        if self.finetune_model is not None:
-            raise NotImplementedError(
-                "JAX multitask finetune is not implemented yet. This path only supports from-scratch/init/restart multitask training."
-            )
         model = self.model
         assert isinstance(model, ModelWrapper)
         _clear_jax_mesh_for_host_ops()
@@ -890,21 +1195,30 @@ class DPTrainer:
             self.training_param,
             train_data,
         )
+        finetune_has_new_type = (
+            self.finetune_model is not None
+            and any(rule.get_has_new_type() for rule in self.finetune_links.values())
+        )
         if self.init_model is None and self.restart is None:
-            data_stat_protect_map = {
-                model_key: float(
-                    self.model_def_script["model_dict"][model_key].get(
-                        "data_stat_protect", 1e-2
+            if self.finetune_model is None or finetune_has_new_type:
+                data_stat_protect_map = {
+                    model_key: float(
+                        self.model_def_script["model_dict"][model_key].get(
+                            "data_stat_protect", 1e-2
+                        )
                     )
+                    for model_key in self.model_keys
+                }
+                _compute_multitask_data_stat(
+                    model,
+                    train_data,
+                    dict(zip(self.model_keys, self.model_prob, strict=True)),
+                    data_stat_protect_map,
                 )
-                for model_key in self.model_keys
-            }
-            _compute_multitask_data_stat(
-                model,
-                train_data,
-                dict(zip(self.model_keys, self.model_prob, strict=True)),
-                data_stat_protect_map,
-            )
+        if self.finetune_model is not None:
+            self._finetune_multi(train_data)
+            model = self.model
+            assert isinstance(model, ModelWrapper)
         self.lr = LearningRateExp(
             **self.learning_rate_param,
             num_steps=self.num_steps,
