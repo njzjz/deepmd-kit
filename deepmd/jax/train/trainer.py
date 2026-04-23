@@ -1102,7 +1102,6 @@ class DPTrainer:
                 fparam=jax_data.get("fparam", None),
                 aparam=jax_data.get("aparam", None),
             )
-            train_step_start = time.perf_counter()
             train_step(
                 model,
                 optimizer,
@@ -1115,12 +1114,9 @@ class DPTrainer:
                 fp,
                 ap,
             )
-            train_step_time = time.perf_counter() - train_step_start
             if self.display_in_training and (step == 0 or (step + 1) % self.disp_freq == 0):
                 wall_time = time.time() - start_time
                 log.info(format_training_message(batch=step + 1, wall_time=wall_time))
-                display_eval_start = time.perf_counter()
-                train_eval_start = time.perf_counter()
                 more_loss = loss_fn_more_loss(
                     model,
                     self.lr.value(step),
@@ -1132,7 +1128,6 @@ class DPTrainer:
                     fp,
                     ap,
                 )
-                train_eval_time = time.perf_counter() - train_eval_start
                 if valid_data is not None:
                     valid_batch_data = valid_data.get_batch()
                     jax_valid_data = convert_numpy_data_to_jax_data(
@@ -1146,10 +1141,9 @@ class DPTrainer:
                         coord=jax_valid_data["coord"],
                         atype=jax_valid_data["type"],
                         box=jax_valid_data["box"] if jax_valid_data["find_box"] else None,
-                        fparam=jax_valid_data.get("fparam", None),
-                        aparam=jax_valid_data.get("aparam", None),
-                    )
-                    valid_eval_start = time.perf_counter()
+                            fparam=jax_valid_data.get("fparam", None),
+                            aparam=jax_valid_data.get("aparam", None),
+                        )
                     valid_more_loss = loss_fn_more_loss(
                         model,
                         self.lr.value(step),
@@ -1161,11 +1155,8 @@ class DPTrainer:
                         fp,
                         ap,
                     )
-                    valid_eval_time = time.perf_counter() - valid_eval_start
                 else:
                     valid_more_loss = None
-                    valid_eval_time = 0.0
-                display_eval_time = time.perf_counter() - display_eval_start
                 if step == 0:
                     self.print_header(disp_file_fp, more_loss, valid_more_loss)
                 self.print_on_training(
@@ -1388,7 +1379,6 @@ class DPTrainer:
                 fparam=jax_data.get("fparam", None),
                 aparam=jax_data.get("aparam", None),
             )
-            train_step_start = time.perf_counter()
             train_step_fns[task_key](
                 model,
                 optimizer,
@@ -1401,17 +1391,12 @@ class DPTrainer:
                 fp,
                 ap,
             )
-            train_step_time = time.perf_counter() - train_step_start
             if self.display_in_training and (step == 0 or (step + 1) % self.disp_freq == 0):
                 wall_time = time.time() - start_time
                 log.info(format_training_message(batch=step + 1, wall_time=wall_time))
                 train_results = {_key: {} for _key in self.model_keys}
                 valid_results = {_key: {} for _key in self.model_keys}
-                train_eval_timing = {}
-                valid_eval_timing = {}
-                display_eval_start = time.perf_counter()
                 model.set_case_embd(task_key)
-                eval_start = time.perf_counter()
                 train_results[task_key] = more_loss_fns[task_key](
                     model,
                     self.lr.value(step),
@@ -1423,7 +1408,6 @@ class DPTrainer:
                     fp,
                     ap,
                 )
-                train_eval_timing[task_key] = time.perf_counter() - eval_start
                 for _key in self.model_keys:
                     if _key != task_key:
                         train_batch_data = train_data[_key].get_batch()
@@ -1452,7 +1436,6 @@ class DPTrainer:
                             aparam=jax_train_data.get("aparam", None),
                         )
                         model.set_case_embd(_key)
-                        eval_start = time.perf_counter()
                         train_results[_key] = more_loss_fns[_key](
                             model,
                             self.lr.value(step),
@@ -1464,7 +1447,6 @@ class DPTrainer:
                             train_fp,
                             train_ap,
                         )
-                        train_eval_timing[_key] = time.perf_counter() - eval_start
                     if valid_data.get(_key) is not None:
                         valid_batch_data = valid_data[_key].get_batch()
                         jax_valid_data = convert_numpy_data_to_jax_data(
@@ -1490,7 +1472,6 @@ class DPTrainer:
                             aparam=jax_valid_data.get("aparam", None),
                         )
                         model.set_case_embd(_key)
-                        eval_start = time.perf_counter()
                         valid_results[_key] = more_loss_fns[_key](
                             model,
                             self.lr.value(step),
@@ -1502,8 +1483,6 @@ class DPTrainer:
                             valid_fp,
                             valid_ap,
                         )
-                        valid_eval_timing[_key] = time.perf_counter() - eval_start
-                display_eval_time = time.perf_counter() - display_eval_start
                 if step == 0:
                     self.print_header_multitask(disp_file_fp, train_results, valid_results)
                 self.print_on_training_multitask(

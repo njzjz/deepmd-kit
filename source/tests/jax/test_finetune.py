@@ -5,7 +5,6 @@ from copy import (
     deepcopy,
 )
 from unittest.mock import (
-    MagicMock,
     Mock,
     patch,
 )
@@ -25,9 +24,6 @@ from deepmd.jax.descriptor.dpa3 import (
     DescrptDPA3,
 )
 from deepmd.jax.entrypoints import train as jax_train_entrypoint
-from deepmd.jax.env import (
-    jnp,
-)
 from deepmd.jax.fitting.fitting import (
     EnergyFittingNet,
 )

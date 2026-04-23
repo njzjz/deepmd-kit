@@ -42,13 +42,15 @@ class DescrptHybrid(DescrptHybridDP):
 
         return super().__setattr__(name, value)
 
-    def call(
-        self,
-        coord_ext: Any,
-        atype_ext: Any,
-        nlist: Any,
-        mapping: Any | None = None,
-    ) -> tuple[Any, Any | None, Any | None, Any | None, Any | None]:
+    def call(self, *args: Any, **kwargs: Any) -> tuple[Any, Any | None, Any | None, Any | None, Any | None]:
+        if len(args) < 3:
+            return super().call(*args, **kwargs)
+        if len(args) > 4:
+            return super().call(*args, **kwargs)
+        if kwargs and set(kwargs) != {"mapping"}:
+            return super().call(*args, **kwargs)
+        coord_ext, atype_ext, nlist = args[:3]
+        mapping = kwargs.pop("mapping", args[3] if len(args) == 4 else None)
         xp = array_api_compat.array_namespace(coord_ext, atype_ext, nlist)
         out_descriptor = []
         out_gr = []
