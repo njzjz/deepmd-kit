@@ -74,7 +74,11 @@ def _maybe_apply_jax_placeholder_sharding(array: Array) -> Array:
             array, jax.sharding.PartitionSpec(None, None)
         )
     except RuntimeError as exc:
-        if "requires a non-empty mesh in context" not in str(exc):
+        message = str(exc)
+        if (
+            "with_sharding_constraint" not in message
+            or "non-empty mesh" not in message
+        ):
             raise
         return array
 
@@ -669,16 +673,7 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
                 if self.use_loc_mapping
                 else xp_take_along_axis(node_ebd, mapping, axis=1)
             )
-            layer_call = ll.call
-            if array_api_compat.is_jax_namespace(xp):
-                # Rematerialize each RepFlow block to trade compute for memory
-                # under higher-order autodiff (EFH training).
-                from deepmd.jax.env import (
-                    jax,
-                )
-
-                layer_call = jax.checkpoint(layer_call)
-            node_ebd, edge_ebd, angle_ebd = layer_call(
+            node_ebd, edge_ebd, angle_ebd = ll.call(
                 node_ebd_ext,
                 edge_ebd,
                 h2,
