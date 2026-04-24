@@ -194,8 +194,14 @@ def _merge_init_frz_model_data(
 
 
 def _clear_jax_mesh_for_host_ops() -> None:
-    nnx.use_eager_sharding(False)
+    _set_nnx_eager_sharding(False)
     jax.set_mesh(Mesh(np.empty((), dtype=object), ()))
+
+
+def _set_nnx_eager_sharding(enabled: bool) -> None:
+    use_eager_sharding = getattr(nnx, "use_eager_sharding", None)
+    if use_eager_sharding is not None:
+        use_eager_sharding(enabled)
 
 
 def _merge_batches_for_bias(batch_list: list[np.ndarray], key: str) -> np.ndarray | float:
@@ -977,7 +983,7 @@ class DPTrainer:
             (jax.process_count(), jax.local_device_count()),
             ("data", "natoms"),
         )
-        nnx.use_eager_sharding(True)
+        _set_nnx_eager_sharding(True)
         jax.set_mesh(auto_mesh)
         sharding = (
             NamedSharding(auto_mesh, P("data"))
@@ -1222,7 +1228,7 @@ class DPTrainer:
             (jax.process_count(), jax.local_device_count()),
             ("data", "natoms"),
         )
-        nnx.use_eager_sharding(True)
+        _set_nnx_eager_sharding(True)
         jax.set_mesh(auto_mesh)
         sharding = (
             NamedSharding(auto_mesh, P("data"))
