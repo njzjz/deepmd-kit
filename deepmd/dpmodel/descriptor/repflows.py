@@ -75,10 +75,7 @@ def _maybe_apply_jax_placeholder_sharding(array: Array) -> Array:
         )
     except RuntimeError as exc:
         message = str(exc)
-        if (
-            "with_sharding_constraint" not in message
-            or "non-empty mesh" not in message
-        ):
+        if "non-empty mesh" not in message:
             raise
         return array
 
