@@ -95,7 +95,7 @@ from deepmd.utils.model_stat import (
 )
 
 log = logging.getLogger(__name__)
-_ACTIVE_JAX_MESH_CONTEXT: Any | None = None
+_ACTIVE_JAX_MESH_CONTEXT: list[Any] = []
 
 DefModel = BaseModel | ModelWrapper
 DefLoss = EnergyLoss | EnergyHessianLoss
@@ -207,11 +207,8 @@ def _set_nnx_eager_sharding(enabled: bool) -> None:
 
 def _set_jax_mesh(mesh: Mesh) -> None:
     """Set the global mesh across JAX versions used by CI and users."""
-    global _ACTIVE_JAX_MESH_CONTEXT
-
-    if _ACTIVE_JAX_MESH_CONTEXT is not None:
-        _ACTIVE_JAX_MESH_CONTEXT.__exit__(None, None, None)
-        _ACTIVE_JAX_MESH_CONTEXT = None
+    if _ACTIVE_JAX_MESH_CONTEXT:
+        _ACTIVE_JAX_MESH_CONTEXT.pop().__exit__(None, None, None)
 
     set_mesh = getattr(jax, "set_mesh", None)
     if set_mesh is not None:
@@ -223,7 +220,7 @@ def _set_jax_mesh(mesh: Mesh) -> None:
         raise AttributeError("This JAX version cannot set a global mesh.")
 
     enter()
-    _ACTIVE_JAX_MESH_CONTEXT = mesh
+    _ACTIVE_JAX_MESH_CONTEXT.append(mesh)
 
 
 def _merge_batches_for_bias(batch_list: list[np.ndarray], key: str) -> np.ndarray | float:
