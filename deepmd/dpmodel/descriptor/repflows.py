@@ -83,20 +83,6 @@ def _maybe_apply_jax_placeholder_sharding(array: Array) -> Array:
         return array
 
 
-def _normalize_residual_container(value):
-    """Normalize serialized residual weights to a numeric array.
-
-    Older checkpoints may store residual weights as ``list[np.ndarray]`` while
-    newer code initializes them as a single array-like container. Converting the
-    legacy representation here keeps runtime math on one consistent container
-    type and avoids tracing failures in JAX.
-    """
-    if isinstance(value, list):
-        if len(value) == 0:
-            return np.asarray([], dtype=np.float64)
-        return np.asarray([np.asarray(item) for item in value])
-    return value
-
 @DescriptorBlock.register("se_repflow")
 class DescrptBlockRepflows(NativeOP, DescriptorBlock):
     r"""
@@ -2011,7 +1997,7 @@ class RepFlowLayer(NativeOP):
                 obj.a_compress_e_linear = NativeLayer.deserialize(a_compress_e_linear)
 
         if update_style == "res_residual":
-            obj.n_residual = _normalize_residual_container(n_residual)
-            obj.e_residual = _normalize_residual_container(e_residual)
-            obj.a_residual = _normalize_residual_container(a_residual)
+            obj.n_residual = n_residual
+            obj.e_residual = e_residual
+            obj.a_residual = a_residual
         return obj
