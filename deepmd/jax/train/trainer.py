@@ -95,6 +95,7 @@ from deepmd.utils.model_stat import (
 )
 
 log = logging.getLogger(__name__)
+_ACTIVE_JAX_MESH_CONTEXT: Any | None = None
 
 DefModel = BaseModel | ModelWrapper
 DefLoss = EnergyLoss | EnergyHessianLoss
@@ -195,13 +196,34 @@ def _merge_init_frz_model_data(
 
 def _clear_jax_mesh_for_host_ops() -> None:
     _set_nnx_eager_sharding(False)
-    jax.set_mesh(Mesh(np.empty((), dtype=object), ()))
+    _set_jax_mesh(Mesh(np.empty((), dtype=object), ()))
 
 
 def _set_nnx_eager_sharding(enabled: bool) -> None:
     use_eager_sharding = getattr(nnx, "use_eager_sharding", None)
     if use_eager_sharding is not None:
         use_eager_sharding(enabled)
+
+
+def _set_jax_mesh(mesh: Mesh) -> None:
+    """Set the global mesh across JAX versions used by CI and users."""
+    global _ACTIVE_JAX_MESH_CONTEXT
+
+    if _ACTIVE_JAX_MESH_CONTEXT is not None:
+        _ACTIVE_JAX_MESH_CONTEXT.__exit__(None, None, None)
+        _ACTIVE_JAX_MESH_CONTEXT = None
+
+    set_mesh = getattr(jax, "set_mesh", None)
+    if set_mesh is not None:
+        set_mesh(mesh)
+        return
+
+    enter = getattr(mesh, "__enter__", None)
+    if enter is None or getattr(mesh, "__exit__", None) is None:
+        raise AttributeError("This JAX version cannot set a global mesh.")
+
+    enter()
+    _ACTIVE_JAX_MESH_CONTEXT = mesh
 
 
 def _merge_batches_for_bias(batch_list: list[np.ndarray], key: str) -> np.ndarray | float:
@@ -984,7 +1006,7 @@ class DPTrainer:
             ("data", "natoms"),
         )
         _set_nnx_eager_sharding(True)
-        jax.set_mesh(auto_mesh)
+        _set_jax_mesh(auto_mesh)
         sharding = (
             NamedSharding(auto_mesh, P("data"))
             if int(os.environ.get("DP_JAX_MULTI_NPROC", "0")) > 1
@@ -1229,7 +1251,7 @@ class DPTrainer:
             ("data", "natoms"),
         )
         _set_nnx_eager_sharding(True)
-        jax.set_mesh(auto_mesh)
+        _set_jax_mesh(auto_mesh)
         sharding = (
             NamedSharding(auto_mesh, P("data"))
             if int(os.environ.get("DP_JAX_MULTI_NPROC", "0")) > 1
