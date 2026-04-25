@@ -1734,12 +1734,18 @@ def convert_numpy_data_to_jax_data(
 
     def _label_sharding(key: str, value: jnp.ndarray) -> Any:
         if key in {"energy", "box", "numb_copy", "virial", "real_natoms_vec"}:
-            return P("data")
-        if natoms_axis_size <= 1 or value.ndim < 2:
-            return P("data")
-        if value.shape[1] % natoms_axis_size != 0:
-            return P("data")
-        return P("data", "natoms")
+            spec = P("data")
+        elif natoms_axis_size <= 1 or value.ndim < 2:
+            spec = P("data")
+        elif value.shape[1] % natoms_axis_size != 0:
+            spec = P("data")
+        else:
+            spec = P("data", "natoms")
+        if sharding is not None and hasattr(sharding, "mesh"):
+            return NamedSharding(sharding.mesh, spec)
+        if getattr(jax, "set_mesh", None) is None:
+            return None
+        return spec
 
     jax_data = {
         kk: jax.device_put(
