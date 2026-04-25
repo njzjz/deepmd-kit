@@ -58,6 +58,28 @@ from .repformers import (
 )
 
 
+def _maybe_apply_jax_placeholder_sharding(array: Array) -> Array:
+    """Keep static placeholder tensors replicated when a mesh context exists.
+
+    JAX training runs under an explicit mesh and benefits from pinning these
+    dummy index tensors to replicated sharding. Export/freeze does not create
+    a mesh context, so the same sharding constraint must be skipped there.
+    """
+    from deepmd.jax.env import (
+        jax,
+    )
+
+    try:
+        return jax.lax.with_sharding_constraint(
+            array, jax.sharding.PartitionSpec(None, None)
+        )
+    except RuntimeError as exc:
+        message = str(exc)
+        if "non-empty mesh" not in message:
+            raise
+        return array
+
+
 @DescriptorBlock.register("se_repflow")
 class DescrptBlockRepflows(NativeOP, DescriptorBlock):
     r"""
@@ -595,12 +617,25 @@ class DescrptBlockRepflows(NativeOP, DescriptorBlock):
             # n_angle x 1
             a_sw = (a_sw[:, :, :, None] * a_sw[:, :, None, :])[a_nlist_mask]
         else:
+            dummy_edge_count = max(1, self.nnei)
+            dummy_angle_count = max(1, self.a_sel * self.a_sel)
             edge_index = xp.zeros(
-                [2, 1], dtype=nlist.dtype, device=array_api_compat.device(nlist)
+                [2, dummy_edge_count],
+                dtype=nlist.dtype,
+                device=array_api_compat.device(nlist),
             )
             angle_index = xp.zeros(
-                [3, 1], dtype=nlist.dtype, device=array_api_compat.device(nlist)
+                [3, dummy_angle_count],
+                dtype=nlist.dtype,
+                device=array_api_compat.device(nlist),
             )
+            if array_api_compat.is_jax_namespace(xp):
+                # These are placeholders in the static-selection path and should
+                # stay replicated instead of inheriting the active natoms mesh.
+                # Freeze/export does not run under a mesh, so skip the
+                # constraint there and keep the placeholders as-is.
+                edge_index = _maybe_apply_jax_placeholder_sharding(edge_index)
+                angle_index = _maybe_apply_jax_placeholder_sharding(angle_index)
 
         # get edge and angle embedding
         # nb x nloc x nnei x e_dim [OR] n_edge x e_dim
