@@ -796,6 +796,10 @@ class DeepEval(DeepEvalBackend):
             Descriptors.
         """
         model = self.dp.model["Default"]
+        # RetrySignal is raised by AutoBatchSize only after it lowers the
+        # current batch size. Therefore this loop makes progress on every
+        # retry and stops retrying once evaluation succeeds or batch size 1
+        # still OOMs.
         while True:
             if self.auto_batch_size is not None:
                 self.auto_batch_size.set_oom_retry_mode(True)
@@ -862,6 +866,10 @@ class DeepEval(DeepEvalBackend):
             Fitting output before last layer.
         """
         model = self.dp.model["Default"]
+        # RetrySignal is raised by AutoBatchSize only after it lowers the
+        # current batch size. Therefore this loop makes progress on every
+        # retry and stops retrying once evaluation succeeds or batch size 1
+        # still OOMs.
         while True:
             if self.auto_batch_size is not None:
                 self.auto_batch_size.set_oom_retry_mode(True)

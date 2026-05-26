@@ -89,8 +89,20 @@ class TestOOMRetry(unittest.TestCase):
             DeepEval.__abstractmethods__ = abstract_methods
 
         model = MagicMock()
-        model.eval_descriptor.return_value = np.array([1.0, 2.0, 3.0])
-        model.eval_fitting_last_layer.return_value = np.array([4.0, 5.0, 6.0])
+        if backend == "pt":
+            import torch
+
+            # PT DeepEval converts hook outputs with the PT tensor helper.
+            # Create CPU tensors explicitly because source/tests/pt sets an
+            # invalid CUDA default device to catch missing device placement.
+            with torch.device("cpu"):
+                model.eval_descriptor.return_value = torch.tensor([1.0, 2.0, 3.0])
+                model.eval_fitting_last_layer.return_value = torch.tensor(
+                    [4.0, 5.0, 6.0]
+                )
+        else:
+            model.eval_descriptor.return_value = np.array([1.0, 2.0, 3.0])
+            model.eval_fitting_last_layer.return_value = np.array([4.0, 5.0, 6.0])
 
         if backend == "pd" and method_name == "eval_descriptor":
             # Paddle eval_descriptor accepts either a ModelWrapper or a direct model.
