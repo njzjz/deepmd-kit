@@ -1,4 +1,12 @@
-file(GLOB OP_SRC print_summary.cc comm.cc tabulate_multi_device.cc)
+set(OP_SRC comm.cc tabulate_multi_device.cc)
+if(ENABLE_PYTORCH_STABLE_ABI)
+  # Initial stable ABI coverage is intentionally limited to the no-autograd
+  # enable_mpi registration. comm.cc and tabulate_multi_device.cc still use
+  # torch::autograd::Function, which is not exposed by the stable ABI.
+  list(APPEND OP_SRC print_summary_stable.cc)
+else()
+  list(APPEND OP_SRC print_summary.cc)
+endif()
 
 add_library(deepmd_op_pt MODULE ${OP_SRC})
 # link: libdeepmd libtorch

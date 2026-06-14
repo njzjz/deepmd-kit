@@ -5,6 +5,8 @@ include(CMakePackageConfigHelpers)
 
 option(ENABLE_TENSORFLOW "Enable TensorFlow interface" OFF)
 option(ENABLE_PYTORCH "Enable PyTorch interface" OFF)
+option(ENABLE_PYTORCH_STABLE_ABI
+       "Enable experimental LibTorch Stable ABI support in PyTorch OPs" OFF)
 option(ENABLE_JAX "Enable JAX interface" OFF)
 if(ENABLE_TENSORFLOW)
   # JAX requires TF C interface, contained in TF C++ library
@@ -340,6 +342,15 @@ if(ENABLE_PYTORCH AND NOT DEEPMD_C_ROOT)
     set_if_higher(CMAKE_CXX_STANDARD 17)
   elseif(NOT Torch_VERSION VERSION_LESS "1.5.0")
     set_if_higher(CMAKE_CXX_STANDARD 14)
+  endif()
+  if(ENABLE_PYTORCH_STABLE_ABI)
+    if(Torch_VERSION VERSION_LESS "2.10.0")
+      message(
+        FATAL_ERROR
+          "ENABLE_PYTORCH_STABLE_ABI requires PyTorch >= 2.10.0 for the "
+          "current source/op/pt stable ABI proof of concept.")
+    endif()
+    message(STATUS "PyTorch Stable ABI: enabled for supported OPs")
   endif()
   string(REGEX MATCH "_GLIBCXX_USE_CXX11_ABI=([0-9]+)" CXXABI_PT_MATCH
                "${TORCH_CXX_FLAGS}")
