@@ -87,9 +87,7 @@ from deepmd.loggers.training import (
     format_training_message,
     format_training_message_per_task,
 )
-from deepmd.utils import (
-    random as dp_random,
-)
+from deepmd.utils import random as dp_random
 from deepmd.utils.data import (
     DataRequirementItem,
 )
