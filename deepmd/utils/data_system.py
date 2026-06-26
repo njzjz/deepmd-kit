@@ -552,12 +552,28 @@ class DeepmdDataSystem:
             if not vv["atomic"]:
                 b_data[kk] = np.concatenate([bb[kk] for bb in batch_data], axis=0)
             else:
-                b_data[kk] = np.zeros(
-                    (len(batch_data), max_natoms * vv["ndof"] * vv["repeat"]),
-                    dtype=batch_data[0][kk].dtype,
-                )
-                for ii, bb in enumerate(batch_data):
-                    b_data[kk][ii, : bb[kk].shape[1]] = bb[kk][0]
+                if kk == "hessian":
+                    max_hessian_size = (3 * max_natoms) ** 2
+                    b_data[kk] = np.zeros(
+                        (len(batch_data), max_hessian_size),
+                        dtype=batch_data[0][kk].dtype,
+                    )
+                    for ii, bb in enumerate(batch_data):
+                        natoms = bb["natoms_vec"][0]
+                        hessian = bb[kk][0].reshape(3 * natoms, 3 * natoms)
+                        padded = np.zeros(
+                            (3 * max_natoms, 3 * max_natoms),
+                            dtype=bb[kk].dtype,
+                        )
+                        padded[: 3 * natoms, : 3 * natoms] = hessian
+                        b_data[kk][ii] = padded.reshape(-1)
+                else:
+                    b_data[kk] = np.zeros(
+                        (len(batch_data), max_natoms * vv["ndof"] * vv["repeat"]),
+                        dtype=batch_data[0][kk].dtype,
+                    )
+                    for ii, bb in enumerate(batch_data):
+                        b_data[kk][ii, : bb[kk].shape[1]] = bb[kk][0]
         return b_data
 
     # ! altered by Marián Rynik

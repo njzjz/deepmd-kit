@@ -243,6 +243,38 @@ def _merge_batches_for_bias(
     return np.concatenate(arrays, axis=0)
 
 
+def _infer_bias_frame_count(sampled: dict[str, np.ndarray | None]) -> int | None:
+    for key in ("coord", "atype", "energy", "force", "real_natoms_vec"):
+        value = sampled.get(key)
+        if value is None:
+            continue
+        array = np.asarray(value)
+        if array.ndim > 0:
+            return int(array.shape[0])
+    return None
+
+
+def _expand_bias_natoms(
+    value: np.ndarray | None,
+    nframes: int | None,
+) -> np.ndarray | None:
+    if value is None or nframes is None:
+        return value
+    array = np.asarray(value)
+    if array.ndim == 0:
+        return array
+    if array.ndim == 1:
+        array = array.reshape(1, -1)
+    if array.shape[0] == nframes:
+        return array
+    if nframes % array.shape[0] != 0:
+        raise ValueError(
+            "Cannot expand natoms statistics from "
+            f"{array.shape[0]} rows to {nframes} frames."
+        )
+    return np.repeat(array, nframes // array.shape[0], axis=0)
+
+
 def _pack_data_for_bias_adjust(
     train_data: DeepmdDataSystem,
     nbatches: int,
@@ -260,6 +292,23 @@ def _pack_data_for_bias_adjust(
             single_data[key] = to_numpy_array(value)
         if not train_data.data_systems[ii].pbc:
             single_data["box"] = None
+        nframes = _infer_bias_frame_count(single_data)
+        if "real_natoms_vec" in single_data:
+            single_data["real_natoms_vec"] = _expand_bias_natoms(
+                single_data["real_natoms_vec"],
+                nframes,
+            )
+            single_data["natoms"] = single_data["real_natoms_vec"]
+        else:
+            single_data["natoms"] = _expand_bias_natoms(
+                single_data.get("natoms"),
+                nframes,
+            )
+        if "natoms_vec" in single_data:
+            single_data["natoms_vec"] = _expand_bias_natoms(
+                single_data["natoms_vec"],
+                nframes,
+            )
     return sampled
 
 
