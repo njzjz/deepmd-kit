@@ -226,7 +226,12 @@ class TypeEmbedNet(NativeOP):
                     [first_layer_matrix, extend_type_params], axis=0
                 )
 
-            first_layer_matrix = first_layer_matrix[remap_index]
+            remap_index_array = xp.asarray(
+                remap_index,
+                dtype=xp.int32,
+                device=array_api_compat.device(first_layer_matrix),
+            )
+            first_layer_matrix = first_layer_matrix[remap_index_array]
             new_ntypes = len(type_map)
             eye_vector = xp.eye(
                 new_ntypes,

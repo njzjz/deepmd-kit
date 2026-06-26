@@ -15,6 +15,21 @@ from packaging.version import (
 Array = np.ndarray | Any  # Any to support JAX, PyTorch, etc. arrays
 
 
+def _xp_arange(
+    xp: Any,
+    size: int,
+    dtype: Any,
+    like: Array,
+) -> Array:
+    if array_api_compat.is_jax_array(like):
+        return xp.arange(size, dtype=dtype)  # pylint: disable=no-explicit-device
+    return xp.arange(
+        size,
+        dtype=dtype,
+        device=array_api_compat.device(like),
+    )
+
+
 # array api adds take_along_axis in https://github.com/data-apis/array-api/pull/816
 # but it hasn't been released yet
 # below is a pure Python implementation of take_along_axis
@@ -51,8 +66,7 @@ def xp_take_along_axis(arr: Array, indices: Array, axis: int) -> Array:
     else:
         indices = xp.reshape(indices, (0, 0))
 
-    dev = array_api_compat.device(indices)
-    offset = (xp.arange(indices.shape[0], dtype=indices.dtype, device=dev) * m)[
+    offset = (_xp_arange(xp, indices.shape[0], indices.dtype, indices) * m)[
         :, xp.newaxis
     ]
     indices = xp.reshape(offset + indices, (-1,))
@@ -78,7 +92,7 @@ def xp_scatter_sum(input: Array, dim: int, index: Array, src: Array) -> Array:
     xp = array_api_compat.array_namespace(input)
 
     # Create flat index array matching input shape
-    idx = xp.arange(input.size, dtype=xp.int64, device=array_api_compat.device(input))
+    idx = _xp_arange(xp, input.size, xp.int64, input)
     idx = xp.reshape(idx, input.shape)
 
     # Get flat indices where we want to add values

@@ -8,6 +8,7 @@ from typing import (
 
 from deepmd.jax.utils.serialization import (
     deserialize_to_file,
+    select_model_branch,
     serialize_from_file,
 )
 
@@ -16,6 +17,8 @@ def freeze(
     *,
     checkpoint_folder: str,
     output: str,
+    head: str | None = None,
+    model_branch: str | None = None,
     hessian: bool = False,
     **kwargs: Any,
 ) -> None:
@@ -37,6 +40,9 @@ def freeze(
         checkpoint_folder = checkpoint_meta.read_text().strip()
     if Path(checkpoint_folder).is_dir():
         data = serialize_from_file(checkpoint_folder)
+        selected_branch = model_branch or head
+        if selected_branch and "model_dict" in data["model_def_script"]:
+            data = select_model_branch(data, selected_branch)
         deserialize_to_file(output, data, hessian=hessian)
     else:
         raise FileNotFoundError(f"Checkpoint {checkpoint_folder} does not exist.")

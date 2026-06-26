@@ -24,6 +24,12 @@ from deepmd.jax.model.base_model import (
 from deepmd.jax.model.dp_zbl_model import (
     DPZBLModel,
 )
+from deepmd.jax.model.multitask import (
+    ModelWrapper,
+)
+from deepmd.jax.utils.multi_task import (
+    get_case_embd_config,
+)
 
 
 def get_standard_model(data: dict) -> BaseModel:
@@ -121,3 +127,23 @@ def get_model(data: dict) -> BaseModel:
             return get_standard_model(data)
     else:
         return BaseModel.get_class_by_type(model_type).get_model(data)
+
+
+def get_model_for_wrapper(
+    model_params: dict,
+    *,
+    shared_links: dict | None = None,
+) -> BaseModel | ModelWrapper:
+    if "model_dict" not in model_params:
+        return get_model(model_params)
+
+    model_dict = {
+        model_key: get_model(model_params["model_dict"][model_key])
+        for model_key in model_params["model_dict"]
+    }
+    do_case_embd, case_embd_index = get_case_embd_config(model_params)
+    return ModelWrapper(
+        model_dict,
+        shared_links=shared_links,
+        case_embd_index=case_embd_index if do_case_embd else None,
+    )

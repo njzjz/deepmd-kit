@@ -77,13 +77,14 @@ def normalize_coord(
     device = array_api_compat.device(icoord)
     if array_api_compat.is_jax_namespace(xp):
         # fix jax sharding "list index out of range"
-        from jax.sharding import PartitionSpec as P, NamedSharding
+        from jax.sharding import (
+            NamedSharding,
+        )
+        from jax.sharding import PartitionSpec as P
 
         if isinstance(device, NamedSharding):
             device = NamedSharding(device.mesh, P())
-    icoord = xp.remainder(
-        icoord, xp.ones((), dtype=icoord.dtype, device=device)
-    )
+    icoord = xp.remainder(icoord, xp.ones((), dtype=icoord.dtype, device=device))
     return inter2phys(icoord, cell)
 
 

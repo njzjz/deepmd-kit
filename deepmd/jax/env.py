@@ -19,6 +19,9 @@ jax.config.update("jax_default_matmul_precision", "tensorfloat32")
 if os.environ.get("DP_DTYPE_PROMOTION_STRICT") == "1":
     jax.config.update("jax_numpy_dtype_promotion", "strict")
 
+if not hasattr(jax.monitoring, "record_scalar"):
+    jax.monitoring.record_scalar = lambda *args, **kwargs: None
+
 __all__ = [
     "flax_version",
     "jax",
