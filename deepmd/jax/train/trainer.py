@@ -4,6 +4,9 @@ import logging
 import os
 import shutil
 import time
+from collections.abc import (
+    Callable,
+)
 from copy import (
     deepcopy,
 )
@@ -84,6 +87,9 @@ from deepmd.loggers.training import (
     format_training_message,
     format_training_message_per_task,
 )
+from deepmd.utils import (
+    random as dp_random,
+)
 from deepmd.utils.data import (
     DataRequirementItem,
 )
@@ -125,15 +131,15 @@ def _merge_init_frz_model_data(
             return merged
         for key in source_node:
             if key not in target_node:
-                unexpected.append(path + (key,))
+                unexpected.append((*path, key))
         for key, value in target_node.items():
             if key not in source_node:
-                missing.append(path + (key,))
+                missing.append((*path, key))
                 continue
             merged[key] = _merge_init_frz_model_data(
                 value,
                 source_node[key],
-                path=path + (key,),
+                path=(*path, key),
                 missing=missing,
                 unexpected=unexpected,
             )
@@ -153,7 +159,7 @@ def _merge_init_frz_model_data(
             merged[idx] = _merge_init_frz_model_data(
                 value,
                 source_node[idx],
-                path=path + (idx,),
+                path=(*path, idx),
                 missing=missing,
                 unexpected=unexpected,
             )
@@ -172,11 +178,11 @@ def _merge_init_frz_model_data(
             _merge_init_frz_model_data(
                 tv,
                 sv,
-                path=path + (idx,),
+                path=(*path, idx),
                 missing=missing,
                 unexpected=unexpected,
             )
-            for idx, (tv, sv) in enumerate(zip(target_node, source_node))
+            for idx, (tv, sv) in enumerate(zip(target_node, source_node, strict=True))
         )
 
     if isinstance(target_node, np.ndarray):
@@ -769,7 +775,7 @@ class DPTrainer:
                 "dpa3",
                 "se_e3_tebd",
             }:
-                return [path_prefix + ("type_embedding",)]
+                return [(*path_prefix, "type_embedding")]
             raise NotImplementedError(
                 "JAX multitask finetune does not support shared override for "
                 f"{shared_type}:{shared_level} with descriptor type {descriptor_type}."
@@ -1301,7 +1307,9 @@ class DPTrainer:
         for model_key in self.model_keys:
             branch_loss = self.loss[model_key]
 
-            def make_loss_fn(task_key: str, task_loss: DefLoss):
+            def make_loss_fn(
+                task_key: str, task_loss: DefLoss
+            ) -> Callable[..., jnp.ndarray]:
                 def loss_fn(
                     wrapper: ModelWrapper,
                     lr: float,
@@ -1338,7 +1346,9 @@ class DPTrainer:
 
                 return loss_fn
 
-            def make_more_loss_fn(task_key: str, task_loss: DefLoss):
+            def make_more_loss_fn(
+                task_key: str, task_loss: DefLoss
+            ) -> Callable[..., dict[str, jnp.ndarray]]:
                 @nnx.jit
                 def more_loss_fn(
                     wrapper: ModelWrapper,
@@ -1376,7 +1386,9 @@ class DPTrainer:
 
                 return more_loss_fn
 
-            def make_train_step(task_loss_fn):
+            def make_train_step(
+                task_loss_fn: Callable[..., jnp.ndarray],
+            ) -> Callable[..., None]:
                 @nnx.jit
                 def train_step(
                     wrapper: ModelWrapper,
@@ -1415,10 +1427,7 @@ class DPTrainer:
         start_time = time.time()
         disp_file_fp = open(self.disp_file, "w")
         for step in range(self.start_step, self.num_steps):
-            model_index = np.random.choice(
-                np.arange(len(self.model_keys), dtype=np.int_),
-                p=self.model_prob,
-            )
+            model_index = dp_random.choice(len(self.model_keys), p=self.model_prob)
             task_key = self.model_keys[model_index]
             model.set_case_embd(task_key)
             batch_data = train_data[task_key].get_batch()

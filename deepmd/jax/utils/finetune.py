@@ -198,11 +198,11 @@ def _merge_array_leaves(
         merged = deepcopy(target_node)
         for key, value in target_node.items():
             if key not in source_node:
-                raise KeyError(f"Missing key {'.'.join(map(str, path + (key,)))}")
+                raise KeyError(f"Missing key {'.'.join(map(str, (*path, key)))}")
             merged[key] = _merge_array_leaves(
                 value,
                 source_node[key],
-                path=path + (key,),
+                path=(*path, key),
                 keep_target_on_shape_mismatch=keep_target_on_shape_mismatch,
             )
         return merged
@@ -213,10 +213,10 @@ def _merge_array_leaves(
             _merge_array_leaves(
                 tv,
                 sv,
-                path=path + (idx,),
+                path=(*path, idx),
                 keep_target_on_shape_mismatch=keep_target_on_shape_mismatch,
             )
-            for idx, (tv, sv) in enumerate(zip(target_node, source_node))
+            for idx, (tv, sv) in enumerate(zip(target_node, source_node, strict=True))
         ]
     if isinstance(target_node, tuple):
         if not isinstance(source_node, tuple) or len(target_node) != len(source_node):
@@ -225,10 +225,10 @@ def _merge_array_leaves(
             _merge_array_leaves(
                 tv,
                 sv,
-                path=path + (idx,),
+                path=(*path, idx),
                 keep_target_on_shape_mismatch=keep_target_on_shape_mismatch,
             )
-            for idx, (tv, sv) in enumerate(zip(target_node, source_node))
+            for idx, (tv, sv) in enumerate(zip(target_node, source_node, strict=True))
         )
     if isinstance(target_node, np.ndarray):
         if not isinstance(source_node, np.ndarray):
