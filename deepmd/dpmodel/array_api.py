@@ -21,10 +21,13 @@ def _xp_arange(
     dtype: Any,
     like: Array,
 ) -> Array:
-    values = np.arange(size, dtype=np.int64)
     if array_api_compat.is_jax_array(like):
-        return xp.asarray(values, dtype=dtype)
-    return xp.asarray(values, dtype=dtype, device=array_api_compat.device(like))
+        return xp.arange(size, dtype=dtype)  # pylint: disable=no-explicit-device
+    return xp.arange(
+        size,
+        dtype=dtype,
+        device=array_api_compat.device(like),
+    )
 
 
 # array api adds take_along_axis in https://github.com/data-apis/array-api/pull/816
