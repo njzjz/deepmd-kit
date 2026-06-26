@@ -119,14 +119,15 @@ def build_neighbor_list(
     device = array_api_compat.device(diff)
     if array_api_compat.is_jax_namespace(xp):
         # fix jax sharding "list index out of range"
-        from jax.sharding import PartitionSpec as P, NamedSharding
+        from jax.sharding import (
+            NamedSharding,
+        )
+        from jax.sharding import PartitionSpec as P
 
         if isinstance(device, NamedSharding):
             device = NamedSharding(device.mesh, P())
     # if central atom has two zero distances, sorting sometimes can not exclude itself
-    rr -= xp.eye(nloc, nall, dtype=diff.dtype, device=device)[
-        xp.newaxis, :, :
-    ]
+    rr -= xp.eye(nloc, nall, dtype=diff.dtype, device=device)[xp.newaxis, :, :]
     nlist = xp.argsort(rr, axis=-1)
     rr = xp.sort(rr, axis=-1)
     rr = rr[:, :, 1:]
@@ -309,7 +310,10 @@ def extend_coord_with_ghosts(
     if array_api_compat.is_jax_namespace(xp):
         # fix jax: Sharding is only valid for values of rank at least 2,
         # but was applied to a value of rank 1.
-        from jax.sharding import PartitionSpec as P, NamedSharding
+        from jax.sharding import (
+            NamedSharding,
+        )
+        from jax.sharding import PartitionSpec as P
 
         if isinstance(device, NamedSharding):
             if len(device.spec) > 1:
@@ -319,9 +323,7 @@ def extend_coord_with_ghosts(
             device_none = NamedSharding(device.mesh, P())
     # int64 for index
     aidx = xp.tile(
-        xp.arange(nloc, dtype=xp.int64, device=device_nloc)[
-            xp.newaxis, :
-        ],
+        xp.arange(nloc, dtype=xp.int64, device=device_nloc)[xp.newaxis, :],
         (nf, 1),
     )
     if cell is None:

@@ -10,7 +10,6 @@ import os
 import time
 from typing import (
     Any,
-    Optional,
 )
 
 from deepmd.common import (
@@ -80,15 +79,15 @@ class SummaryPrinter(BaseSummaryPrinter):
 def train(
     *,
     INPUT: str,
-    init_model: Optional[str],
-    restart: Optional[str],
+    init_model: str | None,
+    restart: str | None,
     output: str,
     init_frz_model: str,
     mpi_log: str,
     log_level: int,
-    log_path: Optional[str],
+    log_path: str | None,
     skip_neighbor_stat: bool = False,
-    finetune: Optional[str] = None,
+    finetune: str | None = None,
     use_pretrain_script: bool = False,
     force_load: bool = False,
     model_branch: str = "",

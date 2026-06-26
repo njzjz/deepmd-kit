@@ -17,9 +17,6 @@ from deepmd.dpmodel.common import (
 from deepmd.jax.common import (
     to_jax_array,
 )
-from deepmd.jax.descriptor.se_e2_a import (
-    DescrptSeA,
-)
 from deepmd.jax.descriptor.dpa3 import (
     DescrptDPA3,
 )
@@ -229,8 +226,12 @@ class TestJAXFinetuneRules(unittest.TestCase):
         self.assertFalse(finetune_links["Default"].get_random_fitting())
         self.assertTrue(finetune_links["new_head"].get_random_fitting())
         self.assertFalse(finetune_links["new_head"].get_resuming())
-        self.assertEqual(updated_config["model_dict"]["Default"]["descriptor"]["rcut"], 5.0)
-        self.assertEqual(updated_config["model_dict"]["new_head"]["fitting_net"]["neuron"], [16])
+        self.assertEqual(
+            updated_config["model_dict"]["Default"]["descriptor"]["rcut"], 5.0
+        )
+        self.assertEqual(
+            updated_config["model_dict"]["new_head"]["fitting_net"]["neuron"], [16]
+        )
 
     def test_multitask_target_from_multitask_source(self) -> None:
         finetune_data = {
@@ -272,17 +273,24 @@ class TestJAXFinetuneRules(unittest.TestCase):
         self.assertFalse(finetune_links["new_head"].get_resuming())
         self.assertEqual(finetune_links["new_head"].get_model_branch(), "head_b")
         self.assertTrue(finetune_links["fresh_head"].get_random_fitting())
-        self.assertEqual(updated_config["model_dict"]["new_head"]["descriptor"]["rcut"], 7.0)
+        self.assertEqual(
+            updated_config["model_dict"]["new_head"]["descriptor"]["rcut"], 7.0
+        )
 
     def test_multitask_target_rejects_command_line_model_branch(self) -> None:
         finetune_data = {
             "model_def_script": deepcopy(self.pretrained_model_config),
             "model": {"unused": True},
         }
-        with patch(
-            "deepmd.jax.utils.finetune._validate_finetune_source",
-            return_value=finetune_data,
-        ), self.assertRaisesRegex(AssertionError, "Multi-task fine-tuning does not support"):
+        with (
+            patch(
+                "deepmd.jax.utils.finetune._validate_finetune_source",
+                return_value=finetune_data,
+            ),
+            self.assertRaisesRegex(
+                AssertionError, "Multi-task fine-tuning does not support"
+            ),
+        ):
             get_finetune_rules(
                 "pretrained.jax",
                 {"model_dict": {"Default": deepcopy(self.target_model_config)}},
@@ -296,10 +304,13 @@ class TestJAXFinetuneRules(unittest.TestCase):
             },
             "model": {"unused": True},
         }
-        with patch(
-            "deepmd.jax.utils.finetune._validate_finetune_source",
-            return_value=finetune_data,
-        ), self.assertRaisesRegex(AssertionError, "chosen to finetune not exist"):
+        with (
+            patch(
+                "deepmd.jax.utils.finetune._validate_finetune_source",
+                return_value=finetune_data,
+            ),
+            self.assertRaisesRegex(AssertionError, "chosen to finetune not exist"),
+        ):
             get_finetune_rules(
                 "pretrained.jax",
                 {
@@ -356,8 +367,12 @@ class TestJAXFinetuneMerge(unittest.TestCase):
             source,
             FinetuneRuleItem(["O", "H"], ["O", "H"]),
         )
-        np.testing.assert_array_equal(merged["descriptor"]["weights"], source["descriptor"]["weights"])
-        np.testing.assert_array_equal(merged["fitting"]["weights"], source["fitting"]["weights"])
+        np.testing.assert_array_equal(
+            merged["descriptor"]["weights"], source["descriptor"]["weights"]
+        )
+        np.testing.assert_array_equal(
+            merged["fitting"]["weights"], source["fitting"]["weights"]
+        )
         self.assertFalse(merged["descriptor"]["trainable"])
         self.assertTrue(merged["fitting"]["trainable"])
 
@@ -388,8 +403,12 @@ class TestJAXFinetuneMerge(unittest.TestCase):
             source,
             FinetuneRuleItem(["O", "H"], ["O", "H"], random_fitting=True),
         )
-        np.testing.assert_array_equal(merged["descriptor"]["weights"], source["descriptor"]["weights"])
-        np.testing.assert_array_equal(merged["fitting"]["weights"], target["fitting"]["weights"])
+        np.testing.assert_array_equal(
+            merged["descriptor"]["weights"], source["descriptor"]["weights"]
+        )
+        np.testing.assert_array_equal(
+            merged["fitting"]["weights"], target["fitting"]["weights"]
+        )
 
     def test_case_embedding_migration_keeps_target_shape_mismatch_leaves(self) -> None:
         target = {
@@ -413,9 +432,15 @@ class TestJAXFinetuneMerge(unittest.TestCase):
             source,
             FinetuneRuleItem(["O", "H"], ["O", "H"]),
         )
-        np.testing.assert_array_equal(merged["descriptor"]["weights"], source["descriptor"]["weights"])
-        np.testing.assert_array_equal(merged["fitting"]["weights"], target["fitting"]["weights"])
-        np.testing.assert_array_equal(merged["@variables"]["bias"], source["@variables"]["bias"])
+        np.testing.assert_array_equal(
+            merged["descriptor"]["weights"], source["descriptor"]["weights"]
+        )
+        np.testing.assert_array_equal(
+            merged["fitting"]["weights"], target["fitting"]["weights"]
+        )
+        np.testing.assert_array_equal(
+            merged["@variables"]["bias"], source["@variables"]["bias"]
+        )
 
     def test_source_override_replaces_only_requested_subtree(self) -> None:
         target = {
@@ -435,9 +460,15 @@ class TestJAXFinetuneMerge(unittest.TestCase):
             FinetuneRuleItem(["O", "H"], ["O", "H"]),
             source_overrides={("fitting", "nets"): override_source},
         )
-        np.testing.assert_array_equal(merged["descriptor"]["weights"], source["descriptor"]["weights"])
-        np.testing.assert_array_equal(merged["fitting"]["nets"], override_source["fitting"]["nets"])
-        np.testing.assert_array_equal(merged["fitting"]["keep"], source["fitting"]["keep"])
+        np.testing.assert_array_equal(
+            merged["descriptor"]["weights"], source["descriptor"]["weights"]
+        )
+        np.testing.assert_array_equal(
+            merged["fitting"]["nets"], override_source["fitting"]["nets"]
+        )
+        np.testing.assert_array_equal(
+            merged["fitting"]["keep"], source["fitting"]["keep"]
+        )
 
 
 @unittest.skipIf(
@@ -521,7 +552,9 @@ class TestJAXFinetuneSharedOverrides(unittest.TestCase):
             trainer.finetune_model_data["model"]["model_dict"]["src_a"],
         )
 
-    def test_collect_shared_source_overrides_hybrid_partial_descriptor_only(self) -> None:
+    def test_collect_shared_source_overrides_hybrid_partial_descriptor_only(
+        self,
+    ) -> None:
         trainer = DPTrainer.__new__(DPTrainer)
         trainer.model_keys = ["head_a", "head_b"]
         trainer.shared_links = {
@@ -599,7 +632,9 @@ class TestJAXFinetuneSharedOverrides(unittest.TestCase):
             }
         }
         trainer.finetune_links = {"head_a": FinetuneRuleItem(["H"], ["H"])}
-        with self.assertRaisesRegex(NotImplementedError, "fitting_net sharing only supports shared_level=0"):
+        with self.assertRaisesRegex(
+            NotImplementedError, "fitting_net sharing only supports shared_level=0"
+        ):
             trainer._validate_shared_finetune_rules()
 
 
@@ -744,10 +779,17 @@ class TestJAXFinetuneWiring(unittest.TestCase):
     def test_trainer_finetune_does_not_restore_step(self) -> None:
         dummy_model = Mock()
         dummy_model.get_dim_fparam.return_value = 0
-        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
-            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
-            return_value=Mock(label_requirement=[]),
-        ), patch("deepmd.jax.train.trainer.serialize_from_file") as mock_serialize:
+        with (
+            patch(
+                "deepmd.jax.train.trainer.get_model_for_wrapper",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+                return_value=Mock(label_requirement=[]),
+            ),
+            patch("deepmd.jax.train.trainer.serialize_from_file") as mock_serialize,
+        ):
             trainer = DPTrainer(
                 self._trainer_jdata(),
                 finetune_model="pretrained.jax",
@@ -760,30 +802,42 @@ class TestJAXFinetuneWiring(unittest.TestCase):
     def test_trainer_finetune_selects_multitask_source_branch(self) -> None:
         dummy_model = Mock()
         dummy_model.get_dim_fparam.return_value = 0
-        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
-            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
-            return_value=Mock(label_requirement=[]),
-        ), patch.object(
-            DPTrainer,
-            "_apply_single_finetune",
-            return_value=dummy_model,
-        ) as mock_apply, patch(
-            "deepmd.jax.train.trainer.select_model_branch",
-            return_value={
-                "model_def_script": {"type": "standard"},
-                "model": {"branch_value": "selected"},
-            },
-        ) as mock_select, patch(
-            "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
-            return_value={"coord": np.zeros((1, 1, 3))},
-        ), patch(
-            "deepmd.jax.train.trainer.model_change_out_bias",
-            return_value=dummy_model,
+        with (
+            patch(
+                "deepmd.jax.train.trainer.get_model_for_wrapper",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+                return_value=Mock(label_requirement=[]),
+            ),
+            patch.object(
+                DPTrainer,
+                "_apply_single_finetune",
+                return_value=dummy_model,
+            ) as mock_apply,
+            patch(
+                "deepmd.jax.train.trainer.select_model_branch",
+                return_value={
+                    "model_def_script": {"type": "standard"},
+                    "model": {"branch_value": "selected"},
+                },
+            ) as mock_select,
+            patch(
+                "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
+                return_value={"coord": np.zeros((1, 1, 3))},
+            ),
+            patch(
+                "deepmd.jax.train.trainer.model_change_out_bias",
+                return_value=dummy_model,
+            ),
         ):
             trainer = DPTrainer(
                 self._trainer_jdata(),
                 finetune_model="pretrained.jax",
-                finetune_links={"Default": FinetuneRuleItem(["H"], ["H"], model_branch="branch_b")},
+                finetune_links={
+                    "Default": FinetuneRuleItem(["H"], ["H"], model_branch="branch_b")
+                },
                 finetune_model_data={
                     "model_def_script": {
                         "model_dict": {
@@ -813,28 +867,43 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         dummy_model.serialize.return_value = {"descriptor": np.zeros((1,))}
         loss = Mock(label_requirement=[])
 
-        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
-            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
-            return_value=loss,
-        ), patch(
-            "deepmd.jax.train.trainer.make_stat_input",
-            return_value={"type": [[np.array([[0]], dtype=np.int32)]], "coord": [[np.zeros((1, 3))]]},
-        ), patch(
-            "deepmd.jax.train.trainer.jnp.asarray",
-            side_effect=lambda x: x,
-        ), patch.object(
-            DPTrainer,
-            "_apply_single_finetune",
-            return_value=dummy_model,
-        ), patch(
-            "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
-            return_value={"coord": np.zeros((1, 1, 3))},
-        ), patch(
-            "deepmd.jax.train.trainer.model_change_out_bias",
-            return_value=dummy_model,
-        ), patch(
-            "deepmd.jax.train.trainer.jax.make_mesh",
-            side_effect=RuntimeError("stop_after_stats"),
+        with (
+            patch(
+                "deepmd.jax.train.trainer.get_model_for_wrapper",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+                return_value=loss,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.make_stat_input",
+                return_value={
+                    "type": [[np.array([[0]], dtype=np.int32)]],
+                    "coord": [[np.zeros((1, 3))]],
+                },
+            ),
+            patch(
+                "deepmd.jax.train.trainer.jnp.asarray",
+                side_effect=lambda x: x,
+            ),
+            patch.object(
+                DPTrainer,
+                "_apply_single_finetune",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
+                return_value={"coord": np.zeros((1, 1, 3))},
+            ),
+            patch(
+                "deepmd.jax.train.trainer.model_change_out_bias",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.jax.make_mesh",
+                side_effect=RuntimeError("stop_after_stats"),
+            ),
         ):
             trainer = DPTrainer(
                 self._trainer_jdata(),
@@ -867,33 +936,48 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer_instance.model.get_type_map.return_value = ["H"]
         trainer_instance.data_requirements = []
 
-        with patch.object(jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)), patch.object(
-            jax_train_entrypoint,
-            "get_finetune_rules",
-            return_value=(
-                deepcopy(fake_jdata["model"]),
-                {"Default": FinetuneRuleItem(["H"], ["H"])},
-                {"model": {"dummy": True}, "model_def_script": deepcopy(fake_jdata["model"])},
+        with (
+            patch.object(
+                jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)
             ),
-        ) as mock_rules, patch.object(
-            jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
-        ), patch.object(
-            jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
-        ) as mock_trainer, patch.object(
-            jax_train_entrypoint, "get_data", return_value=train_data
-        ), patch.object(
-            jax_train_entrypoint.dp_random, "seed"
-        ), patch(
-            "builtins.open",
-            unittest.mock.mock_open(),
-        ), patch.object(
-            jax_train_entrypoint.json, "dump"
+            patch.object(
+                jax_train_entrypoint,
+                "get_finetune_rules",
+                return_value=(
+                    deepcopy(fake_jdata["model"]),
+                    {"Default": FinetuneRuleItem(["H"], ["H"])},
+                    {
+                        "model": {"dummy": True},
+                        "model_def_script": deepcopy(fake_jdata["model"]),
+                    },
+                ),
+            ) as mock_rules,
+            patch.object(
+                jax_train_entrypoint,
+                "update_deepmd_input",
+                side_effect=lambda x, **kwargs: x,
+            ),
+            patch.object(
+                jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "SummaryPrinter",
+                return_value=Mock(__call__=Mock()),
+            ),
+            patch.object(
+                jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
+            ) as mock_trainer,
+            patch.object(jax_train_entrypoint, "get_data", return_value=train_data),
+            patch.object(jax_train_entrypoint.dp_random, "seed"),
+            patch(
+                "builtins.open",
+                unittest.mock.mock_open(),
+            ),
+            patch.object(jax_train_entrypoint.json, "dump"),
         ):
             jax_train_entrypoint.train(
                 INPUT="input.json",
@@ -912,10 +996,14 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         self.assertFalse(rule_kwargs["change_model_params"])
         _, kwargs = mock_trainer.call_args
         self.assertEqual(kwargs["finetune_model"], "pretrained.jax")
-        self.assertEqual(kwargs["finetune_links"]["Default"].get_model_branch(), "Default")
+        self.assertEqual(
+            kwargs["finetune_links"]["Default"].get_model_branch(), "Default"
+        )
         self.assertIn("model", kwargs["finetune_model_data"])
 
-    def test_train_entrypoint_init_model_without_pretrain_script_keeps_target_model(self) -> None:
+    def test_train_entrypoint_init_model_without_pretrain_script_keeps_target_model(
+        self,
+    ) -> None:
         fake_jdata = {
             "model": {"type": "standard", "type_map": ["H"]},
             "learning_rate": {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
@@ -931,27 +1019,37 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer_instance.model.get_type_map.return_value = ["H"]
         trainer_instance.data_requirements = []
 
-        with patch.object(jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)), patch.object(
-            jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
-        ), patch.object(
-            jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
-        ) as mock_trainer, patch.object(
-            jax_train_entrypoint, "get_data", return_value=train_data
-        ), patch.object(
-            jax_train_entrypoint.dp_random, "seed"
-        ), patch.object(
-            jax_train_entrypoint, "serialize_from_file"
-        ) as mock_serialize, patch(
-            "builtins.open",
-            unittest.mock.mock_open(),
-        ), patch.object(
-            jax_train_entrypoint.json, "dump"
+        with (
+            patch.object(
+                jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "update_deepmd_input",
+                side_effect=lambda x, **kwargs: x,
+            ),
+            patch.object(
+                jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "SummaryPrinter",
+                return_value=Mock(__call__=Mock()),
+            ),
+            patch.object(
+                jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
+            ) as mock_trainer,
+            patch.object(jax_train_entrypoint, "get_data", return_value=train_data),
+            patch.object(jax_train_entrypoint.dp_random, "seed"),
+            patch.object(jax_train_entrypoint, "serialize_from_file") as mock_serialize,
+            patch(
+                "builtins.open",
+                unittest.mock.mock_open(),
+            ),
+            patch.object(jax_train_entrypoint.json, "dump"),
         ):
             jax_train_entrypoint.train(
                 INPUT="input.json",
@@ -967,7 +1065,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         mock_serialize.assert_not_called()
         self.assertEqual(mock_trainer.call_args.args[0]["model"], fake_jdata["model"])
 
-    def test_train_entrypoint_init_model_with_pretrain_script_uses_source_model(self) -> None:
+    def test_train_entrypoint_init_model_with_pretrain_script_uses_source_model(
+        self,
+    ) -> None:
         fake_jdata = {
             "model": {"type": "standard", "type_map": ["H"]},
             "learning_rate": {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
@@ -976,7 +1076,11 @@ class TestJAXFinetuneWiring(unittest.TestCase):
                 "training_data": {"systems": []},
             },
         }
-        source_model = {"type": "standard", "type_map": ["O"], "descriptor": {"type": "dpa3"}}
+        source_model = {
+            "type": "standard",
+            "type_map": ["O"],
+            "descriptor": {"type": "dpa3"},
+        }
         train_data = Mock()
         train_data.type_map = ["O"]
         trainer_instance = Mock()
@@ -984,29 +1088,44 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer_instance.model.get_type_map.return_value = ["O"]
         trainer_instance.data_requirements = []
 
-        with patch.object(jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)), patch.object(
-            jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
-        ), patch.object(
-            jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
-        ) as mock_trainer, patch.object(
-            jax_train_entrypoint, "get_data", return_value=train_data
-        ), patch.object(
-            jax_train_entrypoint.dp_random, "seed"
-        ), patch.object(
-            jax_train_entrypoint,
-            "serialize_from_file",
-            return_value={"model_def_script": deepcopy(source_model), "model": {"unused": True}},
-        ) as mock_serialize, patch(
-            "builtins.open",
-            unittest.mock.mock_open(),
-        ), patch.object(
-            jax_train_entrypoint.json, "dump"
+        with (
+            patch.object(
+                jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "update_deepmd_input",
+                side_effect=lambda x, **kwargs: x,
+            ),
+            patch.object(
+                jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "SummaryPrinter",
+                return_value=Mock(__call__=Mock()),
+            ),
+            patch.object(
+                jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
+            ) as mock_trainer,
+            patch.object(jax_train_entrypoint, "get_data", return_value=train_data),
+            patch.object(jax_train_entrypoint.dp_random, "seed"),
+            patch.object(
+                jax_train_entrypoint,
+                "serialize_from_file",
+                return_value={
+                    "model_def_script": deepcopy(source_model),
+                    "model": {"unused": True},
+                },
+            ) as mock_serialize,
+            patch(
+                "builtins.open",
+                unittest.mock.mock_open(),
+            ),
+            patch.object(jax_train_entrypoint.json, "dump"),
         ):
             jax_train_entrypoint.train(
                 INPUT="input.json",
@@ -1022,7 +1141,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         mock_serialize.assert_called_once_with("init_model.jax")
         self.assertEqual(mock_trainer.call_args.args[0]["model"], source_model)
 
-    def test_train_entrypoint_init_frz_model_with_pretrain_script_uses_source_model(self) -> None:
+    def test_train_entrypoint_init_frz_model_with_pretrain_script_uses_source_model(
+        self,
+    ) -> None:
         fake_jdata = {
             "model": {"type": "standard", "type_map": ["H"]},
             "learning_rate": {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
@@ -1031,7 +1152,11 @@ class TestJAXFinetuneWiring(unittest.TestCase):
                 "training_data": {"systems": []},
             },
         }
-        source_model = {"type": "standard", "type_map": ["O"], "descriptor": {"type": "dpa3"}}
+        source_model = {
+            "type": "standard",
+            "type_map": ["O"],
+            "descriptor": {"type": "dpa3"},
+        }
         train_data = Mock()
         train_data.type_map = ["O"]
         trainer_instance = Mock()
@@ -1039,29 +1164,44 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer_instance.model.get_type_map.return_value = ["O"]
         trainer_instance.data_requirements = []
 
-        with patch.object(jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)), patch.object(
-            jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
-        ), patch.object(
-            jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
-        ) as mock_trainer, patch.object(
-            jax_train_entrypoint, "get_data", return_value=train_data
-        ), patch.object(
-            jax_train_entrypoint.dp_random, "seed"
-        ), patch.object(
-            jax_train_entrypoint,
-            "serialize_from_file",
-            return_value={"model_def_script": deepcopy(source_model), "model": {"unused": True}},
-        ) as mock_serialize, patch(
-            "builtins.open",
-            unittest.mock.mock_open(),
-        ), patch.object(
-            jax_train_entrypoint.json, "dump"
+        with (
+            patch.object(
+                jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "update_deepmd_input",
+                side_effect=lambda x, **kwargs: x,
+            ),
+            patch.object(
+                jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "SummaryPrinter",
+                return_value=Mock(__call__=Mock()),
+            ),
+            patch.object(
+                jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
+            ) as mock_trainer,
+            patch.object(jax_train_entrypoint, "get_data", return_value=train_data),
+            patch.object(jax_train_entrypoint.dp_random, "seed"),
+            patch.object(
+                jax_train_entrypoint,
+                "serialize_from_file",
+                return_value={
+                    "model_def_script": deepcopy(source_model),
+                    "model": {"unused": True},
+                },
+            ) as mock_serialize,
+            patch(
+                "builtins.open",
+                unittest.mock.mock_open(),
+            ),
+            patch.object(jax_train_entrypoint.json, "dump"),
         ):
             jax_train_entrypoint.train(
                 INPUT="input.json",
@@ -1076,7 +1216,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             )
         mock_serialize.assert_called_once_with("frozen_model.hlo")
         self.assertEqual(mock_trainer.call_args.args[0]["model"], source_model)
-        self.assertEqual(mock_trainer.call_args.kwargs["init_frz_model"], "frozen_model.hlo")
+        self.assertEqual(
+            mock_trainer.call_args.kwargs["init_frz_model"], "frozen_model.hlo"
+        )
         self.assertFalse(mock_trainer.call_args.kwargs["force_load"])
 
     def test_train_entrypoint_passes_force_load(self) -> None:
@@ -1095,25 +1237,36 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer_instance.model.get_type_map.return_value = ["H"]
         trainer_instance.data_requirements = []
 
-        with patch.object(jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)), patch.object(
-            jax_train_entrypoint, "update_deepmd_input", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
-        ), patch.object(
-            jax_train_entrypoint, "SummaryPrinter", return_value=Mock(__call__=Mock())
-        ), patch.object(
-            jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
-        ) as mock_trainer, patch.object(
-            jax_train_entrypoint, "get_data", return_value=train_data
-        ), patch.object(
-            jax_train_entrypoint.dp_random, "seed"
-        ), patch(
-            "builtins.open",
-            unittest.mock.mock_open(),
-        ), patch.object(
-            jax_train_entrypoint.json, "dump"
+        with (
+            patch.object(
+                jax_train_entrypoint, "j_loader", return_value=deepcopy(fake_jdata)
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "update_deepmd_input",
+                side_effect=lambda x, **kwargs: x,
+            ),
+            patch.object(
+                jax_train_entrypoint, "normalize", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint, "update_sel", side_effect=lambda x, **kwargs: x
+            ),
+            patch.object(
+                jax_train_entrypoint,
+                "SummaryPrinter",
+                return_value=Mock(__call__=Mock()),
+            ),
+            patch.object(
+                jax_train_entrypoint, "DPTrainer", return_value=trainer_instance
+            ) as mock_trainer,
+            patch.object(jax_train_entrypoint, "get_data", return_value=train_data),
+            patch.object(jax_train_entrypoint.dp_random, "seed"),
+            patch(
+                "builtins.open",
+                unittest.mock.mock_open(),
+            ),
+            patch.object(jax_train_entrypoint.json, "dump"),
         ):
             jax_train_entrypoint.train(
                 INPUT="input.json",
@@ -1137,13 +1290,24 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             "learning_rate": {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
             "training": {"numb_steps": 1},
         }
-        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
-            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
-            return_value=Mock(label_requirement=[]),
-        ), patch(
-            "deepmd.jax.train.trainer.serialize_from_file",
-            return_value={"model_def_script": deepcopy(source_model_script), "model": {"dummy": True}},
-        ), patch.object(DPTrainer, "_load_model_data"):
+        with (
+            patch(
+                "deepmd.jax.train.trainer.get_model_for_wrapper",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+                return_value=Mock(label_requirement=[]),
+            ),
+            patch(
+                "deepmd.jax.train.trainer.serialize_from_file",
+                return_value={
+                    "model_def_script": deepcopy(source_model_script),
+                    "model": {"dummy": True},
+                },
+            ),
+            patch.object(DPTrainer, "_load_model_data"),
+        ):
             trainer = DPTrainer(
                 deepcopy(target_jdata),
                 init_model="init_model.jax",
@@ -1159,13 +1323,24 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             "learning_rate": {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
             "training": {"numb_steps": 1},
         }
-        with patch("deepmd.jax.train.trainer.get_model_for_wrapper", return_value=dummy_model), patch(
-            "deepmd.jax.train.trainer.EnergyLoss.get_loss",
-            return_value=Mock(label_requirement=[]),
-        ), patch(
-            "deepmd.jax.train.trainer.serialize_from_file",
-            return_value={"model_def_script": deepcopy(source_model_script), "model": {"dummy": True}},
-        ), patch.object(DPTrainer, "_load_frozen_model_data"):
+        with (
+            patch(
+                "deepmd.jax.train.trainer.get_model_for_wrapper",
+                return_value=dummy_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer.EnergyLoss.get_loss",
+                return_value=Mock(label_requirement=[]),
+            ),
+            patch(
+                "deepmd.jax.train.trainer.serialize_from_file",
+                return_value={
+                    "model_def_script": deepcopy(source_model_script),
+                    "model": {"dummy": True},
+                },
+            ),
+            patch.object(DPTrainer, "_load_frozen_model_data"),
+        ):
             trainer = DPTrainer(
                 deepcopy(target_jdata),
                 init_frz_model="frozen_model.hlo",
@@ -1220,7 +1395,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             np.array([[1.0], [2.0]], dtype=np.float32),
         )
 
-    def test_trainer_load_model_data_force_load_reinitializes_missing_keys(self) -> None:
+    def test_trainer_load_model_data_force_load_reinitializes_missing_keys(
+        self,
+    ) -> None:
         trainer = DPTrainer.__new__(DPTrainer)
         trainer.force_load = True
         trainer.shared_links = {}
@@ -1232,8 +1409,12 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             "descriptor": {"w": np.array([1.0], dtype=np.float32)},
             "fitting": {"b": np.array([2.0], dtype=np.float32)},
         }
-        with patch("deepmd.jax.train.trainer.BaseModel.deserialize", return_value="loaded_model") as mock_deserialize, patch.object(
-            trainer, "_apply_hessian_flags"
+        with (
+            patch(
+                "deepmd.jax.train.trainer.BaseModel.deserialize",
+                return_value="loaded_model",
+            ) as mock_deserialize,
+            patch.object(trainer, "_apply_hessian_flags"),
         ):
             trainer._load_model_data(
                 {
@@ -1243,11 +1424,17 @@ class TestJAXFinetuneWiring(unittest.TestCase):
                 }
             )
         merged = mock_deserialize.call_args.args[0]
-        np.testing.assert_allclose(merged["descriptor"]["w"], np.array([9.0], dtype=np.float32))
-        np.testing.assert_allclose(merged["fitting"]["b"], np.array([2.0], dtype=np.float32))
+        np.testing.assert_allclose(
+            merged["descriptor"]["w"], np.array([9.0], dtype=np.float32)
+        )
+        np.testing.assert_allclose(
+            merged["fitting"]["b"], np.array([2.0], dtype=np.float32)
+        )
         self.assertEqual(trainer.model, "loaded_model")
 
-    def test_apply_single_finetune_force_load_reinitializes_missing_pretrained_keys(self) -> None:
+    def test_apply_single_finetune_force_load_reinitializes_missing_pretrained_keys(
+        self,
+    ) -> None:
         trainer = DPTrainer.__new__(DPTrainer)
         trainer.force_load = True
         target_model = Mock()
@@ -1256,9 +1443,14 @@ class TestJAXFinetuneWiring(unittest.TestCase):
             "fitting": {"b": np.array([2.0], dtype=np.float32)},
         }
         finetune_rule = FinetuneRuleItem(["H"], ["H"])
-        with patch("deepmd.jax.train.trainer.BaseModel.deserialize") as mock_deserialize, patch(
-            "deepmd.jax.train.trainer.merge_finetune_model_data",
-            side_effect=lambda target, pretrained, rule, source_overrides=None: pretrained,
+        with (
+            patch("deepmd.jax.train.trainer.BaseModel.deserialize") as mock_deserialize,
+            patch(
+                "deepmd.jax.train.trainer.merge_finetune_model_data",
+                side_effect=lambda target, pretrained, rule, source_overrides=None: (
+                    pretrained
+                ),
+            ),
         ):
             pretrained_model = Mock()
             pretrained_model.get_type_map.return_value = ["H"]
@@ -1289,7 +1481,11 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer.init_model = None
         trainer.restart = None
         trainer.training_param = {"numb_steps": 1, "model_prob": {"head_a": 1.0}}
-        trainer.learning_rate_param = {"start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8}
+        trainer.learning_rate_param = {
+            "start_lr": 1e-3,
+            "decay_steps": 1,
+            "stop_lr": 1e-8,
+        }
         trainer.model_def_script = {"model_dict": {"head_a": {}}}
         trainer.shared_links = {}
         trainer.case_embd_index = {}
@@ -1297,17 +1493,21 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer.loss = {"head_a": Mock(label_requirement=[])}
         trainer.model = DummyWrapper(head_a=Mock())
         trainer.model_prob = None
-        with patch("deepmd.jax.train.trainer.ModelWrapper", DummyWrapper), patch(
-            "deepmd.jax.train.trainer._clear_jax_mesh_for_host_ops"
-        ), patch(
-            "deepmd.jax.train.trainer._resolve_model_prob_multi",
-            return_value=(np.array([1.0]), 1),
-        ), patch.object(
-            trainer,
-            "_finetune_multi",
-        ) as mock_finetune, patch(
-            "deepmd.jax.train.trainer.jax.make_mesh",
-            side_effect=RuntimeError("stop_after_finetune"),
+        with (
+            patch("deepmd.jax.train.trainer.ModelWrapper", DummyWrapper),
+            patch("deepmd.jax.train.trainer._clear_jax_mesh_for_host_ops"),
+            patch(
+                "deepmd.jax.train.trainer._resolve_model_prob_multi",
+                return_value=(np.array([1.0]), 1),
+            ),
+            patch.object(
+                trainer,
+                "_finetune_multi",
+            ) as mock_finetune,
+            patch(
+                "deepmd.jax.train.trainer.jax.make_mesh",
+                side_effect=RuntimeError("stop_after_finetune"),
+            ),
         ):
             train_data = {"head_a": Mock()}
             with self.assertRaisesRegex(RuntimeError, "stop_after_finetune"):
@@ -1320,7 +1520,9 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer.model_keys = ["head_a"]
         trainer.shared_links = {}
         trainer.finetune_links = {
-            "head_a": FinetuneRuleItem(["H"], ["H"], model_branch="head_a", resuming=True)
+            "head_a": FinetuneRuleItem(
+                ["H"], ["H"], model_branch="head_a", resuming=True
+            )
         }
         trainer.finetune_model = "pretrained.jax"
         trainer.finetune_model_data = {
@@ -1334,23 +1536,27 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer._apply_hessian_flags = Mock()
         merged_model = Mock()
         merged_model.serialize.return_value = {"merged": True}
-        with patch(
-            "deepmd.jax.train.trainer.ModelWrapper",
-            DummyWrapper,
-        ), patch.object(
-            trainer,
-            "_validate_shared_finetune_rules",
-        ), patch.object(
-            trainer,
-            "_collect_shared_source_overrides",
-            return_value={"head_a": {}},
-        ), patch.object(
-            trainer,
-            "_apply_single_finetune",
-            return_value=merged_model,
-        ) as mock_apply, patch(
-            "deepmd.jax.train.trainer.model_change_out_bias"
-        ) as mock_bias:
+        with (
+            patch(
+                "deepmd.jax.train.trainer.ModelWrapper",
+                DummyWrapper,
+            ),
+            patch.object(
+                trainer,
+                "_validate_shared_finetune_rules",
+            ),
+            patch.object(
+                trainer,
+                "_collect_shared_source_overrides",
+                return_value={"head_a": {}},
+            ),
+            patch.object(
+                trainer,
+                "_apply_single_finetune",
+                return_value=merged_model,
+            ) as mock_apply,
+            patch("deepmd.jax.train.trainer.model_change_out_bias") as mock_bias,
+        ):
             trainer._finetune_multi({"head_a": Mock()})
         mock_apply.assert_called_once()
         mock_bias.assert_not_called()
@@ -1377,26 +1583,35 @@ class TestJAXFinetuneWiring(unittest.TestCase):
         trainer._apply_hessian_flags = Mock()
         merged_model = Mock()
         merged_model.serialize.return_value = {"merged": True}
-        with patch(
-            "deepmd.jax.train.trainer.ModelWrapper",
-            DummyWrapper,
-        ), patch.object(
-            trainer,
-            "_validate_shared_finetune_rules",
-        ), patch.object(
-            trainer,
-            "_collect_shared_source_overrides",
-            return_value={"head_a": {}},
-        ), patch.object(
-            trainer,
-            "_apply_single_finetune",
-            return_value=merged_model,
-        ), patch(
-            "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
-            return_value={"coord": np.zeros((1, 1, 3))},
-        ), patch(
-            "deepmd.jax.train.trainer.model_change_out_bias",
-            return_value=merged_model,
-        ) as mock_bias:
+        with (
+            patch(
+                "deepmd.jax.train.trainer.ModelWrapper",
+                DummyWrapper,
+            ),
+            patch.object(
+                trainer,
+                "_validate_shared_finetune_rules",
+            ),
+            patch.object(
+                trainer,
+                "_collect_shared_source_overrides",
+                return_value={"head_a": {}},
+            ),
+            patch.object(
+                trainer,
+                "_apply_single_finetune",
+                return_value=merged_model,
+            ),
+            patch(
+                "deepmd.jax.train.trainer._pack_data_for_bias_adjust",
+                return_value={"coord": np.zeros((1, 1, 3))},
+            ),
+            patch(
+                "deepmd.jax.train.trainer.model_change_out_bias",
+                return_value=merged_model,
+            ) as mock_bias,
+        ):
             trainer._finetune_multi({"head_a": Mock()})
-        self.assertEqual(mock_bias.call_args.kwargs["bias_adjust_mode"], "set-by-statistic")
+        self.assertEqual(
+            mock_bias.call_args.kwargs["bias_adjust_mode"], "set-by-statistic"
+        )

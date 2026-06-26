@@ -275,9 +275,7 @@ def serialize_from_file(model_file: str) -> dict:
         )
         if "model_dict" in model_def_script:
             for model_key in model_def_script["model_dict"]:
-                if model_def_script["model_dict"][model_key].get(
-                    "hessian_mode", False
-                ):
+                if model_def_script["model_dict"][model_key].get("hessian_mode", False):
                     abstract_model[model_key].enable_hessian()
         elif model_def_script.get("hessian_mode", False):
             abstract_model.enable_hessian()

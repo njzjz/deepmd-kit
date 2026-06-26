@@ -192,7 +192,9 @@ def _merge_array_leaves(
 ) -> Any:
     if isinstance(target_node, dict):
         if not isinstance(source_node, dict):
-            raise TypeError(f"Expected dict at {path}, got {type(source_node).__name__}")
+            raise TypeError(
+                f"Expected dict at {path}, got {type(source_node).__name__}"
+            )
         merged = deepcopy(target_node)
         for key, value in target_node.items():
             if key not in source_node:
@@ -277,7 +279,10 @@ def merge_finetune_model_data(
     pretrained_model_data = deepcopy(pretrained_model_data)
     source_overrides = source_overrides or {}
     if finetune_rule.get_random_fitting():
-        if "descriptor" not in target_model_data or "descriptor" not in pretrained_model_data:
+        if (
+            "descriptor" not in target_model_data
+            or "descriptor" not in pretrained_model_data
+        ):
             raise NotImplementedError(
                 "JAX random-fitting fine-tuning currently requires standard descriptor/fitting models."
             )
@@ -295,13 +300,19 @@ def merge_finetune_model_data(
             "dim_case_embd", 0
         )
         if target_case_embd_dim != source_case_embd_dim:
-            if "descriptor" in target_model_data and "descriptor" in pretrained_model_data:
+            if (
+                "descriptor" in target_model_data
+                and "descriptor" in pretrained_model_data
+            ):
                 target_model_data["descriptor"] = _merge_array_leaves(
                     target_model_data["descriptor"],
                     pretrained_model_data["descriptor"],
                     path=("descriptor",),
                 )
-            if "fitting" not in target_model_data or "fitting" not in pretrained_model_data:
+            if (
+                "fitting" not in target_model_data
+                or "fitting" not in pretrained_model_data
+            ):
                 raise NotImplementedError(
                     "JAX case embedding fine-tuning currently requires standard descriptor/fitting models."
                 )
@@ -311,7 +322,10 @@ def merge_finetune_model_data(
                 path=("fitting",),
                 keep_target_on_shape_mismatch=True,
             )
-            if "@variables" in target_model_data and "@variables" in pretrained_model_data:
+            if (
+                "@variables" in target_model_data
+                and "@variables" in pretrained_model_data
+            ):
                 target_model_data["@variables"] = _merge_array_leaves(
                     target_model_data["@variables"],
                     pretrained_model_data["@variables"],

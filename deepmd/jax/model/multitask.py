@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 from typing import (
     Any,
@@ -49,7 +51,6 @@ def _share_fitting_component(base_model: BaseModel, link_model: BaseModel) -> No
     sharing the inner network modules plus the fparam/aparam normalization
     buffers. JAX needs the same behavior for multitask parity.
     """
-
     base_fitting = base_model.atomic_model.fitting
     link_fitting = link_model.atomic_model.fitting
     if base_fitting.__class__ is not link_fitting.__class__:
@@ -185,11 +186,7 @@ class ModelWrapper:
             self[key].set_case_embd(self.case_embd_index[key])
 
     def serialize(self) -> dict[str, Any]:
-        return {
-            "model_dict": {
-                key: self[key].serialize() for key in self.model_keys
-            }
-        }
+        return {"model_dict": {key: self[key].serialize() for key in self.model_keys}}
 
     @classmethod
     def deserialize(
@@ -198,9 +195,10 @@ class ModelWrapper:
         *,
         shared_links: dict[str, Any] | None = None,
         case_embd_index: dict[str, int] | None = None,
-    ) -> "ModelWrapper":
+    ) -> ModelWrapper:
         model_dict = {
-            key: BaseModel.deserialize(value) for key, value in data["model_dict"].items()
+            key: BaseModel.deserialize(value)
+            for key, value in data["model_dict"].items()
         }
         return cls(
             model_dict,

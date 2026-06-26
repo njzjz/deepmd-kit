@@ -80,7 +80,10 @@ def preprocess_shared_params(
                         item_params,
                         model_key,
                     )
-                elif isinstance(item_params, dict) and item_params.get("type", "") == "hybrid":
+                elif (
+                    isinstance(item_params, dict)
+                    and item_params.get("type", "") == "hybrid"
+                ):
                     for ii, hybrid_item in enumerate(item_params["list"]):
                         if isinstance(hybrid_item, str):
                             replace_one_item(

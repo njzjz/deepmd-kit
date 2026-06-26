@@ -471,9 +471,11 @@ class DescrptSeA(NativeOP, BaseDescriptor):
                     tr = tr * xp.astype(mm[:, :, None], tr.dtype)
                     ss = tr[..., 0:1]
                     gg = self.cal_g(ss, (ti, tt))
-                    gr = gr + xp.sum(
-                        gg[:, :, :, None] * tr[:, :, None, :], axis=1
-                    ) * center_mask
+                    gr = (
+                        gr
+                        + xp.sum(gg[:, :, :, None] * tr[:, :, None, :], axis=1)
+                        * center_mask
+                    )
         gr = xp.reshape(gr, (nf, nloc, ng, 4))
         # nf x nloc x ng x 4
         gr /= self.nnei

@@ -4,7 +4,6 @@ from typing import (
 )
 
 import array_api_compat
-
 from packaging.version import (
     Version,
 )
@@ -42,7 +41,9 @@ class DescrptHybrid(DescrptHybridDP):
 
         return super().__setattr__(name, value)
 
-    def call(self, *args: Any, **kwargs: Any) -> tuple[Any, Any | None, Any | None, Any | None, Any | None]:
+    def call(
+        self, *args: Any, **kwargs: Any
+    ) -> tuple[Any, Any | None, Any | None, Any | None, Any | None]:
         if len(args) < 3:
             return super().call(*args, **kwargs)
         if len(args) > 4:
@@ -72,9 +73,7 @@ class DescrptHybrid(DescrptHybridDP):
             else:
                 assert nl_distinguish_types is not None
                 nl = nl_distinguish_types[:, :, nci_value]
-            odescriptor, gr, g2, h2, sw = descrpt(
-                coord_ext, atype_ext, nl, mapping
-            )
+            odescriptor, gr, g2, h2, sw = descrpt(coord_ext, atype_ext, nl, mapping)
             out_descriptor.append(odescriptor)
             if gr is not None:
                 out_gr.append(gr)

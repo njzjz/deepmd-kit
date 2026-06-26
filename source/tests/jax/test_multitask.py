@@ -21,16 +21,16 @@ from unittest.mock import (
 
 import numpy as np
 
-from deepmd.jax.entrypoints import freeze as jax_freeze_entrypoint
-from deepmd.jax.entrypoints import train as jax_train_entrypoint
 from deepmd.dpmodel.descriptor.repflows import (
     _maybe_apply_jax_placeholder_sharding,
 )
-from deepmd.jax.model.multitask import (
-    ModelWrapper,
-)
+from deepmd.jax.entrypoints import freeze as jax_freeze_entrypoint
+from deepmd.jax.entrypoints import train as jax_train_entrypoint
 from deepmd.jax.model.model import (
     get_model_for_wrapper,
+)
+from deepmd.jax.model.multitask import (
+    ModelWrapper,
 )
 from deepmd.jax.train.trainer import (
     _compute_multitask_data_stat,
@@ -43,6 +43,7 @@ from deepmd.jax.utils.serialization import (
     select_model_branch,
     serialize_from_file,
 )
+
 from ..pt.model.test_permutation import (
     model_dpa3,
     model_se_e2_a,
@@ -74,7 +75,9 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
                 },
             },
         }
-        updated_model_config, shared_links = preprocess_shared_params(deepcopy(model_config))
+        updated_model_config, shared_links = preprocess_shared_params(
+            deepcopy(model_config)
+        )
         self.assertIn("shared_desc", shared_links)
         self.assertIn("shared_fit", shared_links)
         enabled, case_embd_index = get_case_embd_config(updated_model_config)
@@ -106,7 +109,9 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
                 },
             },
         }
-        updated_model_config, shared_links = preprocess_shared_params(deepcopy(model_config))
+        updated_model_config, shared_links = preprocess_shared_params(
+            deepcopy(model_config)
+        )
         model = get_model_for_wrapper(updated_model_config, shared_links=shared_links)
         desc_a = model["task_a"].atomic_model.descriptor
         desc_b = model["task_b"].atomic_model.descriptor
@@ -146,7 +151,9 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
                 },
             },
         }
-        updated_model_config, shared_links = preprocess_shared_params(deepcopy(model_config))
+        updated_model_config, shared_links = preprocess_shared_params(
+            deepcopy(model_config)
+        )
         model = get_model_for_wrapper(updated_model_config, shared_links=shared_links)
         desc_a = model["task_a"].atomic_model.descriptor.descrpt_list[0]
         desc_b = model["task_b"].atomic_model.descriptor.descrpt_list[0]
@@ -240,7 +247,9 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
         self.assertFalse(fitting_a.compute_output_stats.call_args.kwargs["mixed_type"])
         self.assertFalse(fitting_b.compute_output_stats.call_args.kwargs["mixed_type"])
 
-    def test_multitask_shared_fitting_input_stats_follow_weights_and_protection(self) -> None:
+    def test_multitask_shared_fitting_input_stats_follow_weights_and_protection(
+        self,
+    ) -> None:
         class FakeWrapper:
             def __init__(self, model_dict: dict[str, SimpleNamespace]) -> None:
                 self._model_dict = model_dict
@@ -369,8 +378,20 @@ class TestJAXMultiTaskHelpers(unittest.TestCase):
         with patch(
             "deepmd.jax.train.trainer._build_single_data_stat",
             side_effect=[
-                ([{"coord": "a"}], {"energy": [[[np.array([1.0])]]], "natoms_vec": [[np.array([0.0, 0.0, 1.0, 0.0])]]}),
-                ([{"coord": "b"}], {"energy": [[[np.array([1.0])]]], "natoms_vec": [[np.array([0.0, 0.0, 1.0, 0.0])]]}),
+                (
+                    [{"coord": "a"}],
+                    {
+                        "energy": [[[np.array([1.0])]]],
+                        "natoms_vec": [[np.array([0.0, 0.0, 1.0, 0.0])]],
+                    },
+                ),
+                (
+                    [{"coord": "b"}],
+                    {
+                        "energy": [[[np.array([1.0])]]],
+                        "natoms_vec": [[np.array([0.0, 0.0, 1.0, 0.0])]],
+                    },
+                ),
             ],
         ):
             with self.assertRaisesRegex(ValueError, "data_stat_protect"):
@@ -460,7 +481,9 @@ class TestJAXMultiTaskTraining(unittest.TestCase):
             json.dump(config, fp)
         return path
 
-    def _base_multitask_config(self, *, descriptor: dict, sharefit: bool = False) -> dict:
+    def _base_multitask_config(
+        self, *, descriptor: dict, sharefit: bool = False
+    ) -> dict:
         template_name = "multitask_sharefit.json" if sharefit else "multitask.json"
         config = self._load_template(template_name)
         config["model"]["shared_dict"]["my_descriptor"] = deepcopy(descriptor)
@@ -525,7 +548,10 @@ class TestJAXMultiTaskTraining(unittest.TestCase):
         self.assertTrue(ckpt_path.is_dir())
 
         serialized, wrapper = self._load_wrapper(ckpt_path)
-        self.assertEqual(set(serialized["model_def_script"]["model_dict"].keys()), {"model_1", "model_2"})
+        self.assertEqual(
+            set(serialized["model_def_script"]["model_dict"].keys()),
+            {"model_1", "model_2"},
+        )
         self.assertIn("shared_links", serialized["model_def_script"])
         self.assertIs(
             wrapper["model_1"].atomic_model.descriptor,
@@ -571,17 +597,25 @@ class TestJAXMultiTaskTraining(unittest.TestCase):
             wrapper["model_2"].atomic_model.fitting.bias_atom_e,
         )
         self.assertEqual(
-            serialized["model_def_script"]["shared_links"]["my_fitting"]["links"][0]["shared_type"],
+            serialized["model_def_script"]["shared_links"]["my_fitting"]["links"][0][
+                "shared_type"
+            ],
             "fitting_net",
         )
 
         wrapper.set_case_embd("model_1")
-        case_embd = wrapper["model_1"].atomic_model.fitting.serialize()["@variables"]["case_embd"]
+        case_embd = wrapper["model_1"].atomic_model.fitting.serialize()["@variables"][
+            "case_embd"
+        ]
         np.testing.assert_array_equal(case_embd, np.array([1.0, 0.0]))
         wrapper.set_case_embd("model_2")
-        case_embd = wrapper["model_2"].atomic_model.fitting.serialize()["@variables"]["case_embd"]
+        case_embd = wrapper["model_2"].atomic_model.fitting.serialize()["@variables"][
+            "case_embd"
+        ]
         np.testing.assert_array_equal(case_embd, np.array([0.0, 1.0]))
-        case_embd_model_1 = wrapper["model_1"].atomic_model.fitting.serialize()["@variables"]["case_embd"]
+        case_embd_model_1 = wrapper["model_1"].atomic_model.fitting.serialize()[
+            "@variables"
+        ]["case_embd"]
         np.testing.assert_array_equal(case_embd_model_1, np.array([1.0, 0.0]))
 
     def test_entrypoint_multitask_train_dpa3(self) -> None:
@@ -603,22 +637,34 @@ class TestJAXMultiTaskTraining(unittest.TestCase):
         )
 
     def test_multitask_checkpoint_rejects_single_task_restart(self) -> None:
-        input_path = self._write_config("multitask_reject.json", self._base_multitask_config(
-            descriptor=deepcopy(model_se_e2_a["descriptor"])
-        ))
+        input_path = self._write_config(
+            "multitask_reject.json",
+            self._base_multitask_config(
+                descriptor=deepcopy(model_se_e2_a["descriptor"])
+            ),
+        )
         self._run_entrypoint(input_path)
         ckpt_path = self.tmpdir / "model.ckpt-1.jax"
 
         single_task_config = {
             "model": deepcopy(model_se_e2_a),
-            "learning_rate": {"type": "exp", "start_lr": 1e-3, "decay_steps": 1, "stop_lr": 1e-8},
+            "learning_rate": {
+                "type": "exp",
+                "start_lr": 1e-3,
+                "decay_steps": 1,
+                "stop_lr": 1e-8,
+            },
             "loss": {"type": "ener"},
             "training": {"numb_steps": 1},
         }
         single_task_config["model"]["fitting_net"].setdefault("type", "ener")
-        from deepmd.jax.train.trainer import DPTrainer
+        from deepmd.jax.train.trainer import (
+            DPTrainer,
+        )
 
-        with self.assertRaisesRegex(ValueError, "single-task JAX target does not accept a multitask checkpoint"):
+        with self.assertRaisesRegex(
+            ValueError, "single-task JAX target does not accept a multitask checkpoint"
+        ):
             DPTrainer(single_task_config, restart=str(ckpt_path))
 
 
@@ -647,16 +693,20 @@ class TestJAXFreezeMultiTask(unittest.TestCase):
                 }
             },
         }
-        with patch.object(
-            jax_freeze_entrypoint,
-            "serialize_from_file",
-            return_value=deepcopy(data),
-        ), patch.object(
-            jax_freeze_entrypoint,
-            "deserialize_to_file",
-        ) as mock_deserialize, patch(
-            "deepmd.jax.entrypoints.freeze.Path.is_dir",
-            return_value=True,
+        with (
+            patch.object(
+                jax_freeze_entrypoint,
+                "serialize_from_file",
+                return_value=deepcopy(data),
+            ),
+            patch.object(
+                jax_freeze_entrypoint,
+                "deserialize_to_file",
+            ) as mock_deserialize,
+            patch(
+                "deepmd.jax.entrypoints.freeze.Path.is_dir",
+                return_value=True,
+            ),
         ):
             jax_freeze_entrypoint.freeze(
                 checkpoint_folder="ckpt_dir",
@@ -683,16 +733,20 @@ class TestJAXFreezeMultiTask(unittest.TestCase):
                 }
             },
         }
-        with patch.object(
-            jax_freeze_entrypoint,
-            "serialize_from_file",
-            return_value=deepcopy(data),
-        ), patch.object(
-            jax_freeze_entrypoint,
-            "deserialize_to_file",
-        ) as mock_deserialize, patch(
-            "deepmd.jax.entrypoints.freeze.Path.is_dir",
-            return_value=True,
+        with (
+            patch.object(
+                jax_freeze_entrypoint,
+                "serialize_from_file",
+                return_value=deepcopy(data),
+            ),
+            patch.object(
+                jax_freeze_entrypoint,
+                "deserialize_to_file",
+            ) as mock_deserialize,
+            patch(
+                "deepmd.jax.entrypoints.freeze.Path.is_dir",
+                return_value=True,
+            ),
         ):
             jax_freeze_entrypoint.freeze(
                 checkpoint_folder="ckpt_dir",
@@ -724,16 +778,20 @@ class TestJAXFreezeMultiTask(unittest.TestCase):
                 }
             },
         }
-        with patch.object(
-            jax_freeze_entrypoint,
-            "serialize_from_file",
-            return_value=deepcopy(data),
-        ), patch.object(
-            jax_freeze_entrypoint,
-            "deserialize_to_file",
-        ) as mock_deserialize, patch(
-            "deepmd.jax.entrypoints.freeze.Path.is_dir",
-            return_value=True,
+        with (
+            patch.object(
+                jax_freeze_entrypoint,
+                "serialize_from_file",
+                return_value=deepcopy(data),
+            ),
+            patch.object(
+                jax_freeze_entrypoint,
+                "deserialize_to_file",
+            ) as mock_deserialize,
+            patch(
+                "deepmd.jax.entrypoints.freeze.Path.is_dir",
+                return_value=True,
+            ),
         ):
             jax_freeze_entrypoint.freeze(
                 checkpoint_folder="ckpt_dir",
@@ -757,13 +815,16 @@ class TestJAXFreezeMultiTask(unittest.TestCase):
                 }
             },
         }
-        with patch.object(
-            jax_freeze_entrypoint,
-            "serialize_from_file",
-            return_value=deepcopy(data),
-        ), patch(
-            "deepmd.jax.entrypoints.freeze.Path.is_dir",
-            return_value=True,
+        with (
+            patch.object(
+                jax_freeze_entrypoint,
+                "serialize_from_file",
+                return_value=deepcopy(data),
+            ),
+            patch(
+                "deepmd.jax.entrypoints.freeze.Path.is_dir",
+                return_value=True,
+            ),
         ):
             with self.assertRaisesRegex(ValueError, "--head/--model-branch"):
                 jax_freeze_entrypoint.freeze(

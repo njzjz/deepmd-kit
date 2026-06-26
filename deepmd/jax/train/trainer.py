@@ -12,7 +12,6 @@ from pathlib import (
 )
 from typing import (
     Any,
-    Optional,
     TextIO,
 )
 
@@ -20,7 +19,11 @@ import array_api_compat
 import numpy as np
 import optax
 import orbax.checkpoint as ocp
-from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
+from jax.sharding import (
+    Mesh,
+    NamedSharding,
+)
+from jax.sharding import PartitionSpec as P
 from packaging.version import (
     Version,
 )
@@ -223,7 +226,9 @@ def _set_jax_mesh(mesh: Mesh) -> None:
     _ACTIVE_JAX_MESH_CONTEXT.append(mesh)
 
 
-def _merge_batches_for_bias(batch_list: list[np.ndarray], key: str) -> np.ndarray | float:
+def _merge_batches_for_bias(
+    batch_list: list[np.ndarray], key: str
+) -> np.ndarray | float:
     arrays = [np.asarray(item) for item in batch_list]
     if key.startswith("find_"):
         return float(np.max(arrays))
@@ -344,7 +349,9 @@ def _apply_weighted_shared_fitting_input_stats(
             cat_data = np.concatenate(
                 [np.asarray(frame["fparam"]) for frame in sampled_stats], axis=0
             )
-            cat_data = np.reshape(cat_data, [-1, component.numb_fparam]).astype(np.float64)
+            cat_data = np.reshape(cat_data, [-1, component.numb_fparam]).astype(
+                np.float64
+            )
             weighted_sum += branch_weight * np.sum(cat_data, axis=0)
             weighted_sum_sq += branch_weight * np.sum(cat_data * cat_data, axis=0)
             weighted_count += branch_weight * cat_data.shape[0]
@@ -379,7 +386,9 @@ def _apply_weighted_shared_fitting_input_stats(
             cat_data = np.concatenate(
                 [np.asarray(frame["aparam"]) for frame in sampled_stats], axis=0
             )
-            cat_data = np.reshape(cat_data, [-1, component.numb_aparam]).astype(np.float64)
+            cat_data = np.reshape(cat_data, [-1, component.numb_aparam]).astype(
+                np.float64
+            )
             weighted_sum += branch_weight * np.sum(cat_data, axis=0)
             weighted_sum_sq += branch_weight * np.sum(cat_data * cat_data, axis=0)
             weighted_count += branch_weight * cat_data.shape[0]
@@ -465,7 +474,9 @@ def _compute_multitask_data_stat(
         fitting_input_groups[fitting_group_id]["weights"].append(
             model_key_prob_map[model_key]
         )
-        fitting_input_groups[fitting_group_id]["samples"].append(stat_cache[model_key][0])
+        fitting_input_groups[fitting_group_id]["samples"].append(
+            stat_cache[model_key][0]
+        )
 
     for descriptor_group in descriptor_groups.values():
         merged_descriptor_stat = []
@@ -503,9 +514,13 @@ def _resolve_model_prob_multi(
             )
         per_task_total = []
         for model_key in model_keys:
-            sampler_weights = np.asarray(train_data[model_key].sys_probs, dtype=np.float64)
+            sampler_weights = np.asarray(
+                train_data[model_key].sys_probs, dtype=np.float64
+            )
             per_task_total.append(
-                compute_total_numb_batch(train_data[model_key].nbatches, sampler_weights)
+                compute_total_numb_batch(
+                    train_data[model_key].nbatches, sampler_weights
+                )
             )
         model_prob, resolved_num_steps, _ = resolve_model_prob_from_epochs(
             model_keys,
@@ -544,10 +559,10 @@ class DPTrainer:
     def __init__(
         self,
         jdata: dict,
-        init_model: Optional[str] = None,
-        restart: Optional[str] = None,
-        init_frz_model: Optional[str] = None,
-        finetune_model: Optional[str] = None,
+        init_model: str | None = None,
+        restart: str | None = None,
+        init_frz_model: str | None = None,
+        finetune_model: str | None = None,
         force_load: bool = False,
         shared_links: dict[str, Any] | None = None,
         finetune_links: dict[str, FinetuneRuleItem] | None = None,
@@ -569,9 +584,7 @@ class DPTrainer:
         self.start_step = 0
         self.multi_task = "model_dict" in jdata["model"]
         self.model_keys = (
-            list(jdata["model"]["model_dict"])
-            if self.multi_task
-            else ["Default"]
+            list(jdata["model"]["model_dict"]) if self.multi_task else ["Default"]
         )
         if self.multi_task:
             _, self.case_embd_index = get_case_embd_config(jdata["model"])
@@ -679,10 +692,9 @@ class DPTrainer:
                     [".".join(map(str, item)) for item in missing[:20]],
                     [".".join(map(str, item)) for item in unexpected[:20]],
                 )
-        effective_shared_links = (
-            self.shared_links
-            or model_data.get("model_def_script", {}).get("shared_links", {})
-        )
+        effective_shared_links = self.shared_links or model_data.get(
+            "model_def_script", {}
+        ).get("shared_links", {})
         if self.multi_task:
             if "model_dict" not in serialized_model:
                 raise ValueError(
@@ -792,7 +804,11 @@ class DPTrainer:
         overrides: dict[str, dict[tuple[Any, ...], dict[str, Any]]] = {
             model_key: {} for model_key in self.model_keys
         }
-        if not self.shared_links or not self.finetune_links or self.finetune_model_data is None:
+        if (
+            not self.shared_links
+            or not self.finetune_links
+            or self.finetune_model_data is None
+        ):
             return overrides
 
         for _, link_info in self.shared_links.items():
@@ -807,14 +823,18 @@ class DPTrainer:
             if not shareable_links:
                 continue
             base_link = shareable_links[0]
-            canonical_source_key = self.finetune_links[base_link["model_key"]].get_model_branch()
+            canonical_source_key = self.finetune_links[
+                base_link["model_key"]
+            ].get_model_branch()
             canonical_source_model_data = (
                 self.finetune_model_data["model"]["model_dict"][canonical_source_key]
                 if source_multi
                 else self.finetune_model_data["model"]
             )
             for link in shareable_links[1:]:
-                current_source_key = self.finetune_links[link["model_key"]].get_model_branch()
+                current_source_key = self.finetune_links[
+                    link["model_key"]
+                ].get_model_branch()
                 if current_source_key == canonical_source_key:
                     continue
                 paths = self._shared_type_to_serialized_paths(
@@ -827,7 +847,9 @@ class DPTrainer:
         return overrides
 
     @property
-    def data_requirements(self) -> list[DataRequirementItem] | dict[str, list[DataRequirementItem]]:
+    def data_requirements(
+        self,
+    ) -> list[DataRequirementItem] | dict[str, list[DataRequirementItem]]:
         if self.multi_task:
             return {
                 model_key: self.loss[model_key].label_requirement
@@ -963,7 +985,9 @@ class DPTrainer:
             self._train_multi(train_data, valid_data)
         else:
             assert isinstance(train_data, DeepmdDataSystem)
-            valid_data = valid_data if isinstance(valid_data, DeepmdDataSystem) else None
+            valid_data = (
+                valid_data if isinstance(valid_data, DeepmdDataSystem) else None
+            )
             self._train_single(train_data, valid_data)
 
     def _train_single(
@@ -996,7 +1020,9 @@ class DPTrainer:
             self._finetune_single(train_data)
             model = self.model
             if isinstance(model, ModelWrapper):
-                raise TypeError("single-task JAX finetune produced a multitask model unexpectedly.")
+                raise TypeError(
+                    "single-task JAX finetune produced a multitask model unexpectedly."
+                )
 
         auto_mesh = jax.make_mesh(
             (jax.process_count(), jax.local_device_count()),
@@ -1139,7 +1165,9 @@ class DPTrainer:
                 fp,
                 ap,
             )
-            if self.display_in_training and (step == 0 or (step + 1) % self.disp_freq == 0):
+            if self.display_in_training and (
+                step == 0 or (step + 1) % self.disp_freq == 0
+            ):
                 wall_time = time.time() - start_time
                 log.info(format_training_message(batch=step + 1, wall_time=wall_time))
                 more_loss = loss_fn_more_loss(
@@ -1160,15 +1188,19 @@ class DPTrainer:
                         sharding,
                         natoms_axis_size=auto_mesh.shape.get("natoms", 1),
                     )
-                    extended_coord, extended_atype, nlist, mapping, fp, ap = prepare_input(
-                        rcut=model.get_rcut(),
-                        sel=model.get_sel(),
-                        coord=jax_valid_data["coord"],
-                        atype=jax_valid_data["type"],
-                        box=jax_valid_data["box"] if jax_valid_data["find_box"] else None,
+                    extended_coord, extended_atype, nlist, mapping, fp, ap = (
+                        prepare_input(
+                            rcut=model.get_rcut(),
+                            sel=model.get_sel(),
+                            coord=jax_valid_data["coord"],
+                            atype=jax_valid_data["type"],
+                            box=jax_valid_data["box"]
+                            if jax_valid_data["find_box"]
+                            else None,
                             fparam=jax_valid_data.get("fparam", None),
                             aparam=jax_valid_data.get("aparam", None),
                         )
+                    )
                     valid_more_loss = loss_fn_more_loss(
                         model,
                         self.lr.value(step),
@@ -1194,7 +1226,9 @@ class DPTrainer:
                 start_time = time.time()
             if (step + 1) % self.save_freq == 0:
                 self._save_checkpoint(model, step + 1)
-                log.info(f"Trained model has been saved to: {Path(f'{self.save_ckpt}-{step + 1}.jax')!s}")
+                log.info(
+                    f"Trained model has been saved to: {Path(f'{self.save_ckpt}-{step + 1}.jax')!s}"
+                )
         disp_file_fp.close()
         self.model = model
 
@@ -1211,9 +1245,8 @@ class DPTrainer:
             self.training_param,
             train_data,
         )
-        finetune_has_new_type = (
-            self.finetune_model is not None
-            and any(rule.get_has_new_type() for rule in self.finetune_links.values())
+        finetune_has_new_type = self.finetune_model is not None and any(
+            rule.get_has_new_type() for rule in self.finetune_links.values()
         )
         if self.init_model is None and self.restart is None:
             if self.finetune_model is None or finetune_has_new_type:
@@ -1416,7 +1449,9 @@ class DPTrainer:
                 fp,
                 ap,
             )
-            if self.display_in_training and (step == 0 or (step + 1) % self.disp_freq == 0):
+            if self.display_in_training and (
+                step == 0 or (step + 1) % self.disp_freq == 0
+            ):
                 wall_time = time.time() - start_time
                 log.info(format_training_message(batch=step + 1, wall_time=wall_time))
                 train_results = {_key: {} for _key in self.model_keys}
@@ -1492,7 +1527,9 @@ class DPTrainer:
                             sel=branch_model.get_sel(),
                             coord=jax_valid_data["coord"],
                             atype=jax_valid_data["type"],
-                            box=jax_valid_data["box"] if jax_valid_data["find_box"] else None,
+                            box=jax_valid_data["box"]
+                            if jax_valid_data["find_box"]
+                            else None,
                             fparam=jax_valid_data.get("fparam", None),
                             aparam=jax_valid_data.get("aparam", None),
                         )
@@ -1509,7 +1546,9 @@ class DPTrainer:
                             valid_ap,
                         )
                 if step == 0:
-                    self.print_header_multitask(disp_file_fp, train_results, valid_results)
+                    self.print_header_multitask(
+                        disp_file_fp, train_results, valid_results
+                    )
                 self.print_on_training_multitask(
                     disp_file_fp,
                     train_results,
@@ -1520,7 +1559,9 @@ class DPTrainer:
                 start_time = time.time()
             if (step + 1) % self.save_freq == 0:
                 self._save_checkpoint(model, step + 1)
-                log.info(f"Trained model has been saved to: {Path(f'{self.save_ckpt}-{step + 1}.jax')!s}")
+                log.info(
+                    f"Trained model has been saved to: {Path(f'{self.save_ckpt}-{step + 1}.jax')!s}"
+                )
         disp_file_fp.close()
         self.model = model
 
@@ -1677,16 +1718,16 @@ def prepare_input(
     sel: list[int],
     coord: np.ndarray,
     atype: np.ndarray,
-    box: Optional[np.ndarray] = None,
-    fparam: Optional[np.ndarray] = None,
-    aparam: Optional[np.ndarray] = None,
+    box: np.ndarray | None = None,
+    fparam: np.ndarray | None = None,
+    aparam: np.ndarray | None = None,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
     np.ndarray,
     np.ndarray,
-    Optional[np.ndarray],
-    Optional[np.ndarray],
+    np.ndarray | None,
+    np.ndarray | None,
 ]:
     nframes, nloc = atype.shape[:2]
     cc, bb, fp, ap = coord, box, fparam, aparam
