@@ -74,6 +74,7 @@ jobs:
           OMP_NUM_THREADS: 1
           TF_INTRA_OP_PARALLELISM_THREADS: 1
           TF_INTER_OP_PARALLELISM_THREADS: 1
+          CTEST_PARALLEL_LEVEL: ${{ matrix.check_memleak && '2' || '4' }}
           CMAKE_GENERATOR: Ninja
           CXXFLAGS: ${{ matrix.check_memleak && '-fsanitize=leak' || '' }}
           LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/workflows/suppr.txt
